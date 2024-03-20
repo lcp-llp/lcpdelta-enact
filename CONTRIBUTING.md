@@ -2,7 +2,7 @@
 You can contribute with issues and pull requests (PRs). Simply logging issues for any problems you encounter is a great way to contribute. Contributing code is greatly appreciated.
 
 ## Where to report issues
-New issues can be reported in the project [issue list](Issues).
+New issues can be reported in the project [issue list](../../../Issues).
 
 Before logging a new issue, please search the list of issues to make sure it doesn't already exist.
 
