@@ -5,17 +5,17 @@ jobs:
   ruff-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
+      - name: Checkout branch
         uses: actions/checkout@v4
       
-      - name: Python setup
+      - name: Set up python
         id: setup-python
         uses: actions/setup-python@v5
         with: 
           python-version: 3.x
   
-      - name: ruff install 
+      - name: Install Ruff
         run: pip install ruff
 
-      - name: ruff lint
+      - name: Ruff lint check
         uses: jpetrucciani/ruff-check@main
