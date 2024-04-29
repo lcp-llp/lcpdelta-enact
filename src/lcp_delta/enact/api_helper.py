@@ -332,7 +332,8 @@ class APIHelper(APIHelperBase):
 
         data = response['data']['data']
         df = pd.DataFrame(data)
-        if df.empty: return df
+        if df.empty:
+            return df
         first_key = next(iter(data))
         df = df.set_index(first_key)
 
@@ -831,7 +832,8 @@ class APIHelper(APIHelperBase):
 
         response = self.post_request(endpoint, request_details)
         df = pd.DataFrame(response['data'])
-        if df.empty: return df
+        if df.empty:
+            return df
         trade_id_column_name = df.columns[-1]
         df.set_index(trade_id_column_name, inplace=True)
         return df
@@ -866,7 +868,8 @@ class APIHelper(APIHelperBase):
 
         response = self.post_request(endpoint, request_details)
         df = pd.DataFrame(response['data'])
-        if df.empty: return df
+        if df.empty:
+            return df
         trade_id_column_name = df.columns[-1]
         df.set_index(trade_id_column_name, inplace=True)
         return df
@@ -951,7 +954,8 @@ class APIHelper(APIHelperBase):
 
         response = self.post_request(endpoint, request_details)
         df = pd.DataFrame(response['data'])
-        if df.empty: return df
+        if df.empty:
+            return df
         contract_id_column_name = df.columns[0]
         df.set_index(contract_id_column_name, inplace=True)
         return df

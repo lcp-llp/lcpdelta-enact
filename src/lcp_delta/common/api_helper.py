@@ -33,7 +33,7 @@ class APIHelperBase(ABC):
 
     def handle_error_and_get_updated_response(self, endpoint : str, request_details : dict, headers , response_raw):
         # check if bearer token has expired and if it has create a new one
-        if response_raw.status_code == 401 and 'WWW-Authenticate' in response.headers:
+        if response_raw.status_code == 401 and 'WWW-Authenticate' in response_raw.headers:
             response_raw = self.handle_authorisation_error(endpoint, request_details, headers)
 
         if response_raw.status_code == 400:
