@@ -1,5 +1,5 @@
 name: Lint
-on: workflow_dispatch
+on: push
 
 jobs:
   adopt-ruff:
