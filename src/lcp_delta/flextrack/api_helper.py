@@ -66,7 +66,8 @@ class APIHelper(APIHelperBase):
             'Dates' : dates
         }
 
-        if weighting_metric: request_details['WeightingMetric'] = weighting_metric
+        if weighting_metric:
+            request_details['WeightingMetric'] = weighting_metric
 
         response = self.post_request(endpoint, request_details)
 

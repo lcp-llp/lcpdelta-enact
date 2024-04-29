@@ -1,11 +1,9 @@
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 import time as pytime
 from functools import partial
-from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetimes
+from lcp_delta.global_helper_methods import is_list_of_strings
 from datetime import datetime as dt
 import pandas as pd
-
-from .credentials_holder import CredentialsHolder
 from .api_helper import APIHelper
 
 class DPSHelper:
@@ -43,10 +41,10 @@ class DPSHelper:
         return self.enact_credentials.bearer_token
 
     def add_subscription(self, request_object : list[dict[str, str]], subscription_id : str):
-        enact_push_response = self.hub_connection.send('JoinEnactPush', request_object, lambda m: self.callback_received(m.result, subscription_id))
+        self.hub_connection.send('JoinEnactPush', request_object, lambda m: self.callback_received(m.result, subscription_id))
 
     def subscribe_to_notifications(self, handle_notification_method: callable):
-        enact_push_response = self.hub_connection.send('JoinParentCompanyNotificationPush',[], on_invocation= lambda m: self.hub_connection.on(m.result['data']['pushName'], lambda x: handle_notification_method(x)))
+        self.hub_connection.send('JoinParentCompanyNotificationPush',[], on_invocation= lambda m: self.hub_connection.on(m.result['data']['pushName'], lambda x: handle_notification_method(x)))
 
     def initialise_series_subscription_data(self, series_id : str, country_id : str, option_id : list[str], handle_data_method : callable, parse_datetimes : bool):
         now = dt.now()
@@ -55,21 +53,26 @@ class DPSHelper:
         initial_series_data[self.last_updated_header] = now
         self.data_by_subscription_id[self.__get_subscription_id(series_id, country_id, option_id)] = (handle_data_method, initial_series_data, parse_datetimes)
 
-    def callback_received(self, m, subscription_id : str):
+    def callback_received(self, m, subscription_id: str):
+        self.hub_connection.on(m['data']['pushName'], lambda x: self.process_push_data(x, subscription_id))
+
+    def process_push_data(self, data, subscription_id):
         (user_callback, all_data, parse_datetimes) = self.data_by_subscription_id[subscription_id]
-        adjusted_callback = lambda x: user_callback(self.handle_new_series_data(all_data, x, parse_datetimes))
-        self.hub_connection.on(m['data']['pushName'], adjusted_callback)
+        modified_data = self.handle_new_series_data(all_data, data, parse_datetimes)
+        user_callback(modified_data)
 
     def handle_new_series_data(self, all_data : pd.DataFrame, data_push_holder : list, parse_datetimes : bool) -> pd.DataFrame:
         try:
-            if all_data.empty: return data_push_holder
+            if all_data.empty:
+                return data_push_holder
             data_push = data_push_holder[0]['data']
             push_ids = list(all_data.columns)[:-1] # Exclude last updated column
             pushes = data_push['data']
             for push in pushes:
                 push_current = push['current']
                 push_date_time = f'{push_current["datePeriod"]["datePeriodCombinedGmt"]}'
-                if push_date_time[-1:] != 'Z': push_date_time += 'Z'
+                if push_date_time[-1:] != 'Z':
+                    push_date_time += 'Z'
 
                 if parse_datetimes:
                     push_date_time = pd.to_datetime(push_date_time, utc=True)
@@ -143,6 +146,7 @@ class DPSHelper:
 
     def __get_subscription_id(self, series_id : str, country_id : str, option_id : list[str]) -> str:
         subscription_id = (series_id, country_id)
-        if option_id: subscription_id + tuple(option_id)
+        if option_id:
+            subscription_id + tuple(option_id)
         return subscription_id
 

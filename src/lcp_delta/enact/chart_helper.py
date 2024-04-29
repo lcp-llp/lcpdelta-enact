@@ -29,7 +29,8 @@ class ChartHelper:
 
         country = series_info['countries'][0]['name'] if len(series_info['countries']) else ''
         plot_title = series_info['name']
-        if country: plot_title = f'{plot_title}: {country}'
+        if country:
+            plot_title = f'{plot_title}: {country}'
         units = series_info['suffix']
 
         plt.ioff()
