@@ -1,0 +1,21 @@
+name: Lint
+on: workflow_dispatch
+
+jobs:
+  adopt-ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v4
+      
+      - name: Python setup
+        id: setup-python
+        uses: actions/setup-python@v5
+        with: 
+          python-version: 3.x
+  
+      - name: ruff install 
+        run: pip install ruff
+
+      - name: ruff lint
+        uses: ScDor/adopt-ruff@master
