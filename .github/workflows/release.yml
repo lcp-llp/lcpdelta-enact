@@ -6,13 +6,18 @@ on:
       version:
         description: 'Enter the version number'
         required: true
-      password:
-        description: 'Enter the release password'
-        required: true
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    
+    environment:
+      name: pypi
+      url: "https://pypi.org/project/LCPDelta/"
+    
+    permissions:
+      id-token: write
+      
     steps:
     - uses: actions/checkout@v2
       with:
@@ -36,5 +41,3 @@ jobs:
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.4.2
-      with:
-        password: ${{ github.event.inputs.password }}
