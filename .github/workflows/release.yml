@@ -8,12 +8,16 @@ on:
         required: true
 
 jobs:
-  build-and-release2323232323232323232:
+  build-and-release:
     runs-on: ubuntu-latest
     
     environment:
       name: pypi
       url: "https://pypi.org/project/LCPDelta/"
+
+    permissions:
+      contents: write
+      id-token: write
       
     steps:
     - uses: actions/checkout@v2
