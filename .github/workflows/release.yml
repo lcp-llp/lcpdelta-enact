@@ -1,0 +1,40 @@
+name: PyPI Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Enter the version number'
+        required: true
+      password:
+        description: 'Enter the release password'
+        required: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: 'main'
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: pip install build wheel setuptools
+
+    - name: Update version in pyproject.toml
+      run: |
+        sed -i "s/version = \".*\"/version = \"${{ github.event.inputs.version }}\"/" pyproject.toml
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@v1.4.2
+      with:
+        password: ${{ github.event.inputs.password }}
