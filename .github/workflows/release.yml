@@ -14,8 +14,9 @@ jobs:
     environment:
       name: pypi
       url: "https://pypi.org/project/LCPDelta/"
-    
+
     permissions:
+      contents: write
       id-token: write
       
     steps:
@@ -40,4 +41,4 @@ jobs:
         python -m build
 
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.4.2
+      uses: pypa/gh-action-pypi-publish@release/v1
