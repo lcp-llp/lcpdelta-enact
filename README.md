@@ -36,7 +36,7 @@ response = api_helper.get_series_data(
 print(response)
 ```
 
-### Enact DPS Example Code
+### Enact DPS Example Code 
 
 ```python
 from lcp_delta import enact
