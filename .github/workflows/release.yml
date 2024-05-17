@@ -1,11 +1,8 @@
 name: PyPI Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version number'
-        required: true
+  release:
+    types: [created]
 
 jobs:
   build-and-release:
@@ -34,7 +31,8 @@ jobs:
 
     - name: Update version in pyproject.toml
       run: |
-        sed -i "s/version = \".*\"/version = \"${{ github.event.inputs.version }}\"/" pyproject.toml
+        version=${{ github.event.release.tag_name }}
+        sed -i "s/version = \".*\"/version = \"$version\"/" pyproject.toml
 
     - name: Build package
       run: |
