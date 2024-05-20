@@ -15,6 +15,7 @@ class APIHelperBase(ABC):
         """
         self.enact_credentials = CredentialsHolder(username, public_api_key)
 
+    # TODO: chat about if these should be async by default instead of sync
     def post_request(self, endpoint: str, request_details: dict, verify=None):
         headers = {
             "Authorization": "Bearer " + self.enact_credentials.bearer_token,
@@ -22,17 +23,24 @@ class APIHelperBase(ABC):
             "cache-control": "no-cache",
         }
 
+        # TODO: chat about if maybe this should use httpx instead of requests given async support and https://www.reddit.com/r/Python/comments/17swe3a/requests_3_news/
         response_raw = requests.post(endpoint, data=json.dumps(request_details), headers=headers, verify=verify)
 
+        # TODO: probably want to do this via response.raise_for_status()
         if response_raw.status_code != 200:
             response_raw = self.handle_error_and_get_updated_response(endpoint, request_details, headers, response_raw)
+
+        # TODO: this would only be a string if you overwrite the var above, and I wouldnt do that. All err processing should happening in that helper
         if isinstance(response_raw, str):
             raise Exception(f"{response_raw}")
         if "messages" in response_raw:
             self.raise_exception_for_enact_error(response_raw)
+
+        # TODO: can access via response.json()
         response = json.loads(response_raw.text)
         return response
 
+    # TODO: missing type hints
     def handle_error_and_get_updated_response(self, endpoint: str, request_details: dict, headers, response_raw):
         # check if bearer token has expired and if it has create a new one
         if response_raw.status_code == 401 and "WWW-Authenticate" in response_raw.headers:
@@ -53,12 +61,14 @@ class APIHelperBase(ABC):
     def handle_authorisation_error(self, endpoint: str, request_details: dict, headers: dict):
         retry_count = 0
         while retry_count < self.enact_credentials.MAX_RETRIES:
+            # TODO: I dont understand the below - get_bearer_token doesnt take arguments. Does this func work?
             self.enact_credentials.get_bearer_token(
                 self.enact_credentials.username, self.enact_credentials.public_api_key
             )
             headers["Authorization"] = "Bearer " + self.enact_credentials.bearer_token
 
             # Retry the POST request with the new bearer token
+            # TODO: dont need to do data=json.dumps can just json=request_details
             response = requests.post(endpoint, data=json.dumps(request_details), headers=headers)
 
             if response.status_code != 401:
@@ -68,5 +78,6 @@ class APIHelperBase(ABC):
             retry_count += 1
 
         if retry_count == self.enact_credentials.MAX_RETRIES:
+            # TODO: Id raise something other than a generic exception here
             raise Exception("Failed to obtain a valid bearer token after multiple attempts.")
         return response

@@ -113,6 +113,7 @@ class DPSHelper:
     def terminate_hub_connection(self):
         self.hub_connection.stop()
 
+    # TODO: youll definitely want to annotype the this to be Callable[[someType], returnType]
     def subscribe_to_epex_trade_updates(self, handle_data_method: callable) -> None:
         """
         `THIS FUNCTION IS IN BETA`

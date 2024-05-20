@@ -11,9 +11,11 @@ class APIHelper(APIHelperBase):
     # Helper functions
     @staticmethod
     def convert_date_time_to_right_format(date_time_to_check: datetime) -> str:
+        # TODO: should be isinstance(date_time_to_check, date | datetime)
         if not (isinstance(date_time_to_check, date) or isinstance(date_time_to_check, datetime)):
             raise TypeError("Inputted date must be a date or datetime")
 
+        # TODO: we could turn on the ruff rule to stop unnecessary assignments if wanted
         converted_date = date_time_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
         return converted_date
 
@@ -24,15 +26,17 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: list[str] = None,
+        option_id: list[str] = None,  # TODO: should be list[str] | None = None
         half_hourly_average: bool = False,
-        request_time_zone_id: str = None,
-        time_zone_id: str = None,
+        request_time_zone_id: str = None,  # TODO: should be list[str] | None = None
+        time_zone_id: str = None,  # TODO: should be list[str] | None = None
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Get series data for a specific series ID.
 
         This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+
+        TODO: googledoc docstring guides no longer require type annotation if it is provided in the signature
 
         Args:
             series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
@@ -60,6 +64,8 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Data_V2"
 
+        # TODO: the below returns a string, so should go in a new var name
+        # TODO: make_series_request takes datetimes, not strings
         date_from = self.convert_date_time_to_right_format(date_from)
         date_to = self.convert_date_time_to_right_format(date_to)
         return self.make_series_request(
@@ -75,7 +81,7 @@ class APIHelper(APIHelperBase):
             endpoint,
         )
 
-    def get_series_info(self, series_id: str, country_id: str = None) -> dict:
+    def get_series_info(self, series_id: str, country_id: str = None) -> dict:  # TODO: type hint should be str | None
         """Get information about a specific series.
 
         This method retrieves information about a specific series based on the given series ID. Optional country ID can be provided to filter the series information.
@@ -83,6 +89,8 @@ class APIHelper(APIHelperBase):
         Args:
             series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
             country_id `str` (optional): The country ID to filter the series information. Defaults to None. If this is not provided, then details will be displayed for the first country available for this series.
+
+        TODO: missing return type
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Info"
         request_details = {"SeriesId": series_id}
@@ -115,6 +123,7 @@ class APIHelper(APIHelperBase):
         """
         if option_id is not None:
             if not is_list_of_strings(option_id):
+                # TODO: maybe value exception?
                 raise Exception("Option ID input must be a list of strings")
 
         request_details = {
@@ -126,6 +135,7 @@ class APIHelper(APIHelperBase):
             "halfHourlyAverage": half_hourly_average,
         }
 
+        # TODO: it shoudl never be done from the type hint. Does the type hint need updating?
         if request_time_zone_id is not None:
             request_details["requestTimeZoneId"] = request_time_zone_id
 
@@ -140,6 +150,7 @@ class APIHelper(APIHelperBase):
             if not df.empty:
                 df = df.set_index(first_key)
                 if parse_datetimes:
+                    # TODO: there's a ruff rule on this too that disallows boolean args without their var name so you can read it easier
                     parse_df_datetimes(df, True, inplace=True)
 
             return df
@@ -262,6 +273,9 @@ class APIHelper(APIHelperBase):
             endpoint,
         )
 
+    # TODO: Im a bit confused where there are so many similar methods with different filtering options
+    # TODO: instead of just one method that allows you to filter like
+    # TODO: owners=["blah"], fuel_type="coal", etc
     def get_series_by_owner(
         self,
         series_id: str,
@@ -682,6 +696,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """Get data for a specified Ancillary contract type.
 
+        # TODO: these are some loooong comments
         Args:
             ancillary_contract_type `str`: The type of ancillary contract being requested.
                                              The options are "DynamicContainmentEfa" (for DC-L), "DynamicContainmentEfaHF" (for DC-H), "DynamicModerationLF" (for DM-L), "DynamicModerationHF" (for DM-H),
@@ -780,6 +795,11 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
+        # TODO: same comment about isinstance(var, typeA | typeB)
+        # TODO: given these three lines appear the same in most methods, why not refactor them away into ancillar_contract_data?
+        # TODO: actually Id be very tempted to create a StrEnum of all the ancillary data types
+        # TODO: and you just pass that. Reduces a ton of code duplication while still having all the ancillary
+        # TODO: datasets obvious in code.
         if not (isinstance(date_requested, date) or isinstance(date_requested, datetime)):
             raise TypeError("Requested date must be a date or datetime")
         month_year = "-".join([str(date_requested.month), str(date_requested.year)])
@@ -972,6 +992,9 @@ class APIHelper(APIHelperBase):
         df.set_index(trade_id_column_name, inplace=True)
         return df
 
+    # TODO: is there a reason that most of the API deals with datetimes, but some methods like this use date+settlement period?
+    # TODO: would it be possible to standardise this?
+    # TODO: and perhaps add a helper method to convert between the two?
     def get_epex_trades(self, type: str, date: datetime, period: int) -> pd.DataFrame:
         """Get executed EPEX trades of a contract, given the date, period and type
 
