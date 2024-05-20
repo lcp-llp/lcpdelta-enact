@@ -3,11 +3,23 @@ import pandas as pd
 
 from ..common import APIHelperBase
 
-class APIHelper(APIHelperBase):
 
+class APIHelper(APIHelperBase):
     # Series:
-    def get_exporter_data(self, date_from : datetime, date_to : datetime, countries : list[str], products : list[str], directions : list[str], market : str, metrics : list[str], aggregation_types : list[str], granularity : str, weighting_metric : list[str] = None) -> pd.DataFrame:
-        '''Get historic data for selected ancillary services.
+    def get_exporter_data(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        countries: list[str],
+        products: list[str],
+        directions: list[str],
+        market: str,
+        metrics: list[str],
+        aggregation_types: list[str],
+        granularity: str,
+        weighting_metric: list[str] = None,
+    ) -> pd.DataFrame:
+        """Get historic data for selected ancillary services.
 
         This method retrieves data for specific ancillary services. The time range, country, ancillary products, ancillary product directions and ancillary market type must all be specified.
 
@@ -36,8 +48,8 @@ class APIHelper(APIHelperBase):
 
         Returns:
             Response: The response object containing the series data.
-        '''
-        endpoint = 'https://enact-staticchartapi.azurewebsites.net/FLEXTrackAPI/Exporter/Data'
+        """
+        endpoint = "https://enact-staticchartapi.azurewebsites.net/FLEXTrackAPI/Exporter/Data"
 
         from_year = date_from.year
         from_month = date_from.month
@@ -46,35 +58,36 @@ class APIHelper(APIHelperBase):
         to_month = date_to.month
         to_day = date_to.day
 
-        dates = [{
-            'fromDay' : from_day,
-            'fromMonth' : from_month,
-            'fromYear' : from_year,
-            'toDay' : to_day,
-            'toMonth' : to_month,
-            'toYear' : to_year
-        }]
+        dates = [
+            {
+                "fromDay": from_day,
+                "fromMonth": from_month,
+                "fromYear": from_year,
+                "toDay": to_day,
+                "toMonth": to_month,
+                "toYear": to_year,
+            }
+        ]
 
         request_details = {
-            'Country' : countries,
-            'Product' : products,
-            'Direction' : directions,
-            'Metric' : metrics,
-            'Market' : market,
-            'SummaryMetric' : aggregation_types,
-            'Granularity' : granularity,
-            'Dates' : dates
+            "Country": countries,
+            "Product": products,
+            "Direction": directions,
+            "Metric": metrics,
+            "Market": market,
+            "SummaryMetric": aggregation_types,
+            "Granularity": granularity,
+            "Dates": dates,
         }
 
         if weighting_metric:
-            request_details['WeightingMetric'] = weighting_metric
+            request_details["WeightingMetric"] = weighting_metric
 
         response = self.post_request(endpoint, request_details)
 
         try:
-
-            df = pd.DataFrame(response['data']['dictionaryOutput'])
-            first_key = next(iter(response['data']['dictionaryOutput']))
+            df = pd.DataFrame(response["data"]["dictionaryOutput"])
+            first_key = next(iter(response["data"]["dictionaryOutput"]))
             df = df.set_index(first_key)
 
             return df

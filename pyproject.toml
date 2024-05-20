@@ -24,5 +24,22 @@ dependencies = [
     "signalrcore",
     "matplotlib"
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+]
+
 [project.urls]
 "Homepage" = "https://portal.lcpdelta.com/"
+
+
+[tool.ruff]
+src = ["src"]
+line-length = 120
+target-version = "py311"
+
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["E402", "F401"]

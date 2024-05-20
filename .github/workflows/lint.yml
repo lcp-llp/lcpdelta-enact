@@ -19,5 +19,3 @@ jobs:
 
       - name: Ruff lint check
         uses: jpetrucciani/ruff-check@main
-        with: 
-          flags: '--ignore F401 --ignore E722'
