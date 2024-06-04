@@ -3,6 +3,7 @@ This is the python wrapper to interact with all LCPDelta products through their 
 
 To find out more about LCPDelta's data products, click [**here**][LCPDelta_data_portal_link].
 To find out more about Enact, click [**here**][Enact_Homepage].
+
 ## Enact API and DPS Instructions
 
 Full instructions on how to utilise Enact's full API and DPS can be found [**here**][Enact_instructions_link]. Below are some examples to get you started.
@@ -93,4 +94,5 @@ response.head
 [FLEXtrack_Homepage]: https://flextrack.lcpdelta.com/
 
 # Contributing
+
 Check out our [contribution guidelines](CONTRIBUTING.md) and [code of conduct](CODE_OF_CONDUCT.md).

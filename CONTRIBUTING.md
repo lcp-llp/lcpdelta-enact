@@ -30,3 +30,8 @@ Do's:
 Don'ts:
 - **DON'T** submit PRs that alter licensing relating files or headers
 - **DON'T** submit PRs that include sensitive details (passwords, personal data, proprietary information etc)
+
+## Installation instructions
+
+1. Fork/clone repo
+2. Run `make install` to update pip, locally install the project, install pre-commit, and update it.
