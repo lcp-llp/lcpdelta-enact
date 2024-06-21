@@ -1085,3 +1085,21 @@ class APIHelper(APIHelperBase):
         contract_id_column_name = df.columns[0]
         df.set_index(contract_id_column_name, inplace=True)
         return df
+
+    def get_N2EX_buy_sell_curves(self, date: datetime) -> dict:
+        ''' Get N2EX buy and sell curves for a given day.
+
+        Args:
+            date `datetime.datetime`: The date you would like buy and sell curves for.
+
+        '''
+        endpoint = 'https://enact-functionapp-siteapi.azurewebsites.net/api/NordpoolBuySellCurves'
+
+        date = self.convert_date_time_to_right_format(date)
+
+        request_details = {
+            'Date': date,
+        }
+
+        response = self.post_request(endpoint, request_details)
+        return response
