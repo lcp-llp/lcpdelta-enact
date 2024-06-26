@@ -53,9 +53,7 @@ class APIHelperBase(ABC):
     def handle_authorisation_error(self, endpoint: str, request_details: dict, headers: dict):
         retry_count = 0
         while retry_count < self.enact_credentials.MAX_RETRIES:
-            self.enact_credentials.get_bearer_token(
-                self.enact_credentials.username, self.enact_credentials.public_api_key
-            )
+            self.enact_credentials.get_bearer_token()
             headers["Authorization"] = "Bearer " + self.enact_credentials.bearer_token
 
             # Retry the POST request with the new bearer token
