@@ -115,7 +115,7 @@ class APIHelper(APIHelperBase):
         """
         if option_id is not None:
             if not is_list_of_strings(option_id):
-                raise Exception("Option ID input must be a list of strings")
+                raise ValueError("Option ID input must be a list of strings")
 
         request_details = {
             "SeriesId": series_id,
@@ -440,7 +440,7 @@ class APIHelper(APIHelperBase):
 
         if option_id is not None:
             if not is_list_of_strings(option_id):
-                raise Exception("Option ID input must be a list of strings")
+                raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
 
         response = await self.post_request(endpoint, request_details)
@@ -480,7 +480,7 @@ class APIHelper(APIHelperBase):
 
         if option_id is not None:
             if not is_list_of_strings(option_id):
-                raise Exception("Option ID input must be a list of strings")
+                raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
 
         response = await self.post_request(endpoint, request_details)
@@ -535,7 +535,7 @@ class APIHelper(APIHelperBase):
 
         if option_id is not None:
             if not is_list_of_strings(option_id):
-                raise Exception("Option ID input must be a list of strings")
+                raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
 
         response = await self.post_request(endpoint, request_details)

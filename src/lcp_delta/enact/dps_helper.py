@@ -157,7 +157,7 @@ class DPSHelper:
 
         if option_id:
             if not is_list_of_strings(option_id):
-                raise Exception("Option ID input must be a list of strings")
+                raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
 
         subscription_id = self.__get_subscription_id(series_id, country_id, option_id)

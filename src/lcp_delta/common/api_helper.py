@@ -41,16 +41,21 @@ class APIHelperBase(ABC):
 
     async def handle_error_and_get_updated_response(self, response: httpx.Response):
         if response.text != "" and "messages" in response.json():
-            self.raise_exception_for_enact_error(response.json())
+            self.raise_exception_for_enact_error(response)
         else:
             response.raise_for_status()
 
-    def raise_exception_for_enact_error(self, response_data: dict):
+    def raise_exception_for_enact_error(self, response: httpx.Response):
+        response_data = response.json()
         error_messages = response_data["messages"]
         for error_message in error_messages:
             if "errorCode" in error_message and error_message["errorCode"]:
                 # An error code is present, so raise an exception with the error message
-                raise Exception(f'ErrorCode: {error_message["errorCode"]}. {error_message["message"]}')
+                raise httpx.HTTPStatusError(
+                    f'ErrorCode: {error_message["errorCode"]}. {error_message["message"]}',
+                    request=response.request,
+                    response=response,
+                )
 
     async def handle_authorisation_error(self, endpoint: str, request_details: dict, headers: dict):
         retry_count = 0
@@ -68,5 +73,7 @@ class APIHelperBase(ABC):
             retry_count += 1
 
         if retry_count == self.enact_credentials.MAX_RETRIES:
-            raise Exception("Failed to obtain a valid bearer token after multiple attempts.")
+            raise httpx.HTTPStatusError(
+                "Failed to obtain a valid bearer token after multiple attempts.", response=response
+            )
         return response
