@@ -153,7 +153,7 @@ class APIHelper(APIHelperBase):
             if not df.empty:
                 df = df.set_index(first_key)
                 if parse_datetimes:
-                    parse_df_datetimes(df, True, inplace=True)
+                    parse_df_datetimes(df, parse_index=True, inplace=True)
 
             return df
         except (ValueError, TypeError, IndexError):
