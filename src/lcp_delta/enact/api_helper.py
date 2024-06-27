@@ -83,6 +83,10 @@ class APIHelper(APIHelperBase):
         Args:
             series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
             country_id `str` (optional): The country ID to filter the series information. Defaults to None. If this is not provided, then details will be displayed for the first country available for this series.
+
+        Returns:
+            Response: The response object containing information about the series. This information includes: The series name, any countries that have data for that series, any options related to the series,
+                      whether or not the series has historical data, and whether or not the series has historical forecasts.
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Info"
         request_details = {"SeriesId": series_id}
