@@ -88,8 +88,7 @@ class APIHelper(APIHelperBase):
         try:
             df = pd.DataFrame(response["data"]["dictionaryOutput"])
             first_key = next(iter(response["data"]["dictionaryOutput"]))
-            df = df.set_index(first_key)
+            return df.set_index(first_key)
 
-            return df
         except (ValueError, TypeError, IndexError):
             return response

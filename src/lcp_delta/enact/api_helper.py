@@ -23,8 +23,7 @@ class APIHelper(APIHelperBase):
         if not isinstance(date_time_to_check, date | datetime):
             raise TypeError("Inputted date must be a date or datetime")
 
-        converted_date = date_time_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
-        return converted_date
+        return date_time_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Series:
     async def get_series_data(
@@ -103,8 +102,7 @@ class APIHelper(APIHelperBase):
         if country_id is not None:
             request_details["CountryId"] = country_id
 
-        response = await self.post_request(endpoint, request_details)
-        return response
+        return await self.post_request(endpoint, request_details)
 
     async def make_series_request(
         self,
@@ -400,8 +398,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Plant/Data/PlantInfo"
         request_details = {"PlantId": plant_id}
-        response = await self.post_request(endpoint, request_details)
-        return response
+        return await self.post_request(endpoint, request_details)
 
     async def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants based on fuel and country.
@@ -463,9 +460,7 @@ class APIHelper(APIHelperBase):
         if df.empty:
             return df
         first_key = next(iter(data))
-        df = df.set_index(first_key)
-
-        return df
+        return df.set_index(first_key)
 
     async def get_history_of_forecast_for_date_range(
         self,
@@ -638,8 +633,7 @@ class APIHelper(APIHelperBase):
             request_details["includeAcceptedTimes"] = "True"
 
         response = await self.post_request(endpoint, request_details)
-        df = pd.DataFrame(response["data"][1:], columns=response["data"][0])
-        return df
+        return pd.DataFrame(response["data"][1:], columns=response["data"][0])
 
     # Leaderboard:
     async def get_leaderboard_data(
@@ -750,8 +744,7 @@ class APIHelper(APIHelperBase):
             return pd.DataFrame()
         first_item = response["data"][0]
         if ancillary_contract_group == AncillaryContractGroup.SFfr:
-            df = pd.DataFrame(first_item["plants"])
-            return df
+            return pd.DataFrame(first_item["plants"])
         if ancillary_contract_group == AncillaryContractGroup.ManFr:
             for entry in first_item["plants"]:
                 entry.update(entry.pop("data"))
@@ -761,8 +754,7 @@ class APIHelper(APIHelperBase):
                 df.set_index(unit_column_name, inplace=True)
             return df
         if ancillary_contract_group == AncillaryContractGroup.StorDayAhead:
-            df = pd.DataFrame(first_item["plants"])
-            return df
+            return pd.DataFrame(first_item["plants"])
         if ancillary_contract_group == AncillaryContractGroup.Ffr:
             df = pd.DataFrame(first_item["plants"])
             df.set_index("tenderNumber", inplace=True)
@@ -781,13 +773,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "DynamicContainmentEfa",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_DCH_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DCH (Dynamic Containment High) contracts for a provided day
@@ -799,13 +790,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "DynamicContainmentEfaHF",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_DML_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DML (Dynamic Moderation Low) contracts for a provided day
@@ -817,13 +807,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return self.get_ancillary_contract_data(
             "DynamicModerationLF",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_DMH_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DMH (Dynamic Moderation High) contracts for a provided day
@@ -835,13 +824,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "DynamicModerationHF",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_DRL_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DRL (Dynamic Regulation Low) contracts for a provided day
@@ -853,13 +841,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "DynamicRegulationLF",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_DRH_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DRH (Dynamic Regulation High) contracts for a provided day
@@ -871,13 +858,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "DynamicRegulationHF",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_NBR_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns NBR (Negative Balancing Reserve) contracts for a provided day
@@ -889,13 +875,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "NegativeBalancingReserve",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     async def get_PBR_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns PBR (Positive Balancing Reserve) contracts for a provided day
@@ -907,13 +892,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "PositiveBalancingReserve",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
-        return response
 
     def convert_api_response_for_dynamic_and_balancing_reserve_products(self, response: dict) -> pd.DataFrame:
         df = pd.DataFrame(response["data"][0]["plants"])
@@ -927,10 +911,9 @@ class APIHelper(APIHelperBase):
         Args:
             tender_number `int`: The tender number for the round that you wish to procure
         """
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "Ffr", tender_number, ancillary_contract_group=AncillaryContractGroup.Ffr
         )
-        return response
 
     async def get_STOR_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns STOR (Short Term Operating Reserve) results for a given date
@@ -942,10 +925,9 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "StorDayAhead", date_requested=date_requested, ancillary_contract_group=AncillaryContractGroup.StorDayAhead
         )
-        return response
 
     async def get_SFFR_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns SFFR (Static Firm Frequency Response) results for a given date
@@ -957,13 +939,12 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "SFfr",
             option_two=date_requested.day,
             date_requested=date_requested,
             ancillary_contract_group=AncillaryContractGroup.SFfr,
         )
-        return response
 
     async def get_MFR_contracts(self, month: int, year: int) -> pd.DataFrame:
         """Returns MFR tender results for a given month and year
@@ -976,11 +957,9 @@ class APIHelper(APIHelperBase):
             raise ValueError("Month must be an integer less than 12")
         month_name = calendar.month_name[month]
 
-        response = await self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "ManFr", year, month_name, ancillary_contract_group=AncillaryContractGroup.ManFr
         )
-
-        return response
 
     # News table
     async def get_news_table(self, table_id: str) -> pd.DataFrame:
@@ -1007,8 +986,7 @@ class APIHelper(APIHelperBase):
         }
 
         response = await self.post_request(endpoint, request_details)
-        df = pd.DataFrame(response["data"][1:], columns=response["data"][0])
-        return df
+        return pd.DataFrame(response["data"][1:], columns=response["data"][0])
 
     # EPEX:
     async def get_epex_trades_by_contract_id(self, contract_id: str) -> pd.DataFrame:
@@ -1161,5 +1139,4 @@ class APIHelper(APIHelperBase):
             "Date": date,
         }
 
-        response = await self.post_request(endpoint, request_details)
-        return response
+        return await self.post_request(endpoint, request_details)

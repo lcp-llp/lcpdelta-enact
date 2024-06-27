@@ -45,4 +45,4 @@ target-version = "py311"
 "__init__.py" = ["E402", "F401"]
 
 [tool.ruff.lint]
-select = ["FBT003"]
+select = ["FBT003", "RET504"]

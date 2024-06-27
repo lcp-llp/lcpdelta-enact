@@ -35,8 +35,7 @@ class CredentialsHolder:
         if response.status_code == 401 or (response.status_code >= 500 and response.status_code < 600):
             response = self.retry_request(headers, data)
 
-        bearer_token = response.text
-        return bearer_token
+        return response.text
 
     def retry_request(self, headers, data):
         """Retry the request to obtain a valid bearer token.
@@ -92,11 +91,9 @@ class CredentialsHolder:
 
         data = json.loads(response.content)
 
-        output = UsageInfo(
+        return UsageInfo(
             data["remainingCallsForMonth"],
             data["monthlyCallAllowance"],
             datetime.strptime(data["dateLastRenewed"], "%Y-%m-%dT%H:%M:%S"),
             data["unlimitedUsage"],
         )
-
-        return output
