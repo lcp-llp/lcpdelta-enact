@@ -1,5 +1,4 @@
 import httpx
-import json
 from abc import ABC
 
 from ..enact.credentials_holder import CredentialsHolder
@@ -32,31 +31,22 @@ class APIHelperBase(ABC):
 
         response = await self.client.post(endpoint, json=request_details, headers=headers)
 
-        response_raw = {}
-        # TODO: Refactor flow
-        if response.status_code != 200:
-            response_raw = await self.handle_error_and_get_updated_response(
-                endpoint, request_details, headers, response
-            )
-        if isinstance(response_raw, str):
-            raise Exception(f"{response_raw}")
-        if "messages" in response_raw:
-            self.raise_exception_for_enact_error(response_raw)
-        response = json.loads(response.text)
-        return response
-
-    async def handle_error_and_get_updated_response(self, endpoint: str, request_details: dict, headers, response_raw):
         # check if bearer token has expired and if it has create a new one
-        if response_raw.status_code == 401 and "WWW-Authenticate" in response_raw.headers:
-            response_raw = await self.handle_authorisation_error(endpoint, request_details, headers)
+        if response.status_code == 401 and "WWW-Authenticate" in response.headers:
+            response = await self.handle_authorisation_error(endpoint, request_details, headers)
 
-        if response_raw.status_code == 400:
-            self.raise_exception_for_enact_error(json.loads(response_raw.text))
-        response = json.loads(response_raw.text)
-        return response
+        if response.status_code != 200:
+            await self.handle_error_and_get_updated_response(response)
+        return response.json()
 
-    def raise_exception_for_enact_error(self, response):
-        error_messages = response["messages"]
+    async def handle_error_and_get_updated_response(self, response: httpx.Response):
+        if response.text != "" and "messages" in response.json():
+            self.raise_exception_for_enact_error(response.json())
+        else:
+            response.raise_for_status()
+
+    def raise_exception_for_enact_error(self, response_data: dict):
+        error_messages = response_data["messages"]
         for error_message in error_messages:
             if "errorCode" in error_message and error_message["errorCode"]:
                 # An error code is present, so raise an exception with the error message
