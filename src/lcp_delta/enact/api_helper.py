@@ -68,12 +68,12 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Data_V2"
 
-        date_from = self.convert_date_time_to_right_format(date_from)
-        date_to = self.convert_date_time_to_right_format(date_to)
+        date_from_str = self.convert_date_time_to_right_format(date_from)
+        date_to_str = self.convert_date_time_to_right_format(date_to)
         return await self.make_series_request(
             series_id,
-            date_from,
-            date_to,
+            date_from_str,
+            date_to_str,
             country_id,
             option_id,
             half_hourly_average,
@@ -107,8 +107,8 @@ class APIHelper(APIHelperBase):
     async def make_series_request(
         self,
         series_id: str,
-        date_from: datetime,
-        date_to: datetime,
+        date_from: str,
+        date_to: str,
         country_id: str,
         option_id: list[str],
         half_hourly_average: bool,
@@ -199,13 +199,13 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Fuel"
 
-        date_from = self.convert_date_time_to_right_format(date_from)
-        date_to = self.convert_date_time_to_right_format(date_to)
+        date_from_str = self.convert_date_time_to_right_format(date_from)
+        date_to_str = self.convert_date_time_to_right_format(date_to)
         fuel_type = [option_id]
         return await self.make_series_request(
             series_id,
-            date_from,
-            date_to,
+            date_from_str,
+            date_to_str,
             country_id,
             fuel_type,
             half_hourly_average,
@@ -257,13 +257,13 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Zone"
 
-        date_from = self.convert_date_time_to_right_format(date_from)
-        date_to = self.convert_date_time_to_right_format(date_to)
+        date_from_str = self.convert_date_time_to_right_format(date_from)
+        date_to_str = self.convert_date_time_to_right_format(date_to)
         zone = [option_id]
         return await self.make_series_request(
             series_id,
-            date_from,
-            date_to,
+            date_from_str,
+            date_to_str,
             country_id,
             zone,
             half_hourly_average,
@@ -315,13 +315,13 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Owner"
 
-        date_from = self.convert_date_time_to_right_format(date_from)
-        date_to = self.convert_date_time_to_right_format(date_to)
+        date_from_str = self.convert_date_time_to_right_format(date_from)
+        date_to_str = self.convert_date_time_to_right_format(date_to)
         owner = [option_id]
         return await self.make_series_request(
             series_id,
-            date_from,
-            date_to,
+            date_from_str,
+            date_to_str,
             country_id,
             owner,
             half_hourly_average,
@@ -373,12 +373,12 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/multiOption"
 
-        date_from = self.convert_date_time_to_right_format(date_from)
-        date_to = self.convert_date_time_to_right_format(date_to)
+        date_from_str = self.convert_date_time_to_right_format(date_from)
+        date_to_str = self.convert_date_time_to_right_format(date_to)
         return await self.make_series_request(
             series_id,
-            date_from,
-            date_to,
+            date_from_str,
+            date_to_str,
             country_id,
             option_id,
             half_hourly_average,
