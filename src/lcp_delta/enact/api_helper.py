@@ -571,7 +571,7 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the BM data.
 
         Raises:
-            TypeError: If the period is not an integer or if no period is given and date is not of type datetime.
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
 
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/BOA/Data"
