@@ -13,14 +13,6 @@ class APIHelperBase(ABC):
             public_api_key `str`: Public API Key provided by Enact. Please contact the Enact team if you are unsure about what your username or public api key are.
         """
         self.enact_credentials = CredentialsHolder(username, public_api_key)
-        self.client = httpx.AsyncClient(verify=True)
-
-    async def __aenter__(self):
-        self.client = httpx.AsyncClient()
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.client.aclose()
 
     async def post_request(self, endpoint: str, request_details: dict):
         headers = {
@@ -29,7 +21,8 @@ class APIHelperBase(ABC):
             "cache-control": "no-cache",
         }
 
-        response = await self.client.post(endpoint, json=request_details, headers=headers)
+        async with httpx.AsyncClient(verify=True) as client:
+            response = await client.post(endpoint, json=request_details, headers=headers)
 
         # check if bearer token has expired and if it has create a new one
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
@@ -64,7 +57,8 @@ class APIHelperBase(ABC):
             headers["Authorization"] = "Bearer " + self.enact_credentials.bearer_token
 
             # Retry the POST request with the new bearer token
-            response = await self.client.post(endpoint, json=request_details, headers=headers)
+            async with httpx.AsyncClient(verify=True) as client:
+                response = await client.post(endpoint, json=request_details, headers=headers)
 
             if response.status_code != 401:
                 # Successful response, no need to retry
