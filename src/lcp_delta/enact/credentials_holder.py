@@ -1,5 +1,5 @@
 from datetime import datetime
-import requests
+import httpx
 import json
 from .response_objects.usage_info import UsageInfo
 
@@ -29,7 +29,8 @@ class CredentialsHolder:
 
         headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
         data = {"Username": self.username, "ApiKey": self.public_api_key}
-        response = requests.post("https://enactapifd.lcp.uk.com/auth/token", headers=headers, data=json.dumps(data))
+        with httpx.Client(verify=True) as client:
+            response = client.post("https://enactapifd.lcp.uk.com/auth/token", headers=headers, json=data)
 
         if response.status_code == 401 or (response.status_code >= 500 and response.status_code < 600):
             response = self.retry_request(headers, data)
@@ -55,7 +56,8 @@ class CredentialsHolder:
         """
         retry_count = 0
         while retry_count < self.MAX_RETRIES:
-            response = requests.post("https://enactapifd.lcp.uk.com/auth/token", headers=headers, data=json.dumps(data))
+            with httpx.Client(verify=True) as client:
+                response = client.post("https://enactapifd.lcp.uk.com/auth/token", headers=headers, json=data)
             if response.status_code != 401 and (response.status_code < 500 or response.status_code >= 600):
                 # Successful response, no need to retry
                 break
@@ -79,13 +81,14 @@ class CredentialsHolder:
 
         endpoint = "https://enactapifd.lcp.uk.com/auth/usage_v2"
 
-        response = requests.post(endpoint, headers=headers, data=json.dumps(data))
+        with httpx.Client(verify=True) as client:
+            response = client.post(endpoint, headers=headers, json=data)
 
         if response.status_code != 200:
             if response.status_code == 401 or (response.status_code >= 500 and response.status_code < 600):
                 response = self.retry_request(headers, data)
             if response.status_code == 404:
-                raise requests.exceptions.HTTPError(f"Error: {response.text}")
+                raise httpx.HTTPStatusError(f"Error: {response.text}", request=response.request, response=response)
 
         data = json.loads(response.content)
 
