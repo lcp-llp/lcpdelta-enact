@@ -11,7 +11,7 @@ class APIHelper(APIHelperBase):
     # Helper functions
     @staticmethod
     def convert_date_time_to_right_format(date_time_to_check: datetime) -> str:
-        if not (isinstance(date_time_to_check, date) or isinstance(date_time_to_check, datetime)):
+        if not isinstance(date_time_to_check, date | datetime):
             raise TypeError("Inputted date must be a date or datetime")
 
         converted_date = date_time_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
