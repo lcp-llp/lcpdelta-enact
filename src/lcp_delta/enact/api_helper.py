@@ -24,10 +24,10 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: list[str] = None,
+        option_id: list[str] | None = None,
         half_hourly_average: bool = False,
-        request_time_zone_id: str = None,
-        time_zone_id: str = None,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Get series data for a specific series ID.
@@ -75,7 +75,7 @@ class APIHelper(APIHelperBase):
             endpoint,
         )
 
-    async def get_series_info(self, series_id: str, country_id: str = None) -> dict:
+    async def get_series_info(self, series_id: str, country_id: str | None = None) -> dict:
         """Get information about a specific series.
 
         This method retrieves information about a specific series based on the given series ID. Optional country ID can be provided to filter the series information.
@@ -101,10 +101,10 @@ class APIHelper(APIHelperBase):
         country_id: str,
         option_id: list[str],
         half_hourly_average: bool,
-        request_time_zone_id: str,
-        time_zone_id: str,
-        parse_datetimes: bool,
         endpoint: str,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Make request for the series endpoints.
 
@@ -154,8 +154,8 @@ class APIHelper(APIHelperBase):
         country_id: str,
         option_id: str,
         half_hourly_average: bool = False,
-        request_time_zone_id: str = None,
-        time_zone_id: str = None,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Get series data for a specific plant series ID and a fuel type.
@@ -212,8 +212,8 @@ class APIHelper(APIHelperBase):
         country_id: str,
         option_id: str,
         half_hourly_average: bool = False,
-        request_time_zone_id: str = None,
-        time_zone_id: str = None,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Get series data for a specific plant series ID and a zone.
@@ -270,8 +270,8 @@ class APIHelper(APIHelperBase):
         country_id: str,
         option_id: str,
         half_hourly_average: bool = False,
-        request_time_zone_id: str = None,
-        time_zone_id: str = None,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Get series data for a specific plant series ID and an owner.
@@ -326,10 +326,10 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: list[str] = None,
+        option_id: list[str] | None = None,
         half_hourly_average: bool = False,
-        request_time_zone_id: str = None,
-        time_zone_id: str = None,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """Get series data for a specific series ID with multiple options available.
@@ -410,7 +410,7 @@ class APIHelper(APIHelperBase):
 
     # History of Forecasts:
     async def get_history_of_forecast_for_given_date(
-        self, series_id: str, date: datetime, country_id: str, option_id: str = None
+        self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
     ) -> pd.DataFrame:
         """Gets the history of a forecast for a given date
 
@@ -455,7 +455,12 @@ class APIHelper(APIHelperBase):
         return df
 
     async def get_history_of_forecast_for_date_range(
-        self, series_id: str, date_from: datetime, date_to: datetime, country_id: str, option_id: list[str] = None
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
         """Gets the history of a forecast for a given date
 
@@ -502,7 +507,7 @@ class APIHelper(APIHelperBase):
         date_to: datetime,
         country_id: str,
         forecast_as_of: datetime,
-        option_id: list[str] = None,
+        option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
         """Gets the latest forecast generated prior to the given 'forecast_as_of' datetime
 
@@ -593,7 +598,11 @@ class APIHelper(APIHelperBase):
         return output
 
     async def get_bm_data_by_search(
-        self, date: datetime, option: str = "all", search_string: str = None, include_accepted_times: bool = False
+        self,
+        date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = False,
     ) -> pd.DataFrame:
         """Get BM data based for a specific date and search criteria.
 
@@ -680,7 +689,7 @@ class APIHelper(APIHelperBase):
 
     # Ancillary Contracts:
     async def get_ancillary_contract_data(
-        self, ancillary_contract_type: str, option_one: Union[str, int], option_two: Union[int, str] = None
+        self, ancillary_contract_type: str, option_one: Union[str, int], option_two: Union[int, str] | None = None
     ) -> pd.DataFrame:
         """Get data for a specified Ancillary contract type.
 
