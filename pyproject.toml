@@ -22,7 +22,8 @@ dependencies = [
     "pandas",
     "requests",
     "signalrcore",
-    "matplotlib"
+    "matplotlib",
+    "httpx"
 ]
 
 [project.optional-dependencies]
