@@ -31,7 +31,7 @@ def get_period_from_datetime(datetime_input: datetime) -> int:
     Each period is 30 minutes long, starting from period 1 at 00:00 to 00:29.
 
     Args:
-    - datetime_input (datetime): The datetime object to calculate the period for.
+    - datetime_input: The datetime to calculate the period for.
 
     Returns:
     - int: The period of the day.
@@ -44,11 +44,11 @@ def get_date_and_period(datetime_input: datetime, period: int = None) -> tuple[d
     """Return the date and period based on input. If no period is specified and input is a datetime, calculate the period.
 
     Args:
-    - datetime_input (datetime): The date or datetime object.
-    - period (int, optional): The period. If None and datetime_input is a datetime, the period is calculated.
+    - datetime_input: The date or datetime object.
+    - period (optional): The period. If None and datetime_input is a datetime, the period is calculated.
 
     Returns:
-    - tuple[date, int]: A tuple containing the date and period.
+    - tuple[date, int]: A 2-tuple containing the date and period.
 
     Raises:
     - TypeError: If the period is not an integer or if no period is given and datetime_input is not a datetime type.

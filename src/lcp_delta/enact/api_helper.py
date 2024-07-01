@@ -563,9 +563,9 @@ class APIHelper(APIHelperBase):
         If specified by the period input, the date should be in the correct format, and the period should be an integer.
 
         Args:
-            date `datetime.datetime`: The date that you would like the BOD data for.
-            period `int` (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated.
-            include_accepted_times `bool`: Choose whether object include BOA accepted times or not
+            date: The date that you would like the BOD data for.
+            period (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated.
+            include_accepted_times: Choose whether object include BOA accepted times or not
 
         Returns:
             Response: The response object containing the BM data.
@@ -984,11 +984,11 @@ class APIHelper(APIHelperBase):
         If specified by the period input, and the period should be an integer.
 
         Args:
-            type `str`: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
+            type: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
 
-            date `datetime.datetime`: The date associated with the EPEX contract you would like executed trades for.
+            date: The date associated with the EPEX contract you would like executed trades for.
 
-            period `int` (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
+            period (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
 
         Raises:
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
@@ -1017,11 +1017,11 @@ class APIHelper(APIHelperBase):
         If specified by the period input, and the period should be an integer.
 
         Args:
-            type `str`: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
+            type: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
 
-            date `datetime.datetime`: The date associated with the EPEX contract you would like executed trades for.
+            date: The date associated with the EPEX contract you would like executed trades for.
 
-            period `int` (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
+            period (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
 
         Raises:
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
