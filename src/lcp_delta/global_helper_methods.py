@@ -36,8 +36,7 @@ def get_period_from_datetime(datetime_input: datetime) -> int:
     Returns:
     - int: The period of the day.
     """
-    period = datetime_input.hour * 2 + (datetime_input.minute // 30) + 1
-    return period
+    return datetime_input.hour * 2 + (datetime_input.minute // 30) + 1
 
 
 def get_period(datetime_input: datetime, period: int = None) -> int:
