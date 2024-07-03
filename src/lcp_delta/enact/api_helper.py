@@ -77,10 +77,10 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
+            endpoint,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
-            endpoint,
         )
 
     async def get_series_info(self, series_id: str, country_id: str | None = None) -> dict:
@@ -209,10 +209,10 @@ class APIHelper(APIHelperBase):
             country_id,
             fuel_type,
             half_hourly_average,
+            endpoint,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
-            endpoint,
         )
 
     async def get_series_by_zone(
@@ -267,10 +267,10 @@ class APIHelper(APIHelperBase):
             country_id,
             zone,
             half_hourly_average,
+            endpoint,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
-            endpoint,
         )
 
     async def get_series_by_owner(
@@ -325,10 +325,10 @@ class APIHelper(APIHelperBase):
             country_id,
             owner,
             half_hourly_average,
+            endpoint,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
-            endpoint,
         )
 
     async def get_series_multi_option(
@@ -382,10 +382,10 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
+            endpoint,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
-            endpoint,
         )
 
     # Plant Details:
