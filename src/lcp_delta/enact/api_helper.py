@@ -1,7 +1,7 @@
 import calendar
 from datetime import date, datetime
 import pandas as pd
-from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetimes, get_date_and_period
+from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetimes, get_period
 from typing import Union
 
 from ..common import APIHelperBase
@@ -576,7 +576,7 @@ class APIHelper(APIHelperBase):
 
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/BOA/Data"
 
-        date, period = get_date_and_period(date, period)
+        period = get_period(date, period)
 
         date = self.convert_date_time_to_right_format(date)
 
@@ -996,7 +996,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/Trades"
 
-        date, period = get_date_and_period(date, period)
+        period = get_period(date, period)
         date = self.convert_date_time_to_right_format(date)
 
         request_details = {"Type": type, "Date": date, "Period": period}
@@ -1029,7 +1029,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/OrderBook"
 
-        date, period = get_date_and_period(date, period)
+        period = get_period(date, period)
         date = self.convert_date_time_to_right_format(date)
 
         request_details = {"Type": type, "Date": date, "Period": period}

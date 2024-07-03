@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import date, datetime
+from datetime import datetime
 
 
 def is_list_of_strings(lst):
@@ -40,15 +40,15 @@ def get_period_from_datetime(datetime_input: datetime) -> int:
     return period
 
 
-def get_date_and_period(datetime_input: datetime, period: int = None) -> tuple[date, int]:
-    """Return the date and period based on input. If no period is specified and input is a datetime, calculate the period.
+def get_period(datetime_input: datetime, period: int = None) -> int:
+    """Returns the correct period. If no period is specified and datetime_input is a datetime, calculate the period.
 
     Args:
     - datetime_input: The date or datetime object.
     - period (optional): The period. If None and datetime_input is a datetime, the period is calculated.
 
     Returns:
-    - tuple[date, int]: A 2-tuple containing the date and period.
+    - int: The period.
 
     Raises:
     - TypeError: If the period is not an integer or if no period is given and datetime_input is not a datetime type.
@@ -57,12 +57,9 @@ def get_date_and_period(datetime_input: datetime, period: int = None) -> tuple[d
         if not isinstance(period, int):
             raise TypeError("Please enter an integer for the period")
 
-        if isinstance(datetime_input, datetime):
-            datetime_input = datetime_input.date()
-
-        return datetime_input, period
+        return period
 
     elif not isinstance(datetime_input, datetime):
         raise TypeError("If no period is given, the inputted date must be of the type datetime")
 
-    return datetime_input.date(), get_period_from_datetime(datetime_input)
+    return get_period_from_datetime(datetime_input)
