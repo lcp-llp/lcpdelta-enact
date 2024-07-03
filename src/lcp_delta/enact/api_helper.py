@@ -1,7 +1,7 @@
 import calendar
 from datetime import date, datetime
 import pandas as pd
-from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetimes
+from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetimes, get_period
 from typing import Union
 from enum import StrEnum
 
@@ -70,6 +70,7 @@ class APIHelper(APIHelperBase):
 
         date_from_str = self.convert_date_time_to_right_format(date_from)
         date_to_str = self.convert_date_time_to_right_format(date_to)
+    
         return await self.make_series_request(
             series_id,
             date_from_str,
@@ -565,29 +566,30 @@ class APIHelper(APIHelperBase):
 
     # BOA:
     async def get_bm_data_by_period(
-        self, date: datetime, period: int, include_accepted_times: bool = False
+        self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
         """Get BM (Balancing Mechanism) data for a specific date and period.
 
         This method retrieves the BM (Balancing Mechanism) data for a specific date and period.
-        The date should be in the correct format, and the period should be an integer.
+        The date and period can either be specified by a single datetime or by passing in an optional period input with a date.
+        If specified by a single datetime, the closest period when rounding down to the nearest half an hour will be used.
+        If specified by the period input, the date should be in the correct format, and the period should be an integer.
 
         Args:
-            date `datetime.datetime`: The date that you would like the BOD data for.
-            period `int`: The period for which to retrieve the BM data.
-            include_accepted_times `bool`: Choose whether object include BOA accepted times or not
+            date: The date that you would like the BOD data for.
+            period (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated.
+            include_accepted_times: Choose whether object include BOA accepted times or not
 
         Returns:
             Response: The response object containing the BM data.
 
         Raises:
-            `TypeError`: If the period is not an integer.
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
 
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/BOA/Data"
 
-        if not isinstance(period, int):
-            raise TypeError("Please enter an integer period")
+        period = get_period(date, period)
 
         date = self.convert_date_time_to_right_format(date)
 
@@ -1010,27 +1012,28 @@ class APIHelper(APIHelperBase):
         df.set_index(trade_id_column_name, inplace=True)
         return df
 
-    async def get_epex_trades(self, type: str, date: datetime, period: int) -> pd.DataFrame:
+    async def get_epex_trades(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """Get executed EPEX trades of a contract, given the date, period and type
 
+        The date and period can either be specified by a datetime or by passing in an optional period input with a date.
+        If specified by a datetime, the closest period when rounding down to the nearest half an hour will be used.
+        If specified by the period input, and the period should be an integer.
+
         Args:
-            type `str`: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
+            type: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
 
-            date `datetime.datetime`: The date associated with the EPEX contract you would like executed trades for.
+            date: The date associated with the EPEX contract you would like executed trades for.
 
-            period `int`: The period associated with the EPEX contract you would like executed trades for.
+            period (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
 
         Raises:
-            `TypeError`: If the period is not an integer.
-                       If the inputted date is not of type `date` or `datetime`.
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
         endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/Trades"
 
+        period = get_period(date, period)
         date = self.convert_date_time_to_right_format(date)
-
-        if not isinstance(period, int):
-            raise TypeError("Please enter an integer period")
 
         request_details = {"Type": type, "Date": date, "Period": period}
 
@@ -1042,26 +1045,28 @@ class APIHelper(APIHelperBase):
         df.set_index(trade_id_column_name, inplace=True)
         return df
 
-    async def get_epex_order_book(self, type: str, date: datetime, period: int) -> dict[str, pd.DataFrame]:
+    async def get_epex_order_book(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """Get order book of a contract,given the date, period and type
 
+        The date and period can either be specified by a datetime or by passing in an optional period input with a date.
+        If specified by a datetime, the closest period when rounding down to the nearest half an hour will be used.
+        If specified by the period input, and the period should be an integer.
+
         Args:
-            type `str`: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
+            type: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
 
-            date `datetime.datetime`: The date associated with the EPEX contract you would like executed trades for.
+            date: The date associated with the EPEX contract you would like executed trades for.
 
-            period `int`: The period associated with the EPEX contract you would like executed trades for.
+            period (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
 
         Raises:
-            `TypeError`: If the period is not an integer.
-                       If the inputted date is not of type `date` or `datetime`.
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
+
         """
         endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/OrderBook"
 
+        period = get_period(date, period)
         date = self.convert_date_time_to_right_format(date)
-
-        if not isinstance(period, int):
-            raise TypeError("Please enter an integer period")
 
         request_details = {"Type": type, "Date": date, "Period": period}
 
