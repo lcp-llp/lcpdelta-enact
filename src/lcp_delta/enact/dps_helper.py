@@ -56,7 +56,7 @@ class DPSHelper:
             ),
         )
 
-    def initialise_series_subscription_data(
+    async def initialise_series_subscription_data(
         self,
         series_id: str,
         country_id: str,
@@ -66,7 +66,7 @@ class DPSHelper:
     ):
         now = dt.now()
         day_start = dt(now.year, now.month, now.day, tzinfo=now.tzinfo)
-        initial_series_data = self.api_helper.get_series_data(
+        initial_series_data = await self.api_helper.get_series_data(
             series_id, day_start, now, country_id, option_id, parse_datetimes=parse_datetimes
         )
         initial_series_data[self.last_updated_header] = now
@@ -134,7 +134,7 @@ class DPSHelper:
         # Add the subscription for EPEX trade updates with the specified callback function
         self.add_subscription(enact_request_object_epex, handle_data_method)
 
-    def subscribe_to_series_updates(
+    async def subscribe_to_series_updates(
         self,
         handle_data_method: Callable[[str], None],
         series_id: str,
@@ -171,7 +171,7 @@ class DPSHelper:
             subscription_id, (None, pd.DataFrame(), False)
         )
         if initial_data_from_series_api.empty:
-            self.initialise_series_subscription_data(
+            await self.initialise_series_subscription_data(
                 series_id, country_id, option_id, handle_data_method, parse_datetimes
             )
         else:

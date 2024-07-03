@@ -807,7 +807,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return self.get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data(
             "DynamicModerationLF",
             option_two=date_requested.day,
             date_requested=date_requested,
