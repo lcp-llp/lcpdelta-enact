@@ -698,7 +698,7 @@ class APIHelper(APIHelperBase):
         return df
 
     # Ancillary Contracts:
-    async def _get_ancillary_contract_data(
+    async def get_ancillary_contract_data_async(
         self,
         ancillary_contract_type: str,
         option_one: Union[str, int] | None = None,
@@ -776,7 +776,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "DynamicContainmentEfa",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -793,7 +793,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "DynamicContainmentEfaHF",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -810,7 +810,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "DynamicModerationLF",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -827,7 +827,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "DynamicModerationHF",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -844,7 +844,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "DynamicRegulationLF",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -861,7 +861,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "DynamicRegulationHF",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -878,7 +878,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "NegativeBalancingReserve",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -895,7 +895,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "PositiveBalancingReserve",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -914,7 +914,7 @@ class APIHelper(APIHelperBase):
         Args:
             tender_number `int`: The tender number for the round that you wish to procure
         """
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "Ffr", tender_number, ancillary_contract_group=AncillaryContractGroup.Ffr
         )
 
@@ -928,7 +928,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "StorDayAhead", date_requested=date_requested, ancillary_contract_group=AncillaryContractGroup.StorDayAhead
         )
 
@@ -942,7 +942,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "SFfr",
             option_two=date_requested.day,
             date_requested=date_requested,
@@ -960,7 +960,7 @@ class APIHelper(APIHelperBase):
             raise ValueError("Month must be an integer less than 12")
         month_name = calendar.month_name[month]
 
-        return await self._get_ancillary_contract_data(
+        return await self.get_ancillary_contract_data_async(
             "ManFr", year, month_name, ancillary_contract_group=AncillaryContractGroup.ManFr
         )
 
