@@ -7,7 +7,7 @@ from ..common import APIHelperBase, add_sync_methods
 @add_sync_methods
 class APIHelper(APIHelperBase):
     # Series:
-    async def get_exporter_data(
+    async def get_exporter_data_async(
         self,
         date_from: datetime,
         date_to: datetime,
@@ -84,7 +84,7 @@ class APIHelper(APIHelperBase):
         if weighting_metric:
             request_details["WeightingMetric"] = weighting_metric
 
-        response = await self.post_request(endpoint, request_details)
+        response = await self._post_request(endpoint, request_details)
 
         try:
             df = pd.DataFrame(response["data"]["dictionaryOutput"])

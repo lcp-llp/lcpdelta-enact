@@ -22,9 +22,15 @@ def async_to_sync(func):
 
 def add_sync_methods(cls):
     for attr_name in dir(cls):
+        if attr_name.startswith("_"):
+            continue
         attr = getattr(cls, attr_name)
         if asyncio.iscoroutinefunction(attr):
-            setattr(cls, f"{attr_name}_sync", async_to_sync(attr))
+            if attr_name.endswith("_async"):
+                new_attr_name = attr_name[:-6]
+                setattr(cls, new_attr_name, async_to_sync(attr))
+            else:
+                raise ValueError(f"Public async function '{attr_name}' must have an '_async' suffix")
     return cls
 
 
@@ -38,7 +44,7 @@ class APIHelperBase(ABC):
         """
         self.enact_credentials = CredentialsHolder(username, public_api_key)
 
-    async def post_request(self, endpoint: str, request_details: dict):
+    async def _post_request(self, endpoint: str, request_details: dict):
         headers = {
             "Authorization": "Bearer " + self.enact_credentials.bearer_token,
             "Content-Type": "application/json",
@@ -50,19 +56,19 @@ class APIHelperBase(ABC):
 
         # check if bearer token has expired and if it has create a new one
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
-            response = await self.handle_authorisation_error(endpoint, request_details, headers)
+            response = await self._handle_authorisation_error(endpoint, request_details, headers)
 
         if response.status_code != 200:
-            await self.handle_error_and_get_updated_response(response)
+            await self._handle_error_and_get_updated_response(response)
         return response.json()
 
-    async def handle_error_and_get_updated_response(self, response: httpx.Response):
+    async def _handle_error_and_get_updated_response(self, response: httpx.Response):
         if response.text != "" and "messages" in response.json():
-            self.raise_exception_for_enact_error(response)
+            self._raise_exception_for_enact_error(response)
         else:
             response.raise_for_status()
 
-    def raise_exception_for_enact_error(self, response: httpx.Response):
+    def _raise_exception_for_enact_error(self, response: httpx.Response):
         response_data = response.json()
         error_messages = response_data["messages"]
         for error_message in error_messages:
@@ -74,7 +80,7 @@ class APIHelperBase(ABC):
                     response=response,
                 )
 
-    async def handle_authorisation_error(self, endpoint: str, request_details: dict, headers: dict):
+    async def _handle_authorisation_error(self, endpoint: str, request_details: dict, headers: dict):
         retry_count = 0
         while retry_count < self.enact_credentials.MAX_RETRIES:
             self.enact_credentials.get_bearer_token()
