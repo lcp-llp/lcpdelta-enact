@@ -67,7 +67,7 @@ class DPSHelper:
     ):
         now = dt.now()
         day_start = dt(now.year, now.month, now.day, tzinfo=now.tzinfo)
-        initial_series_data = await self.api_helper.get_series_data(
+        initial_series_data = await self.api_helper.get_series_data_async(
             series_id, day_start, now, country_id, option_id, parse_datetimes=parse_datetimes
         )
         initial_series_data[self.last_updated_header] = now
