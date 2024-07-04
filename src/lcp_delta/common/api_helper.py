@@ -9,7 +9,13 @@ from ..enact.credentials_holder import CredentialsHolder
 def async_to_sync(func):
     @wraps(func)
     def sync_func(*args, **kwargs):
-        return asyncio.run(func(*args, **kwargs))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(func(*args, **kwargs))
+        else:
+            task = loop.create_task(func(*args, **kwargs))
+            return loop.run_until_complete(task)
 
     return sync_func
 
