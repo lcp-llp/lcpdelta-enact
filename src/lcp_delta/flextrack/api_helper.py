@@ -1,9 +1,10 @@
 from datetime import datetime
 import pandas as pd
 
-from ..common import APIHelperBase
+from ..common import APIHelperBase, add_sync_methods
 
 
+@add_sync_methods
 class APIHelper(APIHelperBase):
     # Series:
     async def get_exporter_data(

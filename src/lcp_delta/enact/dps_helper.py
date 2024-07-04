@@ -4,10 +4,11 @@ from functools import partial
 from lcp_delta.global_helper_methods import is_list_of_strings
 from datetime import datetime as dt
 import pandas as pd
-from .api_helper import APIHelper
+from .api_helper import APIHelper, add_sync_methods
 from typing import Callable
 
 
+@add_sync_methods
 class DPSHelper:
     def __init__(self, username: str, public_api_key: str):
         self.api_helper = APIHelper(username, public_api_key)
