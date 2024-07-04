@@ -1,7 +1,25 @@
 import httpx
 from abc import ABC
+from functools import wraps
+import asyncio
 
 from ..enact.credentials_holder import CredentialsHolder
+
+
+def async_to_sync(func):
+    @wraps(func)
+    def sync_func(*args, **kwargs):
+        return asyncio.run(func(*args, **kwargs))
+
+    return sync_func
+
+
+def add_sync_methods(cls):
+    for attr_name in dir(cls):
+        attr = getattr(cls, attr_name)
+        if asyncio.iscoroutinefunction(attr):
+            setattr(cls, f"{attr_name}_sync", async_to_sync(attr))
+    return cls
 
 
 class APIHelperBase(ABC):

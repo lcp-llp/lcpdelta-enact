@@ -5,7 +5,7 @@ from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetim
 from typing import Union
 from enum import StrEnum
 
-from ..common import APIHelperBase
+from ..common import APIHelperBase, add_sync_methods
 
 
 class AncillaryContractGroup(StrEnum):
@@ -16,6 +16,7 @@ class AncillaryContractGroup(StrEnum):
     SFfr = "SFfr"
 
 
+@add_sync_methods
 class APIHelper(APIHelperBase):
     # Helper functions
     @staticmethod
@@ -70,7 +71,7 @@ class APIHelper(APIHelperBase):
 
         date_from_str = self.convert_date_time_to_right_format(date_from)
         date_to_str = self.convert_date_time_to_right_format(date_to)
-    
+
         return await self.make_series_request(
             series_id,
             date_from_str,
