@@ -1,10 +1,14 @@
 from dotenv import load_dotenv
 import os
-from lcp_delta import enact
+from lcp_delta import enact, flextrack
 
 load_dotenv()
 
-username = os.getenv("LCPDELTA_PACKAGE_TEST_USERNAME")
-public_api_key = os.getenv("LCPDELTA_PACKAGE_TEST_API_KEY")
+enact_username = os.getenv("LCPDELTA_PACKAGE_TEST_ENACT_USERNAME")
+enact_public_api_key = os.getenv("LCPDELTA_PACKAGE_TEST_ENACT_API_KEY")
 
-enact_api_helper = enact.APIHelper(username, public_api_key)
+flextrack_username = os.getenv("LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME")
+flextrack_public_api_key = os.getenv("LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY")
+
+enact_api_helper = enact.APIHelper(enact_username, enact_public_api_key)
+flextrack_api_helper = flextrack.APIHelper(flextrack_username, flextrack_public_api_key)
