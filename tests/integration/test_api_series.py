@@ -1,6 +1,11 @@
 import pytest
+import time
 from datetime import datetime, date
 from tests.integration import enact_api_helper
+
+
+def teardown_function():
+    time.sleep(1)
 
 
 @pytest.mark.asyncio
