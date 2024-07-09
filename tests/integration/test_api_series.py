@@ -1,9 +1,6 @@
 import pytest
 from datetime import datetime, date
-from lcp_delta import enact
-from tests.integration import username, public_api_key
-
-enact_api_helper = enact.APIHelper(username, public_api_key)
+from tests.integration import enact_api_helper
 
 
 @pytest.mark.asyncio
