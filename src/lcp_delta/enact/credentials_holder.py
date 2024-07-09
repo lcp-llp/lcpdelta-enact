@@ -1,6 +1,7 @@
 from datetime import datetime
 import httpx
 import json
+import threading
 from .response_objects.usage_info import UsageInfo
 
 
@@ -10,7 +11,18 @@ class CredentialsHolder:
     def __init__(self, username: str, public_api_key: str):
         self.username = username
         self.public_api_key = public_api_key
-        self.bearer_token = self.get_bearer_token()
+        self._token_lock = threading.Lock()
+        self.get_bearer_token()
+
+    @property
+    def bearer_token(self):
+        with self._token_lock:
+            return self._bearer_token
+
+    @bearer_token.setter
+    def bearer_token(self, value):
+        with self._token_lock:
+            self._bearer_token = value
 
     def get_bearer_token(self) -> str:
         """Get the bearer token for authentication.
@@ -22,9 +34,6 @@ class CredentialsHolder:
         Args:
             username `str`: The username for Enact authentication.
             public_api_key `str`: The public API key for Enact authentication.
-
-        Returns:
-            str: The bearer token obtained from the Enact API.
         """
 
         headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
@@ -35,7 +44,7 @@ class CredentialsHolder:
         if response.status_code == 401 or (response.status_code >= 500 and response.status_code < 600):
             response = self.retry_request(headers, data)
 
-        return response.text
+        self.bearer_token = response.text
 
     def retry_request(self, headers, data):
         """Retry the request to obtain a valid bearer token.
