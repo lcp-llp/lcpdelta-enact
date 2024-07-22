@@ -1156,7 +1156,7 @@ class APIHelper(APIHelperBase):
         selectedEfaBlocks: int | None = None,
         seriesInput: list[str] = None,
     ) -> dict[int, pd.DataFrame]:
-        """Find historical days that are the most similar to the current day.
+        """Find historical days with day ahead prices most similar to the current day.
 
         Args:
             from: The start of the date range to compare against.
