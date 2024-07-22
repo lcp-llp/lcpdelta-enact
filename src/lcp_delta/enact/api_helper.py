@@ -1154,6 +1154,7 @@ class APIHelper(APIHelperBase):
         aggregate: bool = False,
         numberOfSimilarDays: int = 10,
         selectedEfaBlocks: int | None = None,
+        seriesInput: list[str] = None,
     ) -> dict[int, pd.DataFrame]:
         """Find historical days that are the most similar to the current day.
 
@@ -1180,7 +1181,6 @@ class APIHelper(APIHelperBase):
             toDateString = self._convert_date_time_to_right_format(toDate)
         else:
             toDateString = None
-        fromDate = self._convert_date_time_to_right_format(fromDate)
 
         request_details = {
             "from": fromDateString,
@@ -1188,6 +1188,7 @@ class APIHelper(APIHelperBase):
             "aggregate": aggregate,
             "numberOfSimilarDays": numberOfSimilarDays,
             "selectedEfaBlocks": selectedEfaBlocks,
+            "seriesInput": seriesInput,
         }
 
         response = await self._post_request(endpoint, request_details)
