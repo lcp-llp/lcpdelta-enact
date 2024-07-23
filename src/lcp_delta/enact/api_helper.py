@@ -647,6 +647,7 @@ class APIHelper(APIHelperBase):
         revenue_metric="PoundPerMwPerH",
         market_price_assumption="WeightedAverageDayAheadPrice",
         gas_price_assumption="DayAheadForward",
+        include_capacity_market_revenues=False,
     ) -> pd.DataFrame:
         """Get leaderboard data for a specific date range.
 
@@ -670,6 +671,9 @@ class APIHelper(APIHelperBase):
             gas_price_assumption `str` (optional): The gas price assumption to filter the leaderboard data.
                                                   Possible options are: DayAheadForward, DayAheadSpot, WithinDaySpot or CheapestPrice.
                                                   If not included the default is DayAheadForward.
+
+            include_capacity_market_revenues `bool` (optional): Changes whether or not the capacity market revenue column is shown. If set to false, the capacity market
+                                                                revenues will not be included in the net revenues. Defaults to False.
         """
 
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Leaderboard/Data"
@@ -684,6 +688,7 @@ class APIHelper(APIHelperBase):
             "RevenueMetric": revenue_metric,
             "MarketPriceAssumption": market_price_assumption,
             "GasPriceAssumption": gas_price_assumption,
+            "IncludeCmRevenues": include_capacity_market_revenues,
         }
 
         response = await self._post_request(endpoint, request_details)
