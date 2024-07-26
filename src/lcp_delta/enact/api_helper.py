@@ -647,6 +647,7 @@ class APIHelper(APIHelperBase):
         revenue_metric="PoundPerMwPerH",
         market_price_assumption="WeightedAverageDayAheadPrice",
         gas_price_assumption="DayAheadForward",
+        include_capacity_market_revenues=False,
     ) -> pd.DataFrame:
         """Get leaderboard data for a specific date range.
 
@@ -670,6 +671,9 @@ class APIHelper(APIHelperBase):
             gas_price_assumption `str` (optional): The gas price assumption to filter the leaderboard data.
                                                   Possible options are: DayAheadForward, DayAheadSpot, WithinDaySpot or CheapestPrice.
                                                   If not included the default is DayAheadForward.
+
+            include_capacity_market_revenues `bool` (optional): Changes whether or not the capacity market revenue column is shown.
+                                                    If set to false, the capacity market revenues will not be included in the net revenues. Defaults to False.
         """
 
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Leaderboard/Data"
@@ -684,6 +688,7 @@ class APIHelper(APIHelperBase):
             "RevenueMetric": revenue_metric,
             "MarketPriceAssumption": market_price_assumption,
             "GasPriceAssumption": gas_price_assumption,
+            "IncludeCmRevenues": include_capacity_market_revenues,
         }
 
         response = await self._post_request(endpoint, request_details)
@@ -1146,3 +1151,65 @@ class APIHelper(APIHelperBase):
         }
 
         return await self._post_request(endpoint, request_details)
+
+    async def get_day_ahead_data_async(
+        self,
+        fromDate: datetime,
+        toDate: datetime | None = None,
+        aggregate: bool = False,
+        numberOfSimilarDays: int = 10,
+        selectedEfaBlocks: int | None = None,
+        seriesInput: list[str] = None,
+    ) -> dict[int, pd.DataFrame]:
+        """Find historical days with day ahead prices most similar to the current day.
+
+        Args:
+            from: The start of the date range to compare against.
+
+            to: The end of the date range for days to compare against.
+
+            aggregate (optional): If set to true, the EFA blocks are considered as a single time range.
+
+            numberOfSimilarDays (optional): The number of the most similar days to include in the response.
+
+            selectedEfaBlocks (optional): The EFA blocks to find similar days for.
+
+            seriesInput (optional):The series to find days with similar values to. The array must only contain strings from the following list: "ResidualLoad", "Tsdf", "WindForecast", "SolarForecast" "DynamicContainmentEfa", "DynamicContainmentEfaHF", "DynamicContainmentEfaLF", "DynamicRegulationHF", "DynamicRegulationLF", "DynamicModerationLF", "DynamicModerationHF", "PositiveBalancingReserve", "NegativeBalancingReserve", "SFfr". If none are specified, then all of the series listed are used in the calculation.
+        Raises:
+            `TypeError`: If the input dates are not of type date or datetime.
+
+        """
+        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/DayAhead/data"
+
+        fromDateString = self._convert_date_time_to_right_format(fromDate)
+        if toDate != None:
+            toDateString = self._convert_date_time_to_right_format(toDate)
+        else:
+            toDateString = None
+
+        request_details = {
+            "from": fromDateString,
+            "to": toDateString,
+            "aggregate": aggregate,
+            "numberOfSimilarDays": numberOfSimilarDays,
+            "selectedEfaBlocks": selectedEfaBlocks,
+            "seriesInput": seriesInput,
+        }
+
+        response = await self._post_request(endpoint, request_details)
+        output: dict[int, pd.DataFrame] = {}
+
+        for key, value in response["data"].items():
+            data_list = []
+            for item in value:
+                day = item["day"]
+                score = item["score"]
+                raw_data = item["rawData"]
+                raw_data["day"] = day
+                raw_data["score"] = score
+                data_list.append(raw_data)
+            df = pd.DataFrame(data_list)
+            if not df.empty:
+                df.set_index("score", inplace=True)
+            output[int(key)] = df
+        return output
