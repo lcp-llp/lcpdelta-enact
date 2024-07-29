@@ -1,2 +1,2 @@
-from ..enact.credentials_holder import CredentialsHolder
+from ..common import CredentialsHolder
 from .api_helper import APIHelper
