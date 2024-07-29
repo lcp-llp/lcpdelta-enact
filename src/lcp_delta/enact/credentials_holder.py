@@ -24,7 +24,7 @@ class CredentialsHolder:
         with self._token_lock:
             self._bearer_token = value
 
-    def get_bearer_token(self) -> str:
+    def get_bearer_token(self):
         """Get the bearer token for authentication.
 
         This method sends a request to obtain a bearer token for authentication
