@@ -5,7 +5,7 @@ from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetim
 from typing import Union
 from enum import StrEnum
 
-from ..common import APIHelperBase, add_sync_methods
+from ..common import APIHelperBase, add_sync_methods, constants
 
 
 class AncillaryContractGroup(StrEnum):
@@ -67,7 +67,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Data_V2"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
 
         date_from_str = self._convert_date_time_to_right_format(date_from)
         date_to_str = self._convert_date_time_to_right_format(date_to)
@@ -98,7 +98,7 @@ class APIHelper(APIHelperBase):
             Response: The response object containing information about the series. This information includes: The series name, any countries that have data for that series, any options related to the series,
                       whether or not the series has historical data, and whether or not the series has historical forecasts.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Info"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
         request_details = {"SeriesId": series_id}
 
         if country_id is not None:
@@ -199,7 +199,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Fuel"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
 
         date_from_str = self._convert_date_time_to_right_format(date_from)
         date_to_str = self._convert_date_time_to_right_format(date_to)
@@ -257,7 +257,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Zone"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
 
         date_from_str = self._convert_date_time_to_right_format(date_from)
         date_to_str = self._convert_date_time_to_right_format(date_to)
@@ -315,7 +315,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/Owner"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
 
         date_from_str = self._convert_date_time_to_right_format(date_from)
         date_to_str = self._convert_date_time_to_right_format(date_to)
@@ -373,7 +373,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Series/multiOption"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
 
         date_from_str = self._convert_date_time_to_right_format(date_from)
         date_to_str = self._convert_date_time_to_right_format(date_to)
@@ -398,7 +398,7 @@ class APIHelper(APIHelperBase):
         Args:
             plant_id `str`: The ID of the plant to retrieve details for.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Plant/Data/PlantInfo"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
         request_details = {"PlantId": plant_id}
         return await self._post_request(endpoint, request_details)
 
@@ -414,7 +414,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the plant data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Plant/Data/PlantList"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
 
         request_details = {"Country": country_id, "Fuel": fuel_id}
         response = await self._post_request(endpoint, request_details)
@@ -440,7 +440,7 @@ class APIHelper(APIHelperBase):
                     The first row will provide all the dates we have a forecast iteration for.
                     All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/HistoryOfForecast/Data_V2"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
 
         date = self._convert_date_time_to_right_format(date)
 
@@ -486,7 +486,7 @@ class APIHelper(APIHelperBase):
                     The first row will provide all the dates we have a forecast iteration for.
                     All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/HistoryOfForecast/Data_V2"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
 
         date_from = self._convert_date_time_to_right_format(date_from)
         date_to = self._convert_date_time_to_right_format(date_to)
@@ -534,7 +534,7 @@ class APIHelper(APIHelperBase):
                     The first row will provide the date we have a forecast iteration for, which will be the latest generated forecast before the given 'forecast_as_of' datetime.
                     All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/HistoryOfForecast/get_latest_forecast"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
 
         date_from = self._convert_date_time_to_right_format(date_from)
         date_to = self._convert_date_time_to_right_format(date_to)
@@ -588,7 +588,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
 
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/BOA/Data"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
         period = get_period(date, period)
 
@@ -626,7 +626,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the BM data.
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/BOA/Data"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
         date = self._convert_date_time_to_right_format(date)
 
@@ -676,7 +676,7 @@ class APIHelper(APIHelperBase):
                                                     If set to false, the capacity market revenues will not be included in the net revenues. Defaults to False.
         """
 
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Leaderboard/Data"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
 
         date_from = self._convert_date_time_to_right_format(date_from)
         date_to = self._convert_date_time_to_right_format(date_to)
@@ -736,7 +736,7 @@ class APIHelper(APIHelperBase):
             if ancillary_contract_group == AncillaryContractGroup.StorDayAhead:
                 option_one = "-".join([str(date_requested.year), str(date_requested.month), str(date_requested.day)])
 
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Ancillary/Data"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
 
         request_details = {
             "AncillaryContractType": ancillary_contract_type,
@@ -988,7 +988,7 @@ class APIHelper(APIHelperBase):
         """
         if table_id.lower() == "lcp":
             table_id = "Lcp"
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Newstable/Data"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
         request_details = {
             "TableId": table_id,
         }
@@ -1004,7 +1004,7 @@ class APIHelper(APIHelperBase):
             contract_id `int`: The ID associated with the EPEX contract you would like executed trades for.
 
         """
-        endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/TradesFromContractId"
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
 
         request_details = {
             "ContractId": contract_id,
@@ -1036,7 +1036,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
-        endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/Trades"
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
 
         period = get_period(date, period)
         date = self._convert_date_time_to_right_format(date)
@@ -1069,7 +1069,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
-        endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/OrderBook"
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
 
         period = get_period(date, period)
         date = self._convert_date_time_to_right_format(date)
@@ -1093,7 +1093,7 @@ class APIHelper(APIHelperBase):
             contract_id `int`: The ID associated with the EPEX contract you would like the order book for.
 
         """
-        endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/OrderBookFromContractId"
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
 
         request_details = {
             "ContractId": contract_id,
@@ -1119,7 +1119,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
 
         """
-        endpoint = "https://enact-epex.azurefd.net/EnactAPI/Data/Contracts"
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
         date = self._convert_date_time_to_right_format(date)
 
@@ -1142,7 +1142,7 @@ class APIHelper(APIHelperBase):
             date `datetime.datetime`: The date you would like buy and sell curves for.
 
         """
-        endpoint = "https://enact-functionapp-siteapi.azurewebsites.net/api/NordpoolBuySellCurves"
+        endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
 
         date = self._convert_date_time_to_right_format(date)
 
@@ -1179,7 +1179,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the input dates are not of type date or datetime.
 
         """
-        endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/DayAhead/data"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
 
         fromDateString = self._convert_date_time_to_right_format(fromDate)
         if toDate != None:

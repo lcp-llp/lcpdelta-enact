@@ -3,7 +3,7 @@ from abc import ABC
 from functools import wraps
 import asyncio
 
-from ..enact.credentials_holder import CredentialsHolder
+from .credentials_holder import CredentialsHolder
 
 
 def async_to_sync(func):
