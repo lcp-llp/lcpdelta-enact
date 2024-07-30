@@ -25,6 +25,7 @@ class CredentialsHolder:
         with self._token_lock:
             self._bearer_token = value
 
+    @constants.DEFAULT_HTTP_RETRY_POLICY
     def get_bearer_token(self):
         """Get the bearer token for authentication.
 
@@ -47,6 +48,7 @@ class CredentialsHolder:
 
         self.bearer_token = response.text
 
+    @constants.DEFAULT_HTTP_RETRY_POLICY
     def retry_request(self, headers, data):
         """Retry the request to obtain a valid bearer token.
 
@@ -77,6 +79,7 @@ class CredentialsHolder:
 
         return response
 
+    @constants.DEFAULT_HTTP_RETRY_POLICY
     def get_remaining_token_count(self) -> UsageInfo:
         """Get the remaining token count for API calls.
 
