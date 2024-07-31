@@ -20,11 +20,17 @@ class AncillaryContractGroup(StrEnum):
 class APIHelper(APIHelperBase):
     # Helper functions
     @staticmethod
-    def _convert_date_time_to_right_format(date_time_to_check: datetime) -> str:
-        if not isinstance(date_time_to_check, date | datetime):
-            raise TypeError("Inputted date must be a date or datetime")
+    def _convert_datetime_to_iso(datetime_to_check: datetime) -> str:
+        if not isinstance(datetime_to_check, date | datetime):
+            raise TypeError("Input must be a date or datetime")
 
-        return date_time_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return datetime_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @staticmethod
+    def _convert_datetimes_to_iso(date_from: datetime, date_to: datetime) -> tuple[str, str]:
+        date_from_str = APIHelper._convert_datetime_to_iso(date_from)
+        date_to_str = APIHelper._convert_datetime_to_iso(date_to)
+        return date_from_str, date_to_str
 
     # Series:
     async def get_series_data_async(
@@ -69,8 +75,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
 
-        date_from_str = self._convert_date_time_to_right_format(date_from)
-        date_to_str = self._convert_date_time_to_right_format(date_to)
+        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
 
         return await self._make_series_request(
             series_id,
@@ -201,8 +206,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
 
-        date_from_str = self._convert_date_time_to_right_format(date_from)
-        date_to_str = self._convert_date_time_to_right_format(date_to)
+        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
         fuel_type = [option_id]
         return await self._make_series_request(
             series_id,
@@ -259,8 +263,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
 
-        date_from_str = self._convert_date_time_to_right_format(date_from)
-        date_to_str = self._convert_date_time_to_right_format(date_to)
+        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
         zone = [option_id]
         return await self._make_series_request(
             series_id,
@@ -317,8 +320,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
 
-        date_from_str = self._convert_date_time_to_right_format(date_from)
-        date_to_str = self._convert_date_time_to_right_format(date_to)
+        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
         owner = [option_id]
         return await self._make_series_request(
             series_id,
@@ -375,8 +377,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
 
-        date_from_str = self._convert_date_time_to_right_format(date_from)
-        date_to_str = self._convert_date_time_to_right_format(date_to)
+        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
         return await self._make_series_request(
             series_id,
             date_from_str,
@@ -442,7 +443,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
 
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {
             "SeriesId": series_id,
@@ -488,8 +489,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
 
-        date_from = self._convert_date_time_to_right_format(date_from)
-        date_to = self._convert_date_time_to_right_format(date_to)
+        date_from, date_to = APIHelper._convert_datetimes_to_iso(date_from, date_to)
 
         request_details = {"SeriesId": series_id, "CountryId": country_id, "From": date_from, "To": date_to}
 
@@ -536,9 +536,8 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
 
-        date_from = self._convert_date_time_to_right_format(date_from)
-        date_to = self._convert_date_time_to_right_format(date_to)
-        forecast_as_of = self._convert_date_time_to_right_format(forecast_as_of)
+        date_from, date_to = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+        forecast_as_of = self._convert_datetime_to_iso(forecast_as_of)
 
         request_details = {
             "SeriesId": series_id,
@@ -592,7 +591,7 @@ class APIHelper(APIHelperBase):
 
         period = get_period(date, period)
 
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {"Date": date, "Period": period}
 
@@ -628,7 +627,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {"Date": date, "Option": option, "SearchString": search_string}
 
@@ -678,8 +677,7 @@ class APIHelper(APIHelperBase):
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
 
-        date_from = self._convert_date_time_to_right_format(date_from)
-        date_to = self._convert_date_time_to_right_format(date_to)
+        date_from, date_to = APIHelper._convert_datetimes_to_iso(date_from, date_to)
 
         request_details = {
             "From": date_from,
@@ -1039,7 +1037,7 @@ class APIHelper(APIHelperBase):
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
 
         period = get_period(date, period)
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {"Type": type, "Date": date, "Period": period}
 
@@ -1072,7 +1070,7 @@ class APIHelper(APIHelperBase):
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
 
         period = get_period(date, period)
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {"Type": type, "Date": date, "Period": period}
 
@@ -1121,7 +1119,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {
             "Date": date,
@@ -1144,7 +1142,7 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
 
-        date = self._convert_date_time_to_right_format(date)
+        date = self._convert_datetime_to_iso(date)
 
         request_details = {
             "Date": date,
@@ -1181,9 +1179,9 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
 
-        fromDateString = self._convert_date_time_to_right_format(fromDate)
+        fromDateString = self._convert_datetime_to_iso(fromDate)
         if toDate != None:
-            toDateString = self._convert_date_time_to_right_format(toDate)
+            toDateString = self._convert_datetime_to_iso(toDate)
         else:
             toDateString = None
 
