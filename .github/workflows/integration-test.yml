@@ -29,6 +29,13 @@ jobs:
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
 
+    - name: Verify environment variables
+      run: |
+        if [ -n "${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_USERNAME }}" ]; then echo "ENACT_USERNAME is set"; else echo "ENACT_USERNAME is not set"; fi
+        if [ -n "${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_API_KEY }}" ]; then echo "ENACT_API_KEY is set"; else echo "ENACT_API_KEY is not set"; fi
+        if [ -n "${{ secrets.LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME }}" ]; then echo "FLEXTRACK_USERNAME is set"; else echo "FLEXTRACK_USERNAME is not set"; fi
+        if [ -n "${{ secrets.LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY }}" ]; then echo "FLEXTRACK_API_KEY is set"; else echo "FLEXTRACK_API_KEY is not set"; fi
+    
     - name: Run tests
       env:
         LCPDELTA_PACKAGE_TEST_ENACT_USERNAME: ${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_USERNAME }}
