@@ -25,7 +25,6 @@ dependencies = [
     "matplotlib",
     "httpx",
     "tenacity",
-    "asyncio",
     "nest_asyncio"
 ]
 
