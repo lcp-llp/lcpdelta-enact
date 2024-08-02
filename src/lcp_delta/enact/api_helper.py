@@ -32,85 +32,6 @@ class APIHelper(APIHelperBase):
         date_to_str = APIHelper._convert_datetime_to_iso(date_to)
         return date_from_str, date_to_str
 
-    # Series:
-    async def get_series_data_async(
-        self,
-        series_id: str,
-        date_from: datetime,
-        date_to: datetime,
-        country_id: str,
-        option_id: list[str] | None = None,
-        half_hourly_average: bool = False,
-        request_time_zone_id: str | None = None,
-        time_zone_id: str | None = None,
-        parse_datetimes: bool = False,
-    ) -> pd.DataFrame:
-        """Get series data for a specific series ID.
-
-        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
-
-        Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
-
-            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
-
-            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
-
-            option_id `list[str]`: If the selected Series has options, then this is the Enact ID for the requested Option, as defined in the query generator on the "General" tab. If this is not sent, then data for all options will be sent back (but capped to the first 10). Defaults to None.
-
-            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
-
-            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
-
-            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
-
-            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
-
-            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
-
-        Note that the arguments required for specific enact data can be found on the site.
-
-        Returns:
-            Response: The response object containing the series data.
-        """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
-
-        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
-
-        return await self._make_series_request(
-            series_id,
-            date_from_str,
-            date_to_str,
-            country_id,
-            option_id,
-            half_hourly_average,
-            endpoint,
-            request_time_zone_id,
-            time_zone_id,
-            parse_datetimes,
-        )
-
-    async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
-        """Get information about a specific series.
-
-        This method retrieves information about a specific series based on the given series ID. Optional country ID can be provided to filter the series information.
-
-        Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
-            country_id `str` (optional): The country ID to filter the series information. Defaults to None. If this is not provided, then details will be displayed for the first country available for this series.
-
-        Returns:
-            Response: The response object containing information about the series. This information includes: The series name, any countries that have data for that series, any options related to the series,
-                      whether or not the series has historical data, and whether or not the series has historical forecasts.
-        """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_details = {"SeriesId": series_id}
-
-        if country_id is not None:
-            request_details["CountryId"] = country_id
-
-        return await self._post_request(endpoint, request_details)
-
     async def _make_series_request(
         self,
         series_id: str,
@@ -153,16 +74,125 @@ class APIHelper(APIHelperBase):
         response = await self._post_request(endpoint, request_details)
 
         try:
-            df = pd.DataFrame(response["data"]["data"])
-            first_key = next(iter(response["data"]["data"]))
-            if not df.empty:
-                df = df.set_index(first_key)
-                if parse_datetimes:
-                    parse_df_datetimes(df, parse_index=True, inplace=True)
-
-            return df
+            return APIHelper._convert_response_to_df(response, parse_datetimes=True, nested_key="data")
         except (ValueError, TypeError, IndexError):
             return response
+
+    @staticmethod
+    def _convert_response_to_df(
+        response: dict, parse_datetimes: bool = False, index_on: int = 0, key: str = "data", nested_key: str = None
+    ) -> pd.DataFrame:
+        data = response[key]
+        if nested_key:
+            data = data[nested_key]
+
+        if isinstance(data, list):
+            df = pd.DataFrame(data)
+            df.set_index(df.columns[index_on], inplace=True)
+        elif isinstance(data, dict):
+            df = APIHelper._convert_dict_to_df(data, parse_datetimes, index_on)
+        else:
+            raise ValueError(f"Unexpected response data type: {type(data)}. Expected 'list' or 'dict'.")
+
+        return df
+
+    @staticmethod
+    def _convert_dict_to_df(data: dict, parse_datetimes: bool = False, index_on: int = 0) -> pd.DataFrame:
+        df = pd.DataFrame(data)
+        if not df.empty:
+            df.set_index(df.columns[index_on], inplace=True)
+            if parse_datetimes:
+                parse_df_datetimes(df, parse_index=True, inplace=True)
+
+        return df
+
+    @staticmethod
+    def _convert_embedded_list_to_df(data: list, index: str = None, key: str = "data") -> pd.DataFrame:
+        if key:
+            data = data[key]
+        df = pd.DataFrame(data[1:], columns=data[0])
+        if index:
+            df = df.set_index(index)
+
+        return df
+
+    # Series:
+    async def get_series_data_async(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Get series data for a specific series ID.
+
+        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+
+        Args:
+            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+
+            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
+
+            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
+
+            option_id `list[str]`: If the selected Series has options, then this is the Enact ID for the requested Option, as defined in the query generator on the "General" tab. If this is not sent, then data for all options will be sent back (but capped to the first 10). Defaults to None.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
+
+            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that the arguments required for specific enact data can be found on the site.
+
+        Returns:
+            Response: The response object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
+        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+
+        return await self._make_series_request(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            option_id,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
+
+    async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
+        """Get information about a specific series.
+
+        This method retrieves information about a specific series based on the given series ID. Optional country ID can be provided to filter the series information.
+
+        Args:
+            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+            country_id `str` (optional): The country ID to filter the series information. Defaults to None. If this is not provided, then details will be displayed for the first country available for this series.
+
+        Returns:
+            Response: The response object containing information about the series. This information includes: The series name, any countries that have data for that series, any options related to the series,
+                      whether or not the series has historical data, and whether or not the series has historical forecasts.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
+        request_details = {"SeriesId": series_id}
+
+        if country_id is not None:
+            request_details["CountryId"] = country_id
+
+        return await self._post_request(endpoint, request_details)
 
     async def get_series_by_fuel_async(
         self,
@@ -458,12 +488,7 @@ class APIHelper(APIHelperBase):
 
         response = await self._post_request(endpoint, request_details)
 
-        data = response["data"]["data"]
-        df = pd.DataFrame(data)
-        if df.empty:
-            return df
-        first_key = next(iter(data))
-        return df.set_index(first_key)
+        return APIHelper._convert_response_to_df(response, nested_key="data")
 
     async def get_history_of_forecast_for_date_range_async(
         self,
@@ -502,10 +527,7 @@ class APIHelper(APIHelperBase):
 
         output: dict[str, pd.DataFrame] = {}
         for date_str, data in response["data"]["data"].items():
-            df = pd.DataFrame(data)
-            if not df.empty:
-                first_key = next(iter(data))
-                df = df.set_index(first_key)
+            df = APIHelper._convert_dict_to_df(data)
             output[date_str] = df
 
         return output
@@ -556,11 +578,9 @@ class APIHelper(APIHelperBase):
 
         output: dict[str, pd.DataFrame] = {}
         for date_str, data in response["data"]["data"].items():
-            df = pd.DataFrame(data)
-            if not df.empty:
-                first_key = next(iter(data))
-                df = df.set_index(first_key)
-            output[date_str] = df
+            if data is None:
+                continue
+            output[date_str] = APIHelper._convert_dict_to_df(data)
 
         return output
 
@@ -601,10 +621,10 @@ class APIHelper(APIHelperBase):
         response = await self._post_request(endpoint, request_details)
         output: dict[str, pd.DataFrame] = {}
         df_columns = ["acceptedBids", "acceptedOffers", "tableOffers", "tableBids"]
-        for key_str, data in response["data"].items():
-            if key_str in df_columns:
-                df = pd.DataFrame(data)
-                output[key_str] = df
+
+        for key_str in df_columns:
+            if key_str in response["data"]:
+                output[key_str] = APIHelper._convert_response_to_df(response, nested_key=key_str)
         return output
 
     async def get_bm_data_by_search_async(
@@ -690,15 +710,8 @@ class APIHelper(APIHelperBase):
         }
 
         response = await self._post_request(endpoint, request_details)
-
-        df = pd.DataFrame(response["data"][1:])
-        df.columns = response["data"][0]
-        if not df.empty:
-            if type == "Owner":
-                df = df.set_index("Plant - Owner")
-            else:
-                df = df.set_index("Plant - ID")
-        return df
+        index = "Plant - Owner" if type == "Owner" else "Plant - ID"
+        return APIHelper._convert_embedded_list_to_df(response, index)
 
     # Ancillary Contracts:
     async def get_ancillary_contract_data_async(
@@ -986,13 +999,15 @@ class APIHelper(APIHelperBase):
         """
         if table_id.lower() == "lcp":
             table_id = "Lcp"
+
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
         request_details = {
             "TableId": table_id,
         }
 
         response = await self._post_request(endpoint, request_details)
-        return pd.DataFrame(response["data"][1:], columns=response["data"][0])
+
+        return APIHelper._convert_embedded_list_to_df(response)
 
     # EPEX:
     async def get_epex_trades_by_contract_id_async(self, contract_id: str) -> pd.DataFrame:
@@ -1009,12 +1024,7 @@ class APIHelper(APIHelperBase):
         }
 
         response = await self._post_request(endpoint, request_details)
-        df = pd.DataFrame(response["data"])
-        if df.empty:
-            return df
-        trade_id_column_name = df.columns[-1]
-        df.set_index(trade_id_column_name, inplace=True)
-        return df
+        return APIHelper._convert_response_to_df(response, index_on=-1)
 
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """Get executed EPEX trades of a contract, given the date, period and type
@@ -1042,12 +1052,7 @@ class APIHelper(APIHelperBase):
         request_details = {"Type": type, "Date": date, "Period": period}
 
         response = await self._post_request(endpoint, request_details)
-        df = pd.DataFrame(response["data"])
-        if df.empty:
-            return df
-        trade_id_column_name = df.columns[-1]
-        df.set_index(trade_id_column_name, inplace=True)
-        return df
+        return APIHelper._convert_response_to_df(response, index_on=-1)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """Get order book of a contract,given the date, period and type
@@ -1077,11 +1082,8 @@ class APIHelper(APIHelperBase):
         response = await self._post_request(endpoint, request_details)
         output: dict[str, pd.DataFrame] = {}
         for table_str, data in response["data"].items():
-            df = pd.DataFrame(data)
-            if not df.empty:
-                order_id_column_name = df.columns[0]
-                df.set_index(order_id_column_name, inplace=True)
-            output[table_str] = df
+            output[table_str] = APIHelper._convert_dict_to_df(data)
+
         return output
 
     async def get_epex_order_book_by_contract_id_async(self, contract_id: int) -> dict[str, pd.DataFrame]:
@@ -1100,11 +1102,8 @@ class APIHelper(APIHelperBase):
         response = await self._post_request(endpoint, request_details)
         output: dict[str, pd.DataFrame] = {}
         for table_str, data in response["data"].items():
-            df = pd.DataFrame(data)
-            if not df.empty:
-                order_id_column_name = df.columns[0]
-                df.set_index(order_id_column_name, inplace=True)
-            output[table_str] = df
+            output[table_str] = APIHelper._convert_dict_to_df(data)
+
         return output
 
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
@@ -1126,12 +1125,7 @@ class APIHelper(APIHelperBase):
         }
 
         response = await self._post_request(endpoint, request_details)
-        df = pd.DataFrame(response["data"])
-        if df.empty:
-            return df
-        contract_id_column_name = df.columns[0]
-        df.set_index(contract_id_column_name, inplace=True)
-        return df
+        return APIHelper._convert_response_to_df(response)
 
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
         """Get N2EX buy and sell curves for a given day.
