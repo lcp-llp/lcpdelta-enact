@@ -3,6 +3,9 @@ from abc import ABC
 from functools import wraps
 import asyncio
 from .constants import DEFAULT_HTTP_RETRY_POLICY
+import nest_asyncio
+
+nest_asyncio.apply()
 
 
 def async_to_sync(func):
@@ -14,7 +17,7 @@ def async_to_sync(func):
             return asyncio.run(func(*args, **kwargs))
         else:
             task = loop.create_task(func(*args, **kwargs))
-            return asyncio.run_coroutine_threadsafe(task, loop).result()
+            return loop.run_until_complete(task)
 
     return sync_func
 
