@@ -14,7 +14,7 @@ def async_to_sync(func):
             return asyncio.run(func(*args, **kwargs))
         else:
             task = loop.create_task(func(*args, **kwargs))
-            return loop.run_until_complete(task)
+            return asyncio.run_coroutine_threadsafe(task, loop).result()
 
     return sync_func
 
