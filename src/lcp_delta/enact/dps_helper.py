@@ -4,11 +4,10 @@ from functools import partial
 from lcp_delta.global_helper_methods import is_list_of_strings
 from datetime import datetime as dt
 import pandas as pd
-from .api_helper import APIHelper, add_sync_methods
+from .api_helper import APIHelper
 from typing import Callable
 
 
-@add_sync_methods
 class DPSHelper:
     def __init__(self, username: str, public_api_key: str):
         self.api_helper = APIHelper(username, public_api_key)
@@ -18,7 +17,7 @@ class DPSHelper:
     def __initialise(self):
         self.enact_credentials = self.api_helper.enact_credentials
         self.data_by_subscription_id: dict[str, tuple[Callable[[str], None], pd.DataFrame, bool]] = {}
-        access_token_factory = partial(self._fetch_bearer_token)
+        access_token_factory = partial(self.fetch_bearer_token)
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
@@ -40,12 +39,12 @@ class DPSHelper:
         if not success:
             raise ValueError("connection failed")
 
-    def _fetch_bearer_token(self):
+    def fetch_bearer_token(self):
         return self.enact_credentials.bearer_token
 
-    def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
+    def add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
         self.hub_connection.send(
-            "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
+            "JoinEnactPush", request_object, lambda m: self.callback_received(m.result, subscription_id)
         )
 
     def subscribe_to_notifications(self, handle_notification_method: Callable[[str], None]):
@@ -57,7 +56,7 @@ class DPSHelper:
             ),
         )
 
-    async def _initialise_series_subscription_data(
+    async def initialise_series_subscription_data(
         self,
         series_id: str,
         country_id: str,
@@ -67,7 +66,7 @@ class DPSHelper:
     ):
         now = dt.now()
         day_start = dt(now.year, now.month, now.day, tzinfo=now.tzinfo)
-        initial_series_data = await self.api_helper.get_series_data_async(
+        initial_series_data = await self.api_helper.get_series_data(
             series_id, day_start, now, country_id, option_id, parse_datetimes=parse_datetimes
         )
         initial_series_data[self.last_updated_header] = now
@@ -77,15 +76,15 @@ class DPSHelper:
             parse_datetimes,
         )
 
-    def _callback_received(self, m, subscription_id: str):
-        self.hub_connection.on(m["data"]["pushName"], lambda x: self._process_push_data(x, subscription_id))
+    def callback_received(self, m, subscription_id: str):
+        self.hub_connection.on(m["data"]["pushName"], lambda x: self.process_push_data(x, subscription_id))
 
-    def _process_push_data(self, data, subscription_id):
+    def process_push_data(self, data, subscription_id):
         (user_callback, all_data, parse_datetimes) = self.data_by_subscription_id[subscription_id]
-        modified_data = self._handle_new_series_data(all_data, data, parse_datetimes)
+        modified_data = self.handle_new_series_data(all_data, data, parse_datetimes)
         user_callback(modified_data)
 
-    def _handle_new_series_data(
+    def handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
     ) -> pd.DataFrame:
         try:
@@ -133,9 +132,9 @@ class DPSHelper:
         # Create the Enact request object for EPEX trade updates
         enact_request_object_epex = [{"Type": "EPEX", "Group": "Trades"}]
         # Add the subscription for EPEX trade updates with the specified callback function
-        self._add_subscription(enact_request_object_epex, handle_data_method)
+        self.add_subscription(enact_request_object_epex, handle_data_method)
 
-    async def subscribe_to_series_updates_async(
+    async def subscribe_to_series_updates(
         self,
         handle_data_method: Callable[[str], None],
         series_id: str,
@@ -172,14 +171,14 @@ class DPSHelper:
             subscription_id, (None, pd.DataFrame(), False)
         )
         if initial_data_from_series_api.empty:
-            await self._initialise_series_subscription_data(
+            await self.initialise_series_subscription_data(
                 series_id, country_id, option_id, handle_data_method, parse_datetimes
             )
         else:
             self.data_by_subscription_id[subscription_id][0] = handle_data_method
 
         enact_request_object_series = [request_details]
-        self._add_subscription(enact_request_object_series, subscription_id)
+        self.add_subscription(enact_request_object_series, subscription_id)
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
