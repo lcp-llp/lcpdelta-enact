@@ -24,8 +24,7 @@ dependencies = [
     "signalrcore",
     "matplotlib",
     "httpx",
-    "tenacity",
-    "nest_asyncio"
+    "tenacity"
 ]
 
 [project.optional-dependencies]
