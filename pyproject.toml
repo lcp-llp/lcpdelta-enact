@@ -23,8 +23,7 @@ dependencies = [
     "requests",
     "signalrcore",
     "matplotlib",
-    "httpx",
-    "tenacity"
+    "httpx"
 ]
 
 [project.optional-dependencies]

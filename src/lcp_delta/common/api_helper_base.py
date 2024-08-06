@@ -2,7 +2,8 @@ import httpx
 from abc import ABC
 from functools import wraps
 import asyncio
-from .constants import DEFAULT_HTTP_RETRY_POLICY
+
+from .credentials_holder import CredentialsHolder
 
 
 def async_to_sync(func):
@@ -41,11 +42,8 @@ class APIHelperBase(ABC):
             username `str`: Enact Username. Please contact the Enact team if you are unsure about what your username or public api key are.
             public_api_key `str`: Public API Key provided by Enact. Please contact the Enact team if you are unsure about what your username or public api key are.
         """
-        from .credentials_holder import CredentialsHolder
-
         self.enact_credentials = CredentialsHolder(username, public_api_key)
 
-    @DEFAULT_HTTP_RETRY_POLICY
     async def _post_request(self, endpoint: str, request_details: dict):
         headers = {
             "Authorization": "Bearer " + self.enact_credentials.bearer_token,
@@ -82,7 +80,6 @@ class APIHelperBase(ABC):
                     response=response,
                 )
 
-    @DEFAULT_HTTP_RETRY_POLICY
     async def _handle_authorisation_error(self, endpoint: str, request_details: dict, headers: dict):
         retry_count = 0
         while retry_count < self.enact_credentials.MAX_RETRIES:
