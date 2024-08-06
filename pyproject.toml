@@ -22,8 +22,7 @@ dependencies = [
     "pandas",
     "requests",
     "signalrcore",
-    "matplotlib",
-    "httpx"
+    "matplotlib"
 ]
 
 [project.optional-dependencies]
@@ -44,6 +43,3 @@ target-version = "py311"
 
 [tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = ["E402", "F401"]
-
-[tool.ruff.lint]
-select = ["FBT003", "RET504"]

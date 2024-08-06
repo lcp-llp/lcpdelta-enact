@@ -5,7 +5,6 @@ from lcp_delta.global_helper_methods import is_list_of_strings
 from datetime import datetime as dt
 import pandas as pd
 from .api_helper import APIHelper
-from typing import Callable
 
 
 class DPSHelper:
@@ -16,7 +15,7 @@ class DPSHelper:
 
     def __initialise(self):
         self.enact_credentials = self.api_helper.enact_credentials
-        self.data_by_subscription_id: dict[str, tuple[Callable[[str], None], pd.DataFrame, bool]] = {}
+        self.data_by_subscription_id: dict[str, tuple[callable, pd.DataFrame, bool]] = {}
         access_token_factory = partial(self.fetch_bearer_token)
         self.hub_connection = (
             HubConnectionBuilder()
@@ -47,7 +46,7 @@ class DPSHelper:
             "JoinEnactPush", request_object, lambda m: self.callback_received(m.result, subscription_id)
         )
 
-    def subscribe_to_notifications(self, handle_notification_method: Callable[[str], None]):
+    def subscribe_to_notifications(self, handle_notification_method: callable):
         self.hub_connection.send(
             "JoinParentCompanyNotificationPush",
             [],
@@ -56,17 +55,12 @@ class DPSHelper:
             ),
         )
 
-    async def initialise_series_subscription_data(
-        self,
-        series_id: str,
-        country_id: str,
-        option_id: list[str],
-        handle_data_method: Callable[[str], None],
-        parse_datetimes: bool,
+    def initialise_series_subscription_data(
+        self, series_id: str, country_id: str, option_id: list[str], handle_data_method: callable, parse_datetimes: bool
     ):
         now = dt.now()
         day_start = dt(now.year, now.month, now.day, tzinfo=now.tzinfo)
-        initial_series_data = await self.api_helper.get_series_data(
+        initial_series_data = self.api_helper.get_series_data(
             series_id, day_start, now, country_id, option_id, parse_datetimes=parse_datetimes
         )
         initial_series_data[self.last_updated_header] = now
@@ -119,7 +113,7 @@ class DPSHelper:
     def terminate_hub_connection(self):
         self.hub_connection.stop()
 
-    def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[str], None]) -> None:
+    def subscribe_to_epex_trade_updates(self, handle_data_method: callable) -> None:
         """
         `THIS FUNCTION IS IN BETA`
 
@@ -134,9 +128,9 @@ class DPSHelper:
         # Add the subscription for EPEX trade updates with the specified callback function
         self.add_subscription(enact_request_object_epex, handle_data_method)
 
-    async def subscribe_to_series_updates(
+    def subscribe_to_series_updates(
         self,
-        handle_data_method: Callable[[str], None],
+        handle_data_method: callable,
         series_id: str,
         option_id: list[str] = None,
         country_id="Gb",
@@ -163,7 +157,7 @@ class DPSHelper:
 
         if option_id:
             if not is_list_of_strings(option_id):
-                raise ValueError("Option ID input must be a list of strings")
+                raise Exception("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
 
         subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
@@ -171,7 +165,7 @@ class DPSHelper:
             subscription_id, (None, pd.DataFrame(), False)
         )
         if initial_data_from_series_api.empty:
-            await self.initialise_series_subscription_data(
+            self.initialise_series_subscription_data(
                 series_id, country_id, option_id, handle_data_method, parse_datetimes
             )
         else:
