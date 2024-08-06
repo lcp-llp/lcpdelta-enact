@@ -672,8 +672,8 @@ class APIHelper(APIHelperBase):
                                                   Possible options are: DayAheadForward, DayAheadSpot, WithinDaySpot or CheapestPrice.
                                                   If not included the default is DayAheadForward.
 
-            include_capacity_market_revenues `bool` (optional): Changes whether or not the capacity market revenue column is shown.
-                                                    If set to false, the capacity market revenues will not be included in the net revenues. Defaults to False.
+            include_capacity_market_revenues `bool` (optional): Changes whether or not the capacity market revenue column is shown. If set to false, the capacity market
+                                                                revenues will not be included in the net revenues. Defaults to False.
         """
 
         endpoint = "https://enactapifd.lcp.uk.com/EnactAPI/Leaderboard/Data"
