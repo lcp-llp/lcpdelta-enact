@@ -35,22 +35,3 @@ Don'ts:
 
 1. Fork/clone repo
 2. Run `make install` to update pip, locally install the project, install pre-commit, and update it.
-
-## Testing
-### Integration Tests
-The integration tests verify that each publicly exposed function is able to connect to its respective API or DPS service (and return a successful response where necessary). They are to be used alongside manual testing.
-
-**To run integration tests locally**, you will need to have created a .env file in the root directory of the repository as follows:
-```dotenv
-LCPDELTA_PACKAGE_TEST_ENACT_USERNAME=""
-LCPDELTA_PACKAGE_TEST_ENACT_API_KEY=""
-LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME=""
-LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY=""
-```
-And populate the entries with your credentials.
-
-If you do not have credentials for one of these services (i.e. you have Enact credentials but not FLEXtrack), you can leave these empty and cease to run those integration tests. If you are making changes which affect a service you do not have credentials for, then testing should be done by somebody who has these credentials.
-
-**Once you have set up your .env file:**
-1. Run `pip install -e .[dev]` from your repository's root directory to ensure you have dev dependencies installed
-2. Run `pytest` to execute all tests, or run `pytest tests/integration/{file_name}.py` to execute a particular suite of tests
