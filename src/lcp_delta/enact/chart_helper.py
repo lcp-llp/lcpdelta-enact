@@ -4,7 +4,7 @@ import matplotlib.figure as fig
 
 from .api_helper import APIHelper
 
-from ..common import CredentialsHolder
+from .credentials_holder import CredentialsHolder
 
 
 class ChartHelper:

@@ -1,8 +1,7 @@
 from datetime import datetime
 import httpx
 import json
-from ..enact.response_objects.usage_info import UsageInfo
-from . import constants
+from .response_objects.usage_info import UsageInfo
 
 
 class CredentialsHolder:
