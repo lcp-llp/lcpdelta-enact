@@ -1,8 +1,20 @@
 import pandas as pd
-from datetime import datetime
+from datetime import date, datetime
 
 
-def is_list_of_strings(lst):
+def convert_datetime_to_iso(datetime_to_check: date | datetime) -> str:
+    if not isinstance(datetime_to_check, date | datetime):
+        raise TypeError("Input must be a date or datetime.")
+    return datetime_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def convert_datetimes_to_iso(date_from: datetime, date_to: datetime) -> tuple[str, str]:
+    date_from_str = convert_datetime_to_iso(date_from)
+    date_to_str = convert_datetime_to_iso(date_to)
+    return date_from_str, date_to_str
+
+
+def is_list_of_strings(lst: list):
     if not isinstance(lst, list):
         return False
     return all(isinstance(item, str) for item in lst)

@@ -1,7 +1,7 @@
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 import time as pytime
 from functools import partial
-from lcp_delta.global_helper_methods import is_list_of_strings
+from lcp_delta.global_helpers import is_list_of_strings
 from datetime import datetime as dt
 import pandas as pd
 from .api_helper import APIHelper, add_sync_methods
@@ -16,7 +16,7 @@ class DPSHelper:
         self.last_updated_header = "DateTimeLastUpdated"
 
     def __initialise(self):
-        self.enact_credentials = self.api_helper.enact_credentials
+        self.enact_credentials = self.api_helper.credentials_holder
         self.data_by_subscription_id: dict[str, tuple[Callable[[str], None], pd.DataFrame, bool]] = {}
         access_token_factory = partial(self._fetch_bearer_token)
         self.hub_connection = (

@@ -1,38 +1,19 @@
 import calendar
 from datetime import date, datetime
 import pandas as pd
-from lcp_delta.global_helper_methods import is_list_of_strings, parse_df_datetimes, get_period
+
+import handlers.hof_handler
+from .helpers import convert_response_to_df, convert_dict_to_df, convert_embedded_list_to_df
+from lcp_delta.global_helpers import is_list_of_strings, get_period, convert_datetime_to_iso, convert_datetimes_to_iso
 from typing import Union
-from enum import StrEnum
+import handlers
+from enums import AncillaryContractGroup
 
-from ..common import APIHelperBase, add_sync_methods, constants
-
-
-class AncillaryContractGroup(StrEnum):
-    Dynamic = "Dynamic"
-    Ffr = "Ffr"
-    StorDayAhead = "StorDayAhead"
-    ManFr = "ManFr"
-    SFfr = "SFfr"
+from ..common import APIHelperBase, constants
 
 
-@add_sync_methods
 class APIHelper(APIHelperBase):
-    # Helper functions
-    @staticmethod
-    def _convert_datetime_to_iso(datetime_to_check: datetime) -> str:
-        if not isinstance(datetime_to_check, date | datetime):
-            raise TypeError("Input must be a date or datetime")
-
-        return datetime_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    @staticmethod
-    def _convert_datetimes_to_iso(date_from: datetime, date_to: datetime) -> tuple[str, str]:
-        date_from_str = APIHelper._convert_datetime_to_iso(date_from)
-        date_to_str = APIHelper._convert_datetime_to_iso(date_to)
-        return date_from_str, date_to_str
-
-    async def _make_series_request(
+    async def _make_series_request_async(
         self,
         series_id: str,
         date_from: str,
@@ -43,80 +24,55 @@ class APIHelper(APIHelperBase):
         endpoint: str,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
-        parse_datetimes: bool = False,
-    ) -> pd.DataFrame:
-        """Make request for the series endpoints.
-
-        This method creates the request details from the user request.
+    ) -> pd.DataFrame | dict:
+        """Makes a request to the series endpoints asynchronously.
 
         Returns:
-             Response: The response object containing the series data.
+             Response: A dictionary or pandas DataFrame containing the series data.
         """
-        if option_id is not None:
-            if not is_list_of_strings(option_id):
-                raise ValueError("Option ID input must be a list of strings")
+        request_body = handlers.series_handler.generate_series_data_request(
+            series_id,
+            date_from,
+            date_to,
+            country_id,
+            option_id,
+            half_hourly_average,
+            request_time_zone_id,
+            time_zone_id,
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return handlers.series_handler.series_data_post_process(response)
 
-        request_details = {
-            "SeriesId": series_id,
-            "CountryId": country_id,
-            "From": date_from,
-            "To": date_to,
-            "OptionId": option_id,
-            "halfHourlyAverage": half_hourly_average,
-        }
+    def _make_series_request(
+        self,
+        series_id: str,
+        date_from: str,
+        date_to: str,
+        country_id: str,
+        option_id: list[str],
+        half_hourly_average: bool,
+        endpoint: str,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+    ) -> pd.DataFrame | dict:
+        """Makes a request to the series endpoints.
 
-        if request_time_zone_id is not None:
-            request_details["requestTimeZoneId"] = request_time_zone_id
+        Returns:
+             Response: A dictionary or pandas DataFrame containing the series data.
+        """
+        request_body = handlers.series_handler.generate_series_data_request(
+            series_id,
+            date_from,
+            date_to,
+            country_id,
+            option_id,
+            half_hourly_average,
+            request_time_zone_id,
+            time_zone_id,
+        )
+        response = self._post_request(endpoint, request_body)
+        return handlers.series_handler.series_data_post_process(response)
 
-        if time_zone_id is not None:
-            request_details["timeZoneId"] = time_zone_id
-
-        response = await self._post_request(endpoint, request_details)
-
-        try:
-            return APIHelper._convert_response_to_df(response, parse_datetimes=True, nested_key="data")
-        except (ValueError, TypeError, IndexError):
-            return response
-
-    @staticmethod
-    def _convert_response_to_df(
-        response: dict, parse_datetimes: bool = False, index_on: int = 0, key: str = "data", nested_key: str = None
-    ) -> pd.DataFrame:
-        data = response[key]
-        if nested_key:
-            data = data[nested_key]
-
-        if isinstance(data, list):
-            df = pd.DataFrame(data)
-            df.set_index(df.columns[index_on], inplace=True)
-        elif isinstance(data, dict):
-            df = APIHelper._convert_dict_to_df(data, parse_datetimes, index_on)
-        else:
-            raise ValueError(f"Unexpected response data type: {type(data)}. Expected 'list' or 'dict'.")
-
-        return df
-
-    @staticmethod
-    def _convert_dict_to_df(data: dict, parse_datetimes: bool = False, index_on: int = 0) -> pd.DataFrame:
-        df = pd.DataFrame(data)
-        if not df.empty:
-            df.set_index(df.columns[index_on], inplace=True)
-            if parse_datetimes:
-                parse_df_datetimes(df, parse_index=True, inplace=True)
-
-        return df
-
-    @staticmethod
-    def _convert_embedded_list_to_df(data: list, index: str = None, key: str = "data") -> pd.DataFrame:
-        if key:
-            data = data[key]
-        df = pd.DataFrame(data[1:], columns=data[0])
-        if index:
-            df = df.set_index(index)
-
-        return df
-
-    # Series:
     async def get_series_data_async(
         self,
         series_id: str,
@@ -129,38 +85,88 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific series ID.
-
-        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+        """Gets series data from Enact asynchronously.
 
         Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+            series_id `str`: The Enact series ID.
 
-            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
+            date_from `datetime.datetime`: The start date.
 
-            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: If the selected Series has options, then this is the Enact ID for the requested Option, as defined in the query generator on the "General" tab. If this is not sent, then data for all options will be sent back (but capped to the first 10). Defaults to None.
+            option_id `list[str]`: The Enact option ID, if an option is applicable.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
-            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
 
-            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
 
-            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
-        Note that the arguments required for specific enact data can be found on the site.
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: The response object containing the series data.
+            Response: An object containing the series data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
-        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        return await self._make_series_request_async(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            option_id,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
 
-        return await self._make_series_request(
+    def get_series_data(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Gets series data from Enact.
+
+        Args:
+            series_id `str`: The Enact series ID.
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The Enact option ID, if an option is applicable.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: An object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
@@ -174,25 +180,38 @@ class APIHelper(APIHelperBase):
         )
 
     async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
-        """Get information about a specific series.
-
-        This method retrieves information about a specific series based on the given series ID. Optional country ID can be provided to filter the series information.
+        """Gets information about a specific Enact series asynchronously.
 
         Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
-            country_id `str` (optional): The country ID to filter the series information. Defaults to None. If this is not provided, then details will be displayed for the first country available for this series.
+            series_id `str`: The series ID.
+            country_id `str` (optional): The country ID (defaults to None). If not provided, data will be returned for the first country available for this series.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: The response object containing information about the series. This information includes: The series name, any countries that have data for that series, any options related to the series,
-                      whether or not the series has historical data, and whether or not the series has historical forecasts.
+            An object containing information about the series. This includes series name, countries with data for that series, options related to the series, whether or not the series has historical data, and whether
+            or not the series has historical forecasts.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_details = {"SeriesId": series_id}
+        request_body = handlers.series_handler.generate_series_info_request(series_id, country_id)
+        return await self._post_request_async(endpoint, request_body)
 
-        if country_id is not None:
-            request_details["CountryId"] = country_id
+    def get_series_info(self, series_id: str, country_id: str | None = None) -> dict:
+        """Gets information about a specific Enact series.
 
-        return await self._post_request(endpoint, request_details)
+        Args:
+            series_id `str`: The series ID.
+            country_id `str` (optional): The country ID (defaults to None). If not provided, data will be returned for the first country available for this series.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            An object containing information about the series. This includes series name, countries with data for that series, options related to the series, whether or not the series has historical data, and whether
+            or not the series has historical forecasts.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
+        request_body = handlers.series_handler.generate_series_info_request(series_id, country_id)
+        return self._post_request(endpoint, request_body)
 
     async def get_series_by_fuel_async(
         self,
@@ -206,39 +225,90 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific plant series ID and a fuel type.
-
-        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+        """Gets plant series data for a given fuel type asynchronously.
 
         Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+            series_id `str`: The Enact series ID.
 
-            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
+            date_from `datetime.datetime`: The start date.
 
-            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: This is the fuel option for the request e.g. 'Coal'.
+            option_id `list[str]`: The Enact option ID, if an option is applicable.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
-            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
 
-            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
 
-            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
-        Note that the arguments required for specific enact data can be found on the site.
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: The response object containing the series data.
+            Response: An object containing the series data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
-
-        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         fuel_type = [option_id]
-        return await self._make_series_request(
+        return await self._make_series_request_async(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            fuel_type,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
+
+    def get_series_by_fuel(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: str,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Gets plant series data for a given fuel type.
+
+        Args:
+            series_id `str`: The Enact series ID (must be a plant series).
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The fuel option for the request, e.g. "Coal".
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: An object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        fuel_type = [option_id]
+        return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
@@ -263,39 +333,90 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific plant series ID and a zone.
-
-        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+        """Get plant series data for a given zone asynchronously.
 
         Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+            series_id `str`: The Enact series ID (must be a plant series).
 
-            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
+            date_from `datetime.datetime`: The start date.
 
-            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: This is the zone option for the request e.g. 'Z1'.
+            option_id `str`: The fuel option for the request, e.g. "Z1".
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
-            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
 
-            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
 
-            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
-        Note that the arguments required for specific enact data can be found on the site.
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: The response object containing the series data.
+            Response: An object containing the series data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
-
-        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         zone = [option_id]
-        return await self._make_series_request(
+        return await self._make_series_request_async(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            zone,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
+
+    def get_series_by_zone(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: str,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Get plant series data for a given zone.
+
+        Args:
+            series_id `str`: The Enact series ID (must be a plant series).
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `str`: The fuel option for the request, e.g. "Z1".
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: An object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        zone = [option_id]
+        return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
@@ -320,39 +441,90 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific plant series ID and an owner.
-
-        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+        """Get plant series data for a given owner asynchronously.
 
         Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+            series_id `str`: The Enact series ID (must be a plant series).
 
-            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
+            date_from `datetime.datetime`: The start date.
 
-            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: This is the owner option for the request e.g. 'Adela Energy'.
+            option_id `str`: The owner option for the request, e.g. "Adela Energy".
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
-            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
 
-            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
 
-            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
-        Note that the arguments required for specific enact data can be found on the site.
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: The response object containing the series data.
+            Response: An object containing the series data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
-
-        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         owner = [option_id]
-        return await self._make_series_request(
+        return await self._make_series_request_async(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            owner,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
+
+    def get_series_by_owner(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: str,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Get plant series data for a given owner.
+
+        Args:
+            series_id `str`: The Enact series ID (must be a plant series).
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `str`: The owner option for the request, e.g. "Adela Energy".
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: An object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        owner = [option_id]
+        return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
@@ -377,26 +549,24 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific series ID with multiple options available.
-
-        This method retrieves the series data for a specific series ID from the Enact API. It allows specifying the date range, option ID, half-hourly average, and country ID.
+        """Get series data for a specific series with multiple options available asynchronously.
 
         Args:
-            series_id `str`: This is the Enact ID for the requested series, as defined in the query generator on the "General" tab.
+            series_id `str`: The Enact series ID (must be a plant series).
 
-            date_from `datetime.datetime`: This is the start of the date-range being requested. Defaults to today's date.
+            date_from `datetime.datetime`: The start date.
 
-            date_to `datetime.datetime`: This is the end of the date-range being requested. If a single day is wanted, then this will be the same as the From value. Defaults to today's date.
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: Leave this blank to request all possible options for that series. Otherwise, fill the array with the options wanted e.g. ["Coal", "Wind"].
+            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
-            half_hourly_average `bool` (optional): Flag to indicate whether to retrieve half-hourly average data. Defaults to False.
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
 
-            request_time_zone_id `str` (optional): The time zone ID of the requested time range.
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
 
-            time_zone_id `str` (optional): The time zone ID of the data to be returned (UTC by default).
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
@@ -406,9 +576,8 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the series data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
-
-        date_from_str, date_to_str = APIHelper._convert_datetimes_to_iso(date_from, date_to)
-        return await self._make_series_request(
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        return await self._make_series_request_async(
             series_id,
             date_from_str,
             date_to_str,
@@ -421,74 +590,160 @@ class APIHelper(APIHelperBase):
             parse_datetimes,
         )
 
-    # Plant Details:
-    async def get_plant_details_by_id_async(self, plant_id: str) -> dict:
-        """Get details of a plant based on the plant ID.
+    def get_series_multi_option(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Get series data for a specific series with multiple options available.
 
-        This method retrieves details of a specific plant based on the provided plant ID.
         Args:
-            plant_id `str`: The ID of the plant to retrieve details for.
+            series_id `str`: The Enact series ID (must be a plant series).
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that the arguments required for specific enact data can be found on the site.
+
+        Returns:
+            Response: The response object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        return self._make_series_request(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            option_id,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
+
+    async def get_plant_details_by_id_async(self, plant_id: str) -> dict:
+        """Get details of a plant based on the plant ID asynchronously.
+
+        Args:
+            plant_id `str`: The Enact plant ID.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-        request_details = {"PlantId": plant_id}
-        return await self._post_request(endpoint, request_details)
+        request_body = {"PlantId": plant_id}
+        return await self._post_request_async(endpoint, request_body)
 
-    async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
-        """Get a list of plants based on fuel and country.
-
-        This method retrieves a list of plants based on the specified fuel and country.
+    def get_plant_details_by_id(self, plant_id: str) -> dict:
+        """Get details of a plant based on the plant ID.
 
         Args:
-            fuel_id `str`: The fuel that you would like plant data for.
-            country_id `str` (optional): The country that you would like the plant data for. Defaults to "Gb".
+            plant_id `str`: The Enact plant ID.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
+        request_body = {"PlantId": plant_id}
+        return self._post_request(endpoint, request_body)
+
+    async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
+        """Get a list of plants for a given fuel and country asynchronously.
+
+        Args:
+            fuel_id `str`: The fuel ID.
+            country_id `str` (optional): The country ID. Defaults to "Gb".
 
         Returns:
             Response: The response object containing the plant data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
-
-        request_details = {"Country": country_id, "Fuel": fuel_id}
-        response = await self._post_request(endpoint, request_details)
+        request_body = {"Country": country_id, "Fuel": fuel_id}
+        response = await self._post_request_async(endpoint, request_body)
         return response["data"]
 
-    # History of Forecasts:
+    def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
+        """Get a list of plants for a given fuel and country.
+
+        Args:
+            fuel_id `str`: The fuel ID.
+            country_id `str` (optional): The country ID. Defaults to "Gb".
+
+        Returns:
+            Response: The response object containing the plant data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
+        request_body = {"Country": country_id, "Fuel": fuel_id}
+        response = self._post_request(endpoint, request_body)
+        return response["data"]
+
     async def get_history_of_forecast_for_given_date_async(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
     ) -> pd.DataFrame:
-        """Gets the history of a forecast for a given date
+        """Gets the history (all iterations) of a series forecast for a given date asynchronously.
 
         Args:
-            series_id `str`: The Enact ID for the requested Series, as defined in the query generator on the "General" tab.
+            series_id `str`: The Enact series ID.
 
-            date `datetime.date`: The date you want all iterations of the forecast for.
+            date `datetime.date`: The date to request forecasts for.
 
-            country_id `str` (optional): This is the Enact ID for the requested Country, as defined in the query generator on the "General" tab. Defaults to "Gb".
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            option_id `list[str]` (optional): If the selected Series has options, then this is the Enact ID for the requested Option, as defined in the query generator on the "General" tab.
-                                          If this is not sent, then data for all options will be sent back (but capped to the first 10). Defaults to None.
+            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
         Returns:
-            Response: This holds all data for the requested series on the requested date.
+            Response: A pandas DataFrame holding all data for the requested series on the requested date.
                     The first row will provide all the dates we have a forecast iteration for.
                     All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+        request_body = handlers.hof_handler.generate_hof_request_single_date(series_id, date, country_id, option_id)
+        response = await self._post_request_async(endpoint, request_body)
+        return convert_response_to_df(response, nested_key="data")
 
-        date = self._convert_datetime_to_iso(date)
+    def get_history_of_forecast_for_given_date(
+        self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
+    ) -> pd.DataFrame:
+        """Gets the history (all iterations) of a series forecast for a given date.
 
-        request_details = {
-            "SeriesId": series_id,
-            "CountryId": country_id,
-            "Date": date,
-        }
+        Args:
+            series_id `str`: The Enact series ID.
 
-        if option_id is not None:
-            if not is_list_of_strings(option_id):
-                raise ValueError("Option ID input must be a list of strings")
-            request_details["OptionId"] = option_id
+            date `datetime.date`: The date to request forecasts for.
 
-        response = await self._post_request(endpoint, request_details)
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-        return APIHelper._convert_response_to_df(response, nested_key="data")
+            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: A pandas DataFrame holding all data for the requested series on the requested date.
+                    The first row will provide all the dates we have a forecast iteration for.
+                    All other rows correspond to the data-points at each value of the first array.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+        request_body = handlers.hof_handler.generate_hof_request_single_date(series_id, date, country_id, option_id)
+        response = self._post_request(endpoint, request_body)
+        return convert_response_to_df(response, nested_key="data")
 
     async def get_history_of_forecast_for_date_range_async(
         self,
@@ -498,39 +753,67 @@ class APIHelper(APIHelperBase):
         country_id: str,
         option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
-        """Gets the history of a forecast for a given date
+        """Gets the history of a forecast for a given date asynchronously.
 
         Args:
-            series_id `str`: The Enact ID for the requested Series, as defined in the query generator on the "General" tab.
-            date_from `datetime.datetime`: The start date you want all iterations of the forecast for.
-            date_to `datetime.datetime`: The end date you want all iterations of the forecast for.
-            country_id `str` (optional): This is the Enact ID for the requested Country, as defined in the query generator on the "General" tab. Defaults to "Gb".
-            option_id `list[str]` (optional): If the selected Series has options, then this is the Enact ID for the requested Option, as defined in the query generator on the "General" tab.
-                                          If this is not sent, then data for all options will be sent back (but capped to the first 10). Defaults to None.
+            series_id `str`: The Enact series ID.
+
+            date_from `datetime.datetime`: The start date to request forecasts for.
+
+            date_to `datetime.datetime`: The end date to request forecasts for.
+
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
+
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
         Returns:
-            Response: This holds all data for the requested series on the requested date.
+            Response: A dictionary of strings and pandas DataFrame holding all data for the requested series on the requested date.
                     The first row will provide all the dates we have a forecast iteration for.
                     All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+        response_body = handlers.hof_handler.generate_hof_request_date_range(
+            series_id, date_from, date_to, country_id, option_id
+        )
+        response = await self._post_request_async(endpoint, response_body)
+        return handlers.hof_handler.date_range_post_process(response)
 
-        date_from, date_to = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+    def get_history_of_forecast_for_date_range(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: list[str] | None = None,
+    ) -> dict[str, pd.DataFrame]:
+        """Gets the history of a forecast for a given date.
 
-        request_details = {"SeriesId": series_id, "CountryId": country_id, "From": date_from, "To": date_to}
+        Args:
+            series_id `str`: The Enact series ID.
 
-        if option_id is not None:
-            if not is_list_of_strings(option_id):
-                raise ValueError("Option ID input must be a list of strings")
-            request_details["OptionId"] = option_id
+            date_from `datetime.datetime`: The start date to request forecasts for.
 
-        response = await self._post_request(endpoint, request_details)
+            date_to `datetime.datetime`: The end date to request forecasts for.
 
-        output: dict[str, pd.DataFrame] = {}
-        for date_str, data in response["data"]["data"].items():
-            df = APIHelper._convert_dict_to_df(data)
-            output[date_str] = df
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-        return output
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: A dictionary of strings and pandas DataFrames holding all data for the requested series on the requested date.
+                    The first row will provide all the dates we have a forecast iteration for.
+                    All other rows correspond to the data-points at each value of the first array.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+        response_body = handlers.hof_handler.generate_hof_request_date_range(
+            series_id, date_from, date_to, country_id, option_id
+        )
+        response = self._post_request(endpoint, response_body)
+        return handlers.hof_handler.date_range_post_process(response)
 
     async def get_latest_forecast_generated_at_given_time_async(
         self,
@@ -541,48 +824,72 @@ class APIHelper(APIHelperBase):
         forecast_as_of: datetime,
         option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
-        """Gets the latest forecast generated prior to the given 'forecast_as_of' datetime
+        """Gets the latest forecast generated prior to the given 'forecast_as_of' datetime asynchronously.
 
         Args:
-            series_id `str`: The Enact ID for the requested Series, as defined in the query generator on the "General" tab.
-            date_from `datetime.datetime`: The start date you want all iterations of the forecast for.
-            date_to `datetime.datetime`: The end date you want all iterations of the forecast for.
-            country_id `str` (optional): This is the Enact ID for the requested Country, as defined in the query generator on the "General" tab. Defaults to "Gb".
+            series_id `str`: The Enact series ID.
+
+            date_from `datetime.datetime`: The start date to request forecasts for.
+
+            date_to `datetime.datetime`: The end date to request forecasts for.
+
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
+
             forecast_as_of `datetime.datetime`: The date you want the latest forecast generated for.
-            option_id `list[str]` (optional): If the selected Series has options, then this is the Enact ID for the requested Option, as defined in the query generator on the "General" tab.
-                                          If this is not sent, then data for all options will be sent back (but capped to the first 10). Defaults to None.
+
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
         Returns:
-            Response: This holds latest forecast generated to the given 'forecast_as_of' datetime for the range of dates requested in a dictionary keyed by the datetime string of each of these dates.
-                    The first row will provide the date we have a forecast iteration for, which will be the latest generated forecast before the given 'forecast_as_of' datetime.
-                    All other rows correspond to the data-points at each value of the first array.
+            Response: A dictionary of string and pandas DataFrames, holding the latest forecast generated to the given 'forecast_as_of' datetime for the range of dates requested.
+            The keys are the datetime strings of each of these dates. The first row of each DataFrame will provide the date we have a forecast iteration for, which will be the latest generated
+            forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
+        request_body = handlers.hof_handler.generate_hof_request_latest_forecast(
+            series_id, date_from, date_to, country_id, forecast_as_of, option_id
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return handlers.hof_handler.latest_forecast_post_process(response)
 
-        date_from, date_to = APIHelper._convert_datetimes_to_iso(date_from, date_to)
-        forecast_as_of = self._convert_datetime_to_iso(forecast_as_of)
+    def get_latest_forecast_generated_at_given_time(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        forecast_as_of: datetime,
+        option_id: list[str] | None = None,
+    ) -> dict[str, pd.DataFrame]:
+        """Gets the latest forecast generated prior to the given 'forecast_as_of' datetime.
 
-        request_details = {
-            "SeriesId": series_id,
-            "CountryId": country_id,
-            "From": date_from,
-            "To": date_to,
-            "ForecastAsOf": forecast_as_of,
-        }
+        Args:
+            series_id `str`: The Enact series ID.
 
-        if option_id is not None:
-            if not is_list_of_strings(option_id):
-                raise ValueError("Option ID input must be a list of strings")
-            request_details["OptionId"] = option_id
+            date_from `datetime.datetime`: The start date to request forecasts for.
 
-        response = await self._post_request(endpoint, request_details)
+            date_to `datetime.datetime`: The end date to request forecasts for.
 
-        output: dict[str, pd.DataFrame] = {}
-        for date_str, data in response["data"]["data"].items():
-            if data is None:
-                continue
-            output[date_str] = APIHelper._convert_dict_to_df(data)
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-        return output
+            forecast_as_of `datetime.datetime`: The date you want the latest forecast generated for.
+
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: A dictionary of string and pandas DataFrames, holding the latest forecast generated to the given 'forecast_as_of' datetime for the range of dates requested.
+            The keys are the datetime strings of each of these dates. The first row of each DataFrame will provide the date we have a forecast iteration for, which will be the latest generated
+            forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
+        request_body = handlers.hof_handler.generate_hof_request_latest_forecast(
+            series_id, date_from, date_to, country_id, forecast_as_of, option_id
+        )
+        response = self._post_request(endpoint, request_body)
+        return handlers.hof_handler.latest_forecast_post_process(response)
 
     # BOA:
     async def get_bm_data_by_period_async(
@@ -611,20 +918,20 @@ class APIHelper(APIHelperBase):
 
         period = get_period(date, period)
 
-        date = self._convert_datetime_to_iso(date)
+        date = convert_datetime_to_iso(date)
 
         request_details = {"Date": date, "Period": period}
 
         if include_accepted_times is not False:
             request_details["includeAcceptedTimes"] = "True"
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
         output: dict[str, pd.DataFrame] = {}
         df_columns = ["acceptedBids", "acceptedOffers", "tableOffers", "tableBids"]
 
         for key_str in df_columns:
             if key_str in response["data"]:
-                output[key_str] = APIHelper._convert_response_to_df(response, nested_key=key_str)
+                output[key_str] = convert_response_to_df(response, nested_key=key_str)
         return output
 
     async def get_bm_data_by_search_async(
@@ -647,14 +954,14 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
-        date = self._convert_datetime_to_iso(date)
+        date = convert_datetime_to_iso(date)
 
         request_details = {"Date": date, "Option": option, "SearchString": search_string}
 
         if include_accepted_times is not False:
             request_details["includeAcceptedTimes"] = "True"
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
         return pd.DataFrame(response["data"][1:], columns=response["data"][0])
 
     # Leaderboard:
@@ -697,7 +1004,7 @@ class APIHelper(APIHelperBase):
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
 
-        date_from, date_to = APIHelper._convert_datetimes_to_iso(date_from, date_to)
+        date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
 
         request_details = {
             "From": date_from,
@@ -709,9 +1016,9 @@ class APIHelper(APIHelperBase):
             "IncludeCmRevenues": include_capacity_market_revenues,
         }
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
         index = "Plant - Owner" if type == "Owner" else "Plant - ID"
-        return APIHelper._convert_embedded_list_to_df(response, index)
+        return convert_embedded_list_to_df(response, index)
 
     # Ancillary Contracts:
     async def get_ancillary_contract_data_async(
@@ -729,7 +1036,8 @@ class APIHelper(APIHelperBase):
                                              The options are "DynamicContainmentEfa" (for DC-L), "DynamicContainmentEfaHF" (for DC-H), "DynamicModerationLF" (for DM-L), "DynamicModerationHF" (for DM-H),
                                                "DynamicRegulationLF" (for DR-L), "DynamicRegulationHF" (for DR-H), "Ffr" (for FFR), "StorDayAhead" (for STOR), "ManFr" (for MFR), "SFfr" (for SFFR).
 
-            option_one `str` or `int`: Additional information dependent on ancillary contract type. Tender Round (e.g. "150") for "FFR", Year-Month-Day (e.g. "2022-11-3") for "STOR", Year (e.g. "2022") for "MFR", and Month-Year (e.g. "11-2022") otherwise.
+            option_one `str` or `int`: Additional information dependent on ancillary contract type. Tender Round (e.g. "150") for "FFR", Year-Month-Day (e.g. "2022-11-3") for "STOR", Year (e.g. "2022") for
+            "MFR", and Month-Year (e.g. "11-2022") otherwise.
 
             option_two `str` (optional): Additional information dependent on ancillary contract type. Not applicable for "FFR" and "STOR", Month (e.g. "November") for "MFR", and Day (e.g. "5") otherwise.
 
@@ -757,7 +1065,7 @@ class APIHelper(APIHelperBase):
         if option_two is not None:
             request_details["OptionTwo"] = option_two
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
 
         if "data" not in response or not response["data"]:
             return pd.DataFrame()
@@ -1005,9 +1313,9 @@ class APIHelper(APIHelperBase):
             "TableId": table_id,
         }
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
 
-        return APIHelper._convert_embedded_list_to_df(response)
+        return convert_embedded_list_to_df(response)
 
     # EPEX:
     async def get_epex_trades_by_contract_id_async(self, contract_id: str) -> pd.DataFrame:
@@ -1023,8 +1331,8 @@ class APIHelper(APIHelperBase):
             "ContractId": contract_id,
         }
 
-        response = await self._post_request(endpoint, request_details)
-        return APIHelper._convert_response_to_df(response, index_on=-1)
+        response = await self._post_request_async(endpoint, request_details)
+        return convert_response_to_df(response, index_on=-1)
 
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """Get executed EPEX trades of a contract, given the date, period and type
@@ -1047,12 +1355,12 @@ class APIHelper(APIHelperBase):
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
 
         period = get_period(date, period)
-        date = self._convert_datetime_to_iso(date)
+        date = convert_datetime_to_iso(date)
 
         request_details = {"Type": type, "Date": date, "Period": period}
 
-        response = await self._post_request(endpoint, request_details)
-        return APIHelper._convert_response_to_df(response, index_on=-1)
+        response = await self._post_request_async(endpoint, request_details)
+        return convert_response_to_df(response, index_on=-1)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """Get order book of a contract,given the date, period and type
@@ -1075,14 +1383,14 @@ class APIHelper(APIHelperBase):
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
 
         period = get_period(date, period)
-        date = self._convert_datetime_to_iso(date)
+        date = convert_datetime_to_iso(date)
 
         request_details = {"Type": type, "Date": date, "Period": period}
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
         output: dict[str, pd.DataFrame] = {}
         for table_str, data in response["data"].items():
-            output[table_str] = APIHelper._convert_dict_to_df(data)
+            output[table_str] = convert_dict_to_df(data)
 
         return output
 
@@ -1099,10 +1407,10 @@ class APIHelper(APIHelperBase):
             "ContractId": contract_id,
         }
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
         output: dict[str, pd.DataFrame] = {}
         for table_str, data in response["data"].items():
-            output[table_str] = APIHelper._convert_dict_to_df(data)
+            output[table_str] = convert_dict_to_df(data)
 
         return output
 
@@ -1118,14 +1426,14 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
-        date = self._convert_datetime_to_iso(date)
+        date = convert_datetime_to_iso(date)
 
         request_details = {
             "Date": date,
         }
 
-        response = await self._post_request(endpoint, request_details)
-        return APIHelper._convert_response_to_df(response)
+        response = await self._post_request_async(endpoint, request_details)
+        return convert_response_to_df(response)
 
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
         """Get N2EX buy and sell curves for a given day.
@@ -1136,13 +1444,13 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
 
-        date = self._convert_datetime_to_iso(date)
+        date = convert_datetime_to_iso(date)
 
         request_details = {
             "Date": date,
         }
 
-        return await self._post_request(endpoint, request_details)
+        return await self._post_request_async(endpoint, request_details)
 
     async def get_day_ahead_data_async(
         self,
@@ -1166,16 +1474,18 @@ class APIHelper(APIHelperBase):
 
             selectedEfaBlocks (optional): The EFA blocks to find similar days for.
 
-            seriesInput (optional):The series to find days with similar values to. The array must only contain strings from the following list: "ResidualLoad", "Tsdf", "WindForecast", "SolarForecast" "DynamicContainmentEfa", "DynamicContainmentEfaHF", "DynamicContainmentEfaLF", "DynamicRegulationHF", "DynamicRegulationLF", "DynamicModerationLF", "DynamicModerationHF", "PositiveBalancingReserve", "NegativeBalancingReserve", "SFfr". If none are specified, then all of the series listed are used in the calculation.
+            seriesInput (optional):The series to find days with similar values to. The array must only contain strings from the following list: "ResidualLoad", "Tsdf", "WindForecast", "SolarForecast"
+            "DynamicContainmentEfa", "DynamicContainmentEfaHF", "DynamicContainmentEfaLF", "DynamicRegulationHF", "DynamicRegulationLF", "DynamicModerationLF", "DynamicModerationHF", "PositiveBalancingReserve",
+            "NegativeBalancingReserve", "SFfr". If none are specified, then all of the series listed are used in the calculation.
         Raises:
             `TypeError`: If the input dates are not of type date or datetime.
 
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
 
-        fromDateString = self._convert_datetime_to_iso(fromDate)
+        fromDateString = convert_datetime_to_iso(fromDate)
         if toDate != None:
-            toDateString = self._convert_datetime_to_iso(toDate)
+            toDateString = convert_datetime_to_iso(toDate)
         else:
             toDateString = None
 
@@ -1188,7 +1498,7 @@ class APIHelper(APIHelperBase):
             "seriesInput": seriesInput,
         }
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
         output: dict[int, pd.DataFrame] = {}
 
         for key, value in response["data"].items():

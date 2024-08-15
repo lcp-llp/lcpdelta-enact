@@ -84,7 +84,7 @@ class APIHelper(APIHelperBase):
         if weighting_metric:
             request_details["WeightingMetric"] = weighting_metric
 
-        response = await self._post_request(endpoint, request_details)
+        response = await self._post_request_async(endpoint, request_details)
 
         try:
             df = pd.DataFrame(response["data"]["dictionaryOutput"])
