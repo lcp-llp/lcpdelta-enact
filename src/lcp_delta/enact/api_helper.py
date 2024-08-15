@@ -2,6 +2,7 @@ import calendar
 from datetime import date, datetime
 import pandas as pd
 
+import handlers.bm_handler
 import handlers.hof_handler
 from .helpers import convert_response_to_df, convert_dict_to_df, convert_embedded_list_to_df
 from lcp_delta.global_helpers import is_list_of_strings, get_period, convert_datetime_to_iso, convert_datetimes_to_iso
@@ -891,48 +892,53 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return handlers.hof_handler.latest_forecast_post_process(response)
 
-    # BOA:
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
-        """Get BM (Balancing Mechanism) data for a specific date and period.
-
-        This method retrieves the BM (Balancing Mechanism) data for a specific date and period.
-        The date and period can either be specified by a single datetime or by passing in an optional period input with a date.
-        If specified by a single datetime, the closest period when rounding down to the nearest half an hour will be used.
-        If specified by the period input, the date should be in the correct format, and the period should be an integer.
+        """Gets BM (Balancing Mechanism) data for a specific date and period asynchronously.
 
         Args:
-            date: The date that you would like the BOD data for.
-            period (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated.
-            include_accepted_times: Choose whether object include BOA accepted times or not
+            date `datetime.datetime`: The date to request BOD data for.
+
+            period `int` (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
+
+            include_accepted_times `bool`: Choose whether object include BOA accepted times or not
 
         Returns:
-            Response: The response object containing the BM data.
+            Response: A pandas DataFrame containing the BM data.
 
         Raises:
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+        request_body = handlers.bm_handler.generate_by_period_request(date, period, include_accepted_times)
+        response = await self._post_request_async(endpoint, request_body)
+        return handlers.bm_handler.by_period_post_process(response)
 
-        period = get_period(date, period)
+    def get_bm_data_by_period(
+        self, date: datetime, period: int = None, include_accepted_times: bool = False
+    ) -> pd.DataFrame:
+        """Gets BM (Balancing Mechanism) data for a specific date and period.
 
-        date = convert_datetime_to_iso(date)
+        Args:
+            date `datetime.datetime`: The date to request BOD data for.
 
-        request_details = {"Date": date, "Period": period}
+            period `int` (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
 
-        if include_accepted_times is not False:
-            request_details["includeAcceptedTimes"] = "True"
+            include_accepted_times `bool`: Choose whether object include BOA accepted times or not
 
-        response = await self._post_request_async(endpoint, request_details)
-        output: dict[str, pd.DataFrame] = {}
-        df_columns = ["acceptedBids", "acceptedOffers", "tableOffers", "tableBids"]
+        Returns:
+            Response: A pandas DataFrame containing the BM data.
 
-        for key_str in df_columns:
-            if key_str in response["data"]:
-                output[key_str] = convert_response_to_df(response, nested_key=key_str)
-        return output
+        Raises:
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
+        """
+
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+        request_body = handlers.bm_handler.generate_by_period_request(date, period, include_accepted_times)
+        response = self._post_request(endpoint, request_body)
+        return handlers.bm_handler.by_period_post_process(response)
 
     async def get_bm_data_by_search_async(
         self,
@@ -941,30 +947,55 @@ class APIHelper(APIHelperBase):
         search_string: str | None = None,
         include_accepted_times: bool = False,
     ) -> pd.DataFrame:
-        """Get BM data based for a specific date and search criteria.
+        """Gets BM (Balancing Mechanism) data for a specific date and search criteria asynchronously.
 
         Args:
-            date `datetime.datetime`: The date for which to retrieve the BM data.
-            option `str`: This allows you to select whether you want to search for BOA data for plants, fuels or just return everything. Can be set to "plant", "fuel", "all"
-            search_string `str`: The search string to match against the BM data. If Option is "plant", this allows you to search for all BOA actions from plants with BMU ID containing "CARR" (e.g. all Carrington units).
-                                If option is "fuel", this allows you to search for all BOA actions from plants with fuel type "Coal". If Option is "all", this must not be sent to work.
+            date `datetime.datetime`: The date to request BOD data for.
+
+            option `str`: The search option; can be set to "plant", "fuel", or "all".
+
+            search_string `str`: The search string to match against the BM data. If option is "plant", this allows you to filter BOA actions by BMU ID (e.g. "CARR" for all Carrington units).
+                                If option is "fuel", this allows you to filter BOA actions by fuel type (e.g. "Coal"). If Option is "all", this must not be passed as an argument.
+
             include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
         Returns:
-            Response: The response object containing the BM data.
+            Response: A pandas DataFrame containing the BM data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+        request_body = handlers.bm_handler.generate_by_search_request(
+            date, option, search_string, include_accepted_times
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return handlers.bm_handler.by_search_post_process(response)
 
-        date = convert_datetime_to_iso(date)
+    def get_bm_data_by_search(
+        self,
+        date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = False,
+    ) -> pd.DataFrame:
+        """Gets BM (Balancing Mechanism) data for a specific date and search criteria.
 
-        request_details = {"Date": date, "Option": option, "SearchString": search_string}
+        Args:
+            date `datetime.datetime`: The date to request BOD data for.
 
-        if include_accepted_times is not False:
-            request_details["includeAcceptedTimes"] = "True"
+            option `str`: The search option; can be set to "plant", "fuel", or "all".
 
-        response = await self._post_request_async(endpoint, request_details)
-        return pd.DataFrame(response["data"][1:], columns=response["data"][0])
+            search_string `str`: The search string to match against the BM data. If option is "plant", this allows you to filter BOA actions by BMU ID (e.g. "CARR" for all Carrington units).
+                                If option is "fuel", this allows you to filter BOA actions by fuel type (e.g. "Coal"). If Option is "all", this must not be passed as an argument.
 
-    # Leaderboard:
+            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
+        Returns:
+            Response: A pandas DataFrame containing the BM data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+        request_body = handlers.bm_handler.generate_by_search_request(
+            date, option, search_string, include_accepted_times
+        )
+        response = self._post_request(endpoint, request_body)
+        return handlers.bm_handler.by_search_post_process(response)
+
     async def get_leaderboard_data_async(
         self,
         date_from: datetime,
@@ -975,50 +1006,79 @@ class APIHelper(APIHelperBase):
         gas_price_assumption="DayAheadForward",
         include_capacity_market_revenues=False,
     ) -> pd.DataFrame:
-        """Get leaderboard data for a specific date range.
+        """Gets leaderboard data for a given date range asynchronously.
 
         Args:
-            date_from `datetime.datetime`: The start date of the leaderboard data.
+            date_from `datetime.datetime`: The start date.
 
-            date_to `datetime.datetime`: The end date of the leaderboard data.
-                                     If a single day is wanted, then this will be the same as the From value.
+            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
 
-            type `str`: The type of leaderboard to be requested.
-                                     Possible options are: "Plant", "Owner" or "Battery".
+            type `str`: The type of leaderboard to be requested; "Plant", "Owner" or "Battery".
 
-            revenue_metric `str` (optional): This is the unit which revenues will be measured in for the leaderboard.
-                                            Possible options are: Pound or PoundPerMwPerH.
-                                            If not included the default is PoundPerMwPerH.
+            revenue_metric `str` (optional): The unit which revenues will be measured in for the leaderboard; "Pound" or "PoundPerMwPerH" (default).
 
-            market_price_assumption `str` (optional): This is the price assumption for wholesale revenues on the leaderboard.
-                                                     Possible options are: WeightedAverageDayAheadPrice, EpexDayAheadPrice, NordpoolDayAheadPrice, IntradayPrice or BestPrice.
-                                                     Defaults to WeightedAverageDayAheadPrice.
+            market_price_assumption `str` (optional): The price assumption for wholesale revenues on the leaderboard.
+                Possible options are: "WeightedAverageDayAheadPrice" (default), "EpexDayAheadPrice", "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
 
-            gas_price_assumption `str` (optional): The gas price assumption to filter the leaderboard data.
-                                                  Possible options are: DayAheadForward, DayAheadSpot, WithinDaySpot or CheapestPrice.
-                                                  If not included the default is DayAheadForward.
+            gas_price_assumption `str` (optional): The gas price assumption; "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot" or "CheapestPrice".
 
-            include_capacity_market_revenues `bool` (optional): Changes whether or not the capacity market revenue column is shown.
-                                                    If set to false, the capacity market revenues will not be included in the net revenues. Defaults to False.
+            include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
+        response_body = handlers.leaderboard_handler.generate_leaderboard_request(
+            date_from,
+            date_to,
+            type,
+            revenue_metric,
+            market_price_assumption,
+            gas_price_assumption,
+            include_capacity_market_revenues,
+        )
+        response = await self._post_request_async(endpoint, response_body)
+        return handlers.leaderboard_handler.leaderboard_post_process(response, type)
 
-        date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
+    def get_leaderboard_data(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        type="Plant",
+        revenue_metric="PoundPerMwPerH",
+        market_price_assumption="WeightedAverageDayAheadPrice",
+        gas_price_assumption="DayAheadForward",
+        include_capacity_market_revenues=False,
+    ) -> pd.DataFrame:
+        """Gets leaderboard data for a given date range.
 
-        request_details = {
-            "From": date_from,
-            "To": date_to,
-            "Type": type,
-            "RevenueMetric": revenue_metric,
-            "MarketPriceAssumption": market_price_assumption,
-            "GasPriceAssumption": gas_price_assumption,
-            "IncludeCmRevenues": include_capacity_market_revenues,
-        }
+        Args:
+            date_from `datetime.datetime`: The start date.
 
-        response = await self._post_request_async(endpoint, request_details)
-        index = "Plant - Owner" if type == "Owner" else "Plant - ID"
-        return convert_embedded_list_to_df(response, index)
+            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
+
+            type `str`: The type of leaderboard to be requested; "Plant", "Owner" or "Battery".
+
+            revenue_metric `str` (optional): The unit which revenues will be measured in for the leaderboard; "Pound" or "PoundPerMwPerH" (default).
+
+            market_price_assumption `str` (optional): The price assumption for wholesale revenues on the leaderboard.
+                Possible options are: "WeightedAverageDayAheadPrice" (default), "EpexDayAheadPrice", "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
+
+            gas_price_assumption `str` (optional): The gas price assumption; "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot" or "CheapestPrice".
+
+            include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
+        """
+
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
+        response_body = handlers.leaderboard_handler.generate_leaderboard_request(
+            date_from,
+            date_to,
+            type,
+            revenue_metric,
+            market_price_assumption,
+            gas_price_assumption,
+            include_capacity_market_revenues,
+        )
+        response = self._post_request(endpoint, response_body)
+        return handlers.leaderboard_handler.leaderboard_post_process(response, type)
 
     # Ancillary Contracts:
     async def get_ancillary_contract_data_async(
