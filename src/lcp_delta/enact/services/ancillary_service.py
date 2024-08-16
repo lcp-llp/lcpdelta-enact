@@ -39,11 +39,9 @@ def process_ancillary_response(
     response: dict, ancillary_contract_group: AncillaryContractGroup | None = None
 ) -> pd.DataFrame:
     print(ancillary_contract_group)
-    print("1")
     if "data" not in response or not response["data"]:
         return pd.DataFrame()
     first_item = response["data"][0]
-    print("3")
     if ancillary_contract_group == AncillaryContractGroup.SFfr:
         return pd.DataFrame(first_item["plants"])
     if ancillary_contract_group == AncillaryContractGroup.ManFr:
@@ -61,7 +59,6 @@ def process_ancillary_response(
         df.set_index("tenderNumber", inplace=True)
         return df
     if ancillary_contract_group == AncillaryContractGroup.Dynamic:
-        print("8")
         return _process_dynamic_response(response)
     return response
 
