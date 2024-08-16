@@ -36,8 +36,7 @@ class APIHelper(APIHelperBase):
         """Makes a request to the series endpoints.
 
         Returns:
-             Response: A dictionary or pandas DataFrame containing the series data.
-        """
+             Response: A dictionary or pandas DataFrame containing the series data."""
         request_body = series_service.generate_series_data_request(
             series_id,
             date_from,
