@@ -1,8 +1,10 @@
 import httpx
+
 from abc import ABC
-from .credentials_holder import CredentialsHolder
-from .http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
-from .http.exceptions import EnactApiError
+
+from lcp_delta.common.credentials_holder import CredentialsHolder
+from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
+from lcp_delta.common.http.exceptions import EnactApiError
 
 
 class APIHelperBase(ABC):

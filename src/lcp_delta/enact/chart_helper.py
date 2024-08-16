@@ -2,9 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.figure as fig
 
-from .api_helper import APIHelper
-
-from ..common import CredentialsHolder
+from lcp_delta.common import CredentialsHolder
+from lcp_delta.enact.api_helper import APIHelper
 
 
 class ChartHelper:

@@ -1,5 +1,12 @@
 import pandas as pd
 
+from datetime import datetime
+from typing import Union
+
+from lcp_delta.global_helpers import convert_datetimes_to_iso
+from lcp_delta.common import APIHelperBase, constants
+from lcp_delta.enact.helpers import get_month_name
+from lcp_delta.enact.enums import AncillaryContractGroup
 from lcp_delta.enact.services import ancillary_service
 from lcp_delta.enact.services import bm_service
 from lcp_delta.enact.services import day_ahead_service
@@ -10,14 +17,6 @@ from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
-
-from datetime import datetime
-from .helpers import get_month_name
-from lcp_delta.global_helpers import convert_datetimes_to_iso
-from typing import Union
-from .enums import AncillaryContractGroup
-
-from ..common import APIHelperBase, constants
 
 
 class APIHelper(APIHelperBase):
@@ -1104,11 +1103,11 @@ class APIHelper(APIHelperBase):
                 Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
-        request_body = ancillary_service.generate_ancillary_contract_request(
+        request_body = ancillary_service.generate_ancillary_request(
             ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
         )
         response = await self._post_request_async(endpoint, request_body)
-        return ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
+        return ancillary_service.process_ancillary_response(response, ancillary_contract_group)
 
     def get_ancillary_contract_data(
         self,
@@ -1135,11 +1134,11 @@ class APIHelper(APIHelperBase):
                 Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
-        request_body = ancillary_service.generate_ancillary_contract_request(
+        request_body = ancillary_service.generate_ancillary_request(
             ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
         )
         response = self._post_request(endpoint, request_body)
-        return ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
+        return ancillary_service.process_ancillary_response(response, ancillary_contract_group)
 
     async def get_DCL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DCL (Dynamic Containment Low) contracts for a provided day asynchronously.

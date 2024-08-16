@@ -6,7 +6,7 @@ from datetime import date, datetime
 from lcp_delta.enact.enums import AncillaryContractGroup
 
 
-def generate_ancillary_contract_request(
+def generate_ancillary_request(
     ancillary_contract_type: str,
     option_one: Union[str, int] | None = None,
     option_two: Union[int, str] | None = None,
@@ -38,9 +38,12 @@ def generate_ancillary_contract_request(
 def process_ancillary_response(
     response: dict, ancillary_contract_group: AncillaryContractGroup | None = None
 ) -> pd.DataFrame:
+    print(ancillary_contract_group)
+    print("1")
     if "data" not in response or not response["data"]:
         return pd.DataFrame()
     first_item = response["data"][0]
+    print("3")
     if ancillary_contract_group == AncillaryContractGroup.SFfr:
         return pd.DataFrame(first_item["plants"])
     if ancillary_contract_group == AncillaryContractGroup.ManFr:
@@ -58,10 +61,12 @@ def process_ancillary_response(
         df.set_index("tenderNumber", inplace=True)
         return df
     if ancillary_contract_group == AncillaryContractGroup.Dynamic:
+        print("8")
         return _process_dynamic_response(response)
+    return response
 
 
-def _process_dynamic_response(self, response: dict) -> pd.DataFrame:
+def _process_dynamic_response(response: dict) -> pd.DataFrame:
     df = pd.DataFrame(response["data"][0]["plants"])
     if not df.empty:
         df.set_index("orderId", inplace=True)
