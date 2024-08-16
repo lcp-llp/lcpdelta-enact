@@ -1,8 +1,8 @@
 import json
 import httpx
 import threading
-import constants
 from datetime import datetime
+from . import constants
 from .response_objects.usage_info import UsageInfo
 from .http.retry_policies import DEFAULT_RETRY_POLICY
 

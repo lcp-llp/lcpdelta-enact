@@ -1,11 +1,10 @@
-import calendar
-from datetime import date, datetime
+from datetime import datetime
 import pandas as pd
-from .helpers import convert_response_to_df, convert_dict_to_df, convert_embedded_list_to_df, get_month_name
-from lcp_delta.global_helpers import is_list_of_strings, get_period, convert_datetime_to_iso, convert_datetimes_to_iso
+from .helpers import get_month_name
+from lcp_delta.global_helpers import convert_datetimes_to_iso
 from typing import Union
 import lcp_delta.enact.services as sv
-from enums import AncillaryContractGroup
+from .enums import AncillaryContractGroup
 
 from ..common import APIHelperBase, constants
 
@@ -1525,6 +1524,18 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(endpoint, request_body)
         return sv.epex_service.process_trades_response(response)
 
+    def get_epex_trades_by_contract_id(self, contract_id: str) -> pd.DataFrame:
+        """Gets executed EPEX trades for a given contract ID.
+
+        Args:
+            contract_id `int`: The ID associated with the EPEX contract you would like executed trades for.
+
+        """
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
+        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        response = self._post_request(endpoint, request_body)
+        return sv.epex_service.process_trades_response(response)
+
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """Gets executed EPEX trades of a contract given the date, period and type asynchronously.
 
@@ -1542,6 +1553,25 @@ class APIHelper(APIHelperBase):
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
         request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
         response = await self._post_request_async(endpoint, request_body)
+        return sv.epex_service.process_trades_response(response)
+
+    def get_epex_trades(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
+        """Gets executed EPEX trades of a contract given the date, period and type.
+
+        Args:
+            type: The EPEX contract type; "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", or "Ext. Peak".
+
+            date `datetime.datetime`: The date to request EPEX trades for.
+
+            period `int` (optional): The period for which to retrieve the EPEX trades. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
+
+        Raises:
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
+
+        """
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
+        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        response = self._post_request(endpoint, request_body)
         return sv.epex_service.process_trades_response(response)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
@@ -1563,8 +1593,27 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(endpoint, request_body)
         return sv.epex_service.process_order_book_response(response)
 
+    def get_epex_order_book(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
+        """Gets the order book of a contract given a date, period and type.
+
+        Args:
+            type: The EPEX contract type; "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", or "Ext. Peak".
+
+            date `datetime.datetime`: The date to request EPEX trades for.
+
+            period `int` (optional): The period for which to retrieve the EPEX trades. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
+
+        Raises:
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
+
+        """
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
+        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        response = self._post_request(endpoint, request_body)
+        return sv.epex_service.process_order_book_response(response)
+
     async def get_epex_order_book_by_contract_id_async(self, contract_id: int) -> dict[str, pd.DataFrame]:
-        """Get EPEX order book by contract ID
+        """Gets the EPEX order book for a given contract ID asynchronously.
 
         Args:
             contract_id `int`: The ID associated with the EPEX contract you would like the order book for.
@@ -1575,8 +1624,20 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(endpoint, request_body)
         return sv.epex_service.process_order_book_response(response)
 
+    def get_epex_order_book_by_contract_id(self, contract_id: int) -> dict[str, pd.DataFrame]:
+        """Gets the EPEX order book for a given contract ID.
+
+        Args:
+            contract_id `int`: The ID associated with the EPEX contract you would like the order book for.
+
+        """
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
+        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        response = self._post_request(endpoint, request_body)
+        return sv.epex_service.process_order_book_response(response)
+
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
-        """Get EPEX contracts for a given day
+        """Gets EPEX contracts for a given day asynchronously.
 
         Args:
             date `datetime.datetime`: The date you would like all contracts for.
@@ -1591,8 +1652,24 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(endpoint, request_body)
         return sv.epex_service.process_contract_response(response)
 
+    def get_epex_contracts(self, date: datetime) -> pd.DataFrame:
+        """Gets EPEX contracts for a given day.
+
+        Args:
+            date `datetime.datetime`: The date you would like all contracts for.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+
+        """
+        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
+
+        request_body = sv.epex_service.generate_contract_request(date)
+        response = self._post_request(endpoint, request_body)
+        return sv.epex_service.process_contract_response(response)
+
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
-        """Gets N2EX buy and sell curves for a given day.
+        """Gets N2EX buy and sell curves for a given day asynchronously.
 
         Args:
             date `datetime.datetime`: The date you would like buy and sell curves for.
@@ -1602,7 +1679,54 @@ class APIHelper(APIHelperBase):
         request_body = sv.nordpool_service.generate_request(date)
         return await self._post_request_async(endpoint, request_body)
 
+    def get_N2EX_buy_sell_curves(self, date: datetime) -> dict:
+        """Gets N2EX buy and sell curves for a given day.
+
+        Args:
+            date `datetime.datetime`: The date you would like buy and sell curves for.
+
+        """
+        endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
+        request_body = sv.nordpool_service.generate_request(date)
+        return self._post_request(endpoint, request_body)
+
     async def get_day_ahead_data_async(
+        self,
+        fromDate: datetime,
+        toDate: datetime | None = None,
+        aggregate: bool = False,
+        numberOfSimilarDays: int = 10,
+        selectedEfaBlocks: int | None = None,
+        seriesInput: list[str] = None,
+    ) -> dict[int, pd.DataFrame]:
+        """Find historical days with day ahead prices most similar to the current day asynchronously.
+
+        Args:
+            from `datetime.datetime`: The start of the date range to compare against.
+
+            to `datetime.datetime`: The end of the date range for days to compare against.
+
+            aggregate `bool` (optional): If set to true, the EFA blocks are considered as a single time range.
+
+            numberOfSimilarDays `int` (optional): The number of the most similar days to include in the response.
+
+            selectedEfaBlocks `int` (optional): The EFA blocks to find similar days for.
+
+            seriesInput `list[str]` (optional): The series to find days with similar values to. Accepted values: "ResidualLoad", "Tsdf", "WindForecast", "SolarForecast"
+            "DynamicContainmentEfa", "DynamicContainmentEfaHF", "DynamicContainmentEfaLF", "DynamicRegulationHF", "DynamicRegulationLF", "DynamicModerationLF",
+            "DynamicModerationHF", "PositiveBalancingReserve", "NegativeBalancingReserve", "SFfr". If none specified, all are used in the calculation.
+        Raises:
+            `TypeError`: If the input dates are not of type date or datetime.
+
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
+        request_body = sv.day_ahead_service.generate_request(
+            fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.day_ahead_service.process_response(response)
+
+    def get_day_ahead_data(
         self,
         fromDate: datetime,
         toDate: datetime | None = None,
@@ -1635,5 +1759,5 @@ class APIHelper(APIHelperBase):
         request_body = sv.day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
-        response = await self._post_request_async(endpoint, request_body)
+        response = self._post_request(endpoint, request_body)
         return sv.day_ahead_service.process_response(response)
