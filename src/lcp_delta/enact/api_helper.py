@@ -31,6 +31,7 @@ class APIHelper(APIHelperBase):
         endpoint: str,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
     ) -> pd.DataFrame | dict:
         """Makes a request to the series endpoints asynchronously.
 
@@ -48,7 +49,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
         response = await self._post_request_async(endpoint, request_body)
-        return series_service.process_series_data_response(response)
+        return series_service.process_series_data_response(response, parse_datetimes)
 
     def _make_series_request(
         self,
@@ -61,6 +62,7 @@ class APIHelper(APIHelperBase):
         endpoint: str,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
     ) -> pd.DataFrame | dict:
         """Makes a request to the series endpoints.
 
@@ -78,7 +80,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
         response = self._post_request(endpoint, request_body)
-        return series_service.process_series_data_response(response)
+        return series_service.process_series_data_response(response, parse_datetimes)
 
     async def get_series_data_async(
         self,
@@ -271,7 +273,6 @@ class APIHelper(APIHelperBase):
             endpoint,
             request_time_zone_id,
             time_zone_id,
-            parse_datetimes,
         )
 
     def get_series_by_fuel(

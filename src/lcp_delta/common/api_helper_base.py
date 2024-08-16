@@ -16,6 +16,7 @@ class APIHelperBase(ABC):
             public_api_key `str`: Public API Key provided by Enact. Please contact the Enact team if you are unsure about what your username or public api key are.
         """
         self.credentials_holder = CredentialsHolder(username, public_api_key)
+        self.enact_credentials = self.credentials_holder  # legacy
 
     @DEFAULT_RETRY_POLICY
     async def _post_request_async(self, endpoint: str, request_body: dict):
