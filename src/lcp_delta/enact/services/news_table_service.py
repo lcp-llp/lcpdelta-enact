@@ -1,5 +1,6 @@
 import pandas as pd
-from ..helpers import convert_embedded_list_to_df
+
+from lcp_delta.enact.helpers import convert_embedded_list_to_df
 
 
 def generate_request(table_id: str) -> dict:

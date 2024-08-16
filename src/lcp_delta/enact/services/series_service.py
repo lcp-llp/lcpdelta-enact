@@ -1,6 +1,7 @@
 from typing import Any
+
 from lcp_delta.global_helpers import is_list_of_strings
-from helpers import convert_response_to_df
+from lcp_delta.enact.helpers import convert_response_to_df
 
 
 def generate_series_data_request(

@@ -1,7 +1,9 @@
 import pandas as pd
+
 from datetime import datetime
+
 from lcp_delta.global_helpers import get_period, convert_datetime_to_iso
-from helpers import convert_response_to_df
+from lcp_delta.enact.helpers import convert_response_to_df
 
 
 def generate_by_period_request(date: datetime, period: int = None, include_accepted_times: bool = False):

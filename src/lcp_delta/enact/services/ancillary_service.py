@@ -1,7 +1,9 @@
 import pandas as pd
+
 from typing import Union
 from datetime import date, datetime
-from ..enums import AncillaryContractGroup
+
+from lcp_delta.enact.enums import AncillaryContractGroup
 
 
 def generate_ancillary_contract_request(

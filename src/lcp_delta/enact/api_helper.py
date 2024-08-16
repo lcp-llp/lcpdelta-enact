@@ -1,9 +1,20 @@
-from datetime import datetime
 import pandas as pd
+
+from lcp_delta.enact.services import ancillary_service
+from lcp_delta.enact.services import bm_service
+from lcp_delta.enact.services import day_ahead_service
+from lcp_delta.enact.services import epex_service
+from lcp_delta.enact.services import hof_service
+from lcp_delta.enact.services import leaderboard_service
+from lcp_delta.enact.services import news_table_service
+from lcp_delta.enact.services import nordpool_service
+from lcp_delta.enact.services import plant_service
+from lcp_delta.enact.services import series_service
+
+from datetime import datetime
 from .helpers import get_month_name
 from lcp_delta.global_helpers import convert_datetimes_to_iso
 from typing import Union
-import lcp_delta.enact.services as sv
 from .enums import AncillaryContractGroup
 
 from ..common import APIHelperBase, constants
@@ -27,7 +38,7 @@ class APIHelper(APIHelperBase):
         Returns:
              Response: A dictionary or pandas DataFrame containing the series data.
         """
-        request_body = sv.series_service.generate_series_data_request(
+        request_body = series_service.generate_series_data_request(
             series_id,
             date_from,
             date_to,
@@ -38,7 +49,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
         response = await self._post_request_async(endpoint, request_body)
-        return sv.series_service.process_series_data_response(response)
+        return series_service.process_series_data_response(response)
 
     def _make_series_request(
         self,
@@ -57,7 +68,7 @@ class APIHelper(APIHelperBase):
         Returns:
              Response: A dictionary or pandas DataFrame containing the series data.
         """
-        request_body = sv.series_service.generate_series_data_request(
+        request_body = series_service.generate_series_data_request(
             series_id,
             date_from,
             date_to,
@@ -68,7 +79,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
         response = self._post_request(endpoint, request_body)
-        return sv.series_service.process_series_data_response(response)
+        return series_service.process_series_data_response(response)
 
     async def get_series_data_async(
         self,
@@ -190,7 +201,7 @@ class APIHelper(APIHelperBase):
             or not the series has historical forecasts.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_body = sv.series_service.generate_series_info_request(series_id, country_id)
+        request_body = series_service.generate_series_info_request(series_id, country_id)
         return await self._post_request_async(endpoint, request_body)
 
     def get_series_info(self, series_id: str, country_id: str | None = None) -> dict:
@@ -207,7 +218,7 @@ class APIHelper(APIHelperBase):
             or not the series has historical forecasts.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_body = sv.series_service.generate_series_info_request(series_id, country_id)
+        request_body = series_service.generate_series_info_request(series_id, country_id)
         return self._post_request(endpoint, request_body)
 
     async def get_series_by_fuel_async(
@@ -647,7 +658,7 @@ class APIHelper(APIHelperBase):
             plant_id `str`: The Enact plant ID.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-        request_body = sv.plant_service.generate_plant_request(plant_id)
+        request_body = plant_service.generate_plant_request(plant_id)
         return await self._post_request_async(endpoint, request_body)
 
     def get_plant_details_by_id(self, plant_id: str) -> dict:
@@ -657,7 +668,7 @@ class APIHelper(APIHelperBase):
             plant_id `str`: The Enact plant ID.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-        request_body = sv.plant_service.generate_plant_request(plant_id)
+        request_body = plant_service.generate_plant_request(plant_id)
         return self._post_request(endpoint, request_body)
 
     async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
@@ -671,9 +682,9 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the plant data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
-        request_body = sv.plant_service.generate_country_fuel_request(country_id, fuel_id)
+        request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.plant_service.process_country_fuel_response(response)
+        return plant_service.process_country_fuel_response(response)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants for a given fuel and country.
@@ -686,9 +697,9 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the plant data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
-        request_body = sv.plant_service.generate_country_fuel_request(country_id, fuel_id)
+        request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
         response = self._post_request(endpoint, request_body)
-        return sv.plant_service.process_country_fuel_response(response)
+        return plant_service.process_country_fuel_response(response)
 
     async def get_history_of_forecast_for_given_date_async(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
@@ -712,9 +723,9 @@ class APIHelper(APIHelperBase):
             All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        request_body = sv.hof_service.generate_single_date_request(series_id, date, country_id, option_id)
+        request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.hof_service.process_single_date_response(response)
+        return hof_service.process_single_date_response(response)
 
     def get_history_of_forecast_for_given_date(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
@@ -738,9 +749,9 @@ class APIHelper(APIHelperBase):
             All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        request_body = sv.hof_service.generate_single_date_request(series_id, date, country_id, option_id)
+        request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
         response = self._post_request(endpoint, request_body)
-        return sv.hof_service.process_single_date_response(response)
+        return hof_service.process_single_date_response(response)
 
     async def get_history_of_forecast_for_date_range_async(
         self,
@@ -771,9 +782,9 @@ class APIHelper(APIHelperBase):
             All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        response_body = sv.hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
+        response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
         response = await self._post_request_async(endpoint, response_body)
-        return sv.hof_service.process_date_range_response(response)
+        return hof_service.process_date_range_response(response)
 
     def get_history_of_forecast_for_date_range(
         self,
@@ -804,9 +815,9 @@ class APIHelper(APIHelperBase):
             All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        response_body = sv.hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
+        response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
         response = self._post_request(endpoint, response_body)
-        return sv.hof_service.process_date_range_response(response)
+        return hof_service.process_date_range_response(response)
 
     async def get_latest_forecast_generated_at_given_time_async(
         self,
@@ -840,11 +851,11 @@ class APIHelper(APIHelperBase):
             forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
-        request_body = sv.hof_service.generate_latest_forecast_request(
+        request_body = hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
         response = await self._post_request_async(endpoint, request_body)
-        return sv.hof_service.process_latest_forecast_response(response)
+        return hof_service.process_latest_forecast_response(response)
 
     def get_latest_forecast_generated_at_given_time(
         self,
@@ -878,11 +889,11 @@ class APIHelper(APIHelperBase):
             forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
-        request_body = sv.hof_service.generate_latest_forecast_request(
+        request_body = hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
         response = self._post_request(endpoint, request_body)
-        return sv.hof_service.process_latest_forecast_response(response)
+        return hof_service.process_latest_forecast_response(response)
 
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
@@ -904,9 +915,9 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = sv.bm_service.generate_by_period_request(date, period, include_accepted_times)
+        request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.bm_service.process_by_period_response(response)
+        return bm_service.process_by_period_response(response)
 
     def get_bm_data_by_period(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
@@ -928,9 +939,9 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = sv.bm_service.generate_by_period_request(date, period, include_accepted_times)
+        request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = self._post_request(endpoint, request_body)
-        return sv.bm_service.process_by_period_response(response)
+        return bm_service.process_by_period_response(response)
 
     async def get_bm_data_by_search_async(
         self,
@@ -954,9 +965,9 @@ class APIHelper(APIHelperBase):
             Response: A pandas DataFrame containing the BM data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = sv.bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.bm_service.process_by_search_response(response)
+        return bm_service.process_by_search_response(response)
 
     def get_bm_data_by_search(
         self,
@@ -980,9 +991,9 @@ class APIHelper(APIHelperBase):
             Response: A pandas DataFrame containing the BM data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = sv.bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
         response = self._post_request(endpoint, request_body)
-        return sv.bm_service.process_by_search_response(response)
+        return bm_service.process_by_search_response(response)
 
     async def get_leaderboard_data_async(
         self,
@@ -1014,7 +1025,7 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
-        response_body = sv.leaderboard_service.generate_request(
+        response_body = leaderboard_service.generate_request(
             date_from,
             date_to,
             type,
@@ -1024,7 +1035,7 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
         )
         response = await self._post_request_async(endpoint, response_body)
-        return sv.leaderboard_service.process_response(response, type)
+        return leaderboard_service.process_response(response, type)
 
     def get_leaderboard_data(
         self,
@@ -1056,7 +1067,7 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
-        response_body = sv.leaderboard_service.generate_request(
+        response_body = leaderboard_service.generate_request(
             date_from,
             date_to,
             type,
@@ -1066,7 +1077,7 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
         )
         response = self._post_request(endpoint, response_body)
-        return sv.leaderboard_service.process_response(response, type)
+        return leaderboard_service.process_response(response, type)
 
     async def get_ancillary_contract_data_async(
         self,
@@ -1093,11 +1104,11 @@ class APIHelper(APIHelperBase):
                 Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
-        request_body = sv.ancillary_service.generate_ancillary_contract_request(
+        request_body = ancillary_service.generate_ancillary_contract_request(
             ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
         )
         response = await self._post_request_async(endpoint, request_body)
-        return sv.ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
+        return ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
 
     def get_ancillary_contract_data(
         self,
@@ -1124,11 +1135,11 @@ class APIHelper(APIHelperBase):
                 Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
-        request_body = sv.ancillary_service.generate_ancillary_contract_request(
+        request_body = ancillary_service.generate_ancillary_contract_request(
             ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
         )
         response = self._post_request(endpoint, request_body)
-        return sv.ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
+        return ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
 
     async def get_DCL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DCL (Dynamic Containment Low) contracts for a provided day asynchronously.
@@ -1495,9 +1506,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
-        request_body = sv.news_table_service.generate_request(table_id)
+        request_body = news_table_service.generate_request(table_id)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.news_table_service.process_response(response)
+        return news_table_service.process_response(response)
 
     def get_news_table(self, table_id: str) -> pd.DataFrame:
         """Gets the specified news table.
@@ -1508,9 +1519,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
-        request_body = sv.news_table_service.generate_request(table_id)
+        request_body = news_table_service.generate_request(table_id)
         response = self._post_request(endpoint, request_body)
-        return sv.news_table_service.process_response(response)
+        return news_table_service.process_response(response)
 
     async def get_epex_trades_by_contract_id_async(self, contract_id: str) -> pd.DataFrame:
         """Gets executed EPEX trades for a given contract ID asynchronously.
@@ -1520,9 +1531,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
-        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        request_body = epex_service.generate_contract_id_request(contract_id)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.epex_service.process_trades_response(response)
+        return epex_service.process_trades_response(response)
 
     def get_epex_trades_by_contract_id(self, contract_id: str) -> pd.DataFrame:
         """Gets executed EPEX trades for a given contract ID.
@@ -1532,9 +1543,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
-        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        request_body = epex_service.generate_contract_id_request(contract_id)
         response = self._post_request(endpoint, request_body)
-        return sv.epex_service.process_trades_response(response)
+        return epex_service.process_trades_response(response)
 
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """Gets executed EPEX trades of a contract given the date, period and type asynchronously.
@@ -1551,9 +1562,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
-        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        request_body = epex_service.generate_time_and_type_request(type, date, period)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.epex_service.process_trades_response(response)
+        return epex_service.process_trades_response(response)
 
     def get_epex_trades(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """Gets executed EPEX trades of a contract given the date, period and type.
@@ -1570,9 +1581,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
-        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        request_body = epex_service.generate_time_and_type_request(type, date, period)
         response = self._post_request(endpoint, request_body)
-        return sv.epex_service.process_trades_response(response)
+        return epex_service.process_trades_response(response)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """Gets the order book of a contract given a date, period and type asynchronously.
@@ -1589,9 +1600,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
-        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        request_body = epex_service.generate_time_and_type_request(type, date, period)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.epex_service.process_order_book_response(response)
+        return epex_service.process_order_book_response(response)
 
     def get_epex_order_book(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """Gets the order book of a contract given a date, period and type.
@@ -1608,9 +1619,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
-        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        request_body = epex_service.generate_time_and_type_request(type, date, period)
         response = self._post_request(endpoint, request_body)
-        return sv.epex_service.process_order_book_response(response)
+        return epex_service.process_order_book_response(response)
 
     async def get_epex_order_book_by_contract_id_async(self, contract_id: int) -> dict[str, pd.DataFrame]:
         """Gets the EPEX order book for a given contract ID asynchronously.
@@ -1620,9 +1631,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
-        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        request_body = epex_service.generate_contract_id_request(contract_id)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.epex_service.process_order_book_response(response)
+        return epex_service.process_order_book_response(response)
 
     def get_epex_order_book_by_contract_id(self, contract_id: int) -> dict[str, pd.DataFrame]:
         """Gets the EPEX order book for a given contract ID.
@@ -1632,9 +1643,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
-        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        request_body = epex_service.generate_contract_id_request(contract_id)
         response = self._post_request(endpoint, request_body)
-        return sv.epex_service.process_order_book_response(response)
+        return epex_service.process_order_book_response(response)
 
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
         """Gets EPEX contracts for a given day asynchronously.
@@ -1648,9 +1659,9 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
-        request_body = sv.epex_service.generate_contract_request(date)
+        request_body = epex_service.generate_contract_request(date)
         response = await self._post_request_async(endpoint, request_body)
-        return sv.epex_service.process_contract_response(response)
+        return epex_service.process_contract_response(response)
 
     def get_epex_contracts(self, date: datetime) -> pd.DataFrame:
         """Gets EPEX contracts for a given day.
@@ -1664,9 +1675,9 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
-        request_body = sv.epex_service.generate_contract_request(date)
+        request_body = epex_service.generate_contract_request(date)
         response = self._post_request(endpoint, request_body)
-        return sv.epex_service.process_contract_response(response)
+        return epex_service.process_contract_response(response)
 
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
         """Gets N2EX buy and sell curves for a given day asynchronously.
@@ -1676,7 +1687,7 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
-        request_body = sv.nordpool_service.generate_request(date)
+        request_body = nordpool_service.generate_request(date)
         return await self._post_request_async(endpoint, request_body)
 
     def get_N2EX_buy_sell_curves(self, date: datetime) -> dict:
@@ -1687,7 +1698,7 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
-        request_body = sv.nordpool_service.generate_request(date)
+        request_body = nordpool_service.generate_request(date)
         return self._post_request(endpoint, request_body)
 
     async def get_day_ahead_data_async(
@@ -1720,11 +1731,11 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
-        request_body = sv.day_ahead_service.generate_request(
+        request_body = day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
         response = await self._post_request_async(endpoint, request_body)
-        return sv.day_ahead_service.process_response(response)
+        return day_ahead_service.process_response(response)
 
     def get_day_ahead_data(
         self,
@@ -1756,8 +1767,8 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
-        request_body = sv.day_ahead_service.generate_request(
+        request_body = day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
         response = self._post_request(endpoint, request_body)
-        return sv.day_ahead_service.process_response(response)
+        return day_ahead_service.process_response(response)
