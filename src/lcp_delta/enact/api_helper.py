@@ -20,37 +20,6 @@ from lcp_delta.enact.services import series_service
 
 
 class APIHelper(APIHelperBase):
-    async def _make_series_request_async(
-        self,
-        series_id: str,
-        date_from: str,
-        date_to: str,
-        country_id: str,
-        option_id: list[str],
-        half_hourly_average: bool,
-        endpoint: str,
-        request_time_zone_id: str | None = None,
-        time_zone_id: str | None = None,
-        parse_datetimes: bool = False,
-    ) -> pd.DataFrame | dict:
-        """Makes a request to the series endpoints asynchronously.
-
-        Returns:
-             Response: A dictionary or pandas DataFrame containing the series data.
-        """
-        request_body = series_service.generate_series_data_request(
-            series_id,
-            date_from,
-            date_to,
-            country_id,
-            option_id,
-            half_hourly_average,
-            request_time_zone_id,
-            time_zone_id,
-        )
-        response = await self._post_request_async(endpoint, request_body)
-        return series_service.process_series_data_response(response, parse_datetimes)
-
     def _make_series_request(
         self,
         series_id: str,
@@ -82,58 +51,32 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return series_service.process_series_data_response(response, parse_datetimes)
 
-    async def get_series_data_async(
+    async def _make_series_request_async(
         self,
         series_id: str,
-        date_from: datetime,
-        date_to: datetime,
+        date_from: str,
+        date_to: str,
         country_id: str,
-        option_id: list[str] | None = None,
-        half_hourly_average: bool = False,
+        option_id: list[str],
+        half_hourly_average: bool,
+        endpoint: str,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
-    ) -> pd.DataFrame:
-        """Gets series data from Enact asynchronously.
-
-        Args:
-            series_id `str`: The Enact series ID.
-
-            date_from `datetime.datetime`: The start date.
-
-            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
-
-            option_id `list[str]`: The Enact option ID, if an option is applicable.
-
-            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
-
-            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
-
-            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
-
-            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
-
-            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
-
-        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
-
-        Returns:
-            Response: An object containing the series data.
-        """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        return await self._make_series_request_async(
+    ) -> pd.DataFrame | dict:
+        """An asynchronous version of `_make_series_request`."""
+        request_body = series_service.generate_series_data_request(
             series_id,
-            date_from_str,
-            date_to_str,
+            date_from,
+            date_to,
             country_id,
             option_id,
             half_hourly_average,
-            endpoint,
             request_time_zone_id,
             time_zone_id,
-            parse_datetimes,
         )
+        response = await self._post_request_async(endpoint, request_body)
+        return series_service.process_series_data_response(response, parse_datetimes)
 
     def get_series_data(
         self,
@@ -188,22 +131,58 @@ class APIHelper(APIHelperBase):
             parse_datetimes,
         )
 
-    async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
-        """Gets information about a specific Enact series asynchronously.
+    async def get_series_data_async(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Gets series data from Enact asynchronously.
 
         Args:
-            series_id `str`: The series ID.
-            country_id `str` (optional): The country ID (defaults to None). If not provided, data will be returned for the first country available for this series.
+            series_id `str`: The Enact series ID.
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The Enact option ID, if an option is applicable.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            An object containing information about the series. This includes series name, countries with data for that series, options related to the series, whether or not the series has historical data, and whether
-            or not the series has historical forecasts.
+            Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_body = series_service.generate_series_info_request(series_id, country_id)
-        return await self._post_request_async(endpoint, request_body)
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        return await self._make_series_request_async(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            option_id,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
 
     def get_series_info(self, series_id: str, country_id: str | None = None) -> dict:
         """Gets information about a specific Enact series.
@@ -221,6 +200,77 @@ class APIHelper(APIHelperBase):
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
         request_body = series_service.generate_series_info_request(series_id, country_id)
         return self._post_request(endpoint, request_body)
+
+    async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
+        """Gets information about a specific Enact series asynchronously.
+
+        Args:
+            series_id `str`: The series ID.
+            country_id `str` (optional): The country ID (defaults to None). If not provided, data will be returned for the first country available for this series.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            An object containing information about the series. This includes series name, countries with data for that series, options related to the series, whether or not the series has historical data, and whether
+            or not the series has historical forecasts.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
+        request_body = series_service.generate_series_info_request(series_id, country_id)
+        return await self._post_request_async(endpoint, request_body)
+
+    def get_series_by_fuel(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_id: str,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Gets plant series data for a given fuel type.
+
+        Args:
+            series_id `str`: The Enact series ID (must be a plant series).
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The fuel option for the request, e.g. "Coal".
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+
+        Returns:
+            Response: An object containing the series data.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
+        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
+        fuel_type = [option_id]
+        return self._make_series_request(
+            series_id,
+            date_from_str,
+            date_to_str,
+            country_id,
+            fuel_type,
+            half_hourly_average,
+            endpoint,
+            request_time_zone_id,
+            time_zone_id,
+            parse_datetimes,
+        )
 
     async def get_series_by_fuel_async(
         self,
@@ -275,7 +325,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
 
-    def get_series_by_fuel(
+    def get_series_by_zone(
         self,
         series_id: str,
         date_from: datetime,
@@ -287,7 +337,7 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Gets plant series data for a given fuel type.
+        """Get plant series data for a given zone.
 
         Args:
             series_id `str`: The Enact series ID (must be a plant series).
@@ -296,7 +346,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: The fuel option for the request, e.g. "Coal".
+            option_id `str`: The fuel option for the request, e.g. "Z1".
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -313,15 +363,15 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        fuel_type = [option_id]
+        zone = [option_id]
         return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
             country_id,
-            fuel_type,
+            zone,
             half_hourly_average,
             endpoint,
             request_time_zone_id,
@@ -383,7 +433,7 @@ class APIHelper(APIHelperBase):
             parse_datetimes,
         )
 
-    def get_series_by_zone(
+    def get_series_by_owner(
         self,
         series_id: str,
         date_from: datetime,
@@ -395,7 +445,7 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get plant series data for a given zone.
+        """Get plant series data for a given owner.
 
         Args:
             series_id `str`: The Enact series ID (must be a plant series).
@@ -404,7 +454,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: The fuel option for the request, e.g. "Z1".
+            option_id `str`: The owner option for the request, e.g. "Adela Energy".
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -421,15 +471,15 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        zone = [option_id]
+        owner = [option_id]
         return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
             country_id,
-            zone,
+            owner,
             half_hourly_average,
             endpoint,
             request_time_zone_id,
@@ -491,19 +541,19 @@ class APIHelper(APIHelperBase):
             parse_datetimes,
         )
 
-    def get_series_by_owner(
+    def get_series_multi_option(
         self,
         series_id: str,
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_id: list[str] | None = None,
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get plant series data for a given owner.
+        """Get series data for a specific series with multiple options available.
 
         Args:
             series_id `str`: The Enact series ID (must be a plant series).
@@ -512,7 +562,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: The owner option for the request, e.g. "Adela Energy".
+            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -524,20 +574,19 @@ class APIHelper(APIHelperBase):
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
-        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        Note that the arguments required for specific enact data can be found on the site.
 
         Returns:
-            Response: An object containing the series data.
+            Response: The response object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        owner = [option_id]
         return self._make_series_request(
             series_id,
             date_from_str,
             date_to_str,
             country_id,
-            owner,
+            option_id,
             half_hourly_average,
             endpoint,
             request_time_zone_id,
@@ -598,69 +647,6 @@ class APIHelper(APIHelperBase):
             parse_datetimes,
         )
 
-    def get_series_multi_option(
-        self,
-        series_id: str,
-        date_from: datetime,
-        date_to: datetime,
-        country_id: str,
-        option_id: list[str] | None = None,
-        half_hourly_average: bool = False,
-        request_time_zone_id: str | None = None,
-        time_zone_id: str | None = None,
-        parse_datetimes: bool = False,
-    ) -> pd.DataFrame:
-        """Get series data for a specific series with multiple options available.
-
-        Args:
-            series_id `str`: The Enact series ID (must be a plant series).
-
-            date_from `datetime.datetime`: The start date.
-
-            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
-
-            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
-
-            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
-
-            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
-
-            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
-
-            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
-
-            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
-
-        Note that the arguments required for specific enact data can be found on the site.
-
-        Returns:
-            Response: The response object containing the series data.
-        """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        return self._make_series_request(
-            series_id,
-            date_from_str,
-            date_to_str,
-            country_id,
-            option_id,
-            half_hourly_average,
-            endpoint,
-            request_time_zone_id,
-            time_zone_id,
-            parse_datetimes,
-        )
-
-    async def get_plant_details_by_id_async(self, plant_id: str) -> dict:
-        """Get details of a plant based on the plant ID asynchronously.
-
-        Args:
-            plant_id `str`: The Enact plant ID.
-        """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-        request_body = plant_service.generate_plant_request(plant_id)
-        return await self._post_request_async(endpoint, request_body)
-
     def get_plant_details_by_id(self, plant_id: str) -> dict:
         """Get details of a plant based on the plant ID.
 
@@ -671,20 +657,15 @@ class APIHelper(APIHelperBase):
         request_body = plant_service.generate_plant_request(plant_id)
         return self._post_request(endpoint, request_body)
 
-    async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
-        """Get a list of plants for a given fuel and country asynchronously.
+    async def get_plant_details_by_id_async(self, plant_id: str) -> dict:
+        """Get details of a plant based on the plant ID asynchronously.
 
         Args:
-            fuel_id `str`: The fuel ID.
-            country_id `str` (optional): The country ID. Defaults to "Gb".
-
-        Returns:
-            Response: The response object containing the plant data.
+            plant_id `str`: The Enact plant ID.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
-        request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
-        response = await self._post_request_async(endpoint, request_body)
-        return plant_service.process_country_fuel_response(response)
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
+        request_body = plant_service.generate_plant_request(plant_id)
+        return await self._post_request_async(endpoint, request_body)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants for a given fuel and country.
@@ -701,31 +682,20 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return plant_service.process_country_fuel_response(response)
 
-    async def get_history_of_forecast_for_given_date_async(
-        self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
-    ) -> pd.DataFrame:
-        """Gets the history (all iterations) of a series forecast for a given date asynchronously.
+    async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
+        """Get a list of plants for a given fuel and country asynchronously.
 
         Args:
-            series_id `str`: The Enact series ID.
-
-            date `datetime.date`: The date to request forecasts for.
-
-            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
-
-            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
-
-        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+            fuel_id `str`: The fuel ID.
+            country_id `str` (optional): The country ID. Defaults to "Gb".
 
         Returns:
-            Response: A pandas DataFrame holding all data for the requested series on the requested date.
-            The first row will provide all the dates we have a forecast iteration for.
-            All other rows correspond to the data-points at each value of the first array.
+            Response: The response object containing the plant data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
+        request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
         response = await self._post_request_async(endpoint, request_body)
-        return hof_service.process_single_date_response(response)
+        return plant_service.process_country_fuel_response(response)
 
     def get_history_of_forecast_for_given_date(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
@@ -753,38 +723,31 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return hof_service.process_single_date_response(response)
 
-    async def get_history_of_forecast_for_date_range_async(
-        self,
-        series_id: str,
-        date_from: datetime,
-        date_to: datetime,
-        country_id: str,
-        option_id: list[str] | None = None,
-    ) -> dict[str, pd.DataFrame]:
-        """Gets the history of a forecast for a given date asynchronously.
+    async def get_history_of_forecast_for_given_date_async(
+        self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
+    ) -> pd.DataFrame:
+        """Gets the history (all iterations) of a series forecast for a given date asynchronously.
 
         Args:
             series_id `str`: The Enact series ID.
 
-            date_from `datetime.datetime`: The start date to request forecasts for.
-
-            date_to `datetime.datetime`: The end date to request forecasts for.
+            date `datetime.date`: The date to request forecasts for.
 
             country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: A dictionary of strings and pandas DataFrame holding all data for the requested series on the requested date.
+            Response: A pandas DataFrame holding all data for the requested series on the requested date.
             The first row will provide all the dates we have a forecast iteration for.
             All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = await self._post_request_async(endpoint, response_body)
-        return hof_service.process_date_range_response(response)
+        request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
+        response = await self._post_request_async(endpoint, request_body)
+        return hof_service.process_single_date_response(response)
 
     def get_history_of_forecast_for_date_range(
         self,
@@ -819,16 +782,15 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, response_body)
         return hof_service.process_date_range_response(response)
 
-    async def get_latest_forecast_generated_at_given_time_async(
+    async def get_history_of_forecast_for_date_range_async(
         self,
         series_id: str,
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        forecast_as_of: datetime,
         option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
-        """Gets the latest forecast generated prior to the given 'forecast_as_of' datetime asynchronously.
+        """Gets the history of a forecast for a given date asynchronously.
 
         Args:
             series_id `str`: The Enact series ID.
@@ -839,23 +801,19 @@ class APIHelper(APIHelperBase):
 
             country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            forecast_as_of `datetime.datetime`: The date you want the latest forecast generated for.
-
             option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: A dictionary of string and pandas DataFrames, holding the latest forecast generated to the given 'forecast_as_of' datetime for the range of dates requested.
-            The keys are the datetime strings of each of these dates. The first row of each DataFrame will provide the date we have a forecast iteration for, which will be the latest generated
-            forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
+            Response: A dictionary of strings and pandas DataFrame holding all data for the requested series on the requested date.
+            The first row will provide all the dates we have a forecast iteration for.
+            All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
-        request_body = hof_service.generate_latest_forecast_request(
-            series_id, date_from, date_to, country_id, forecast_as_of, option_id
-        )
-        response = await self._post_request_async(endpoint, request_body)
-        return hof_service.process_latest_forecast_response(response)
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+        response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
+        response = await self._post_request_async(endpoint, response_body)
+        return hof_service.process_date_range_response(response)
 
     def get_latest_forecast_generated_at_given_time(
         self,
@@ -895,29 +853,43 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return hof_service.process_latest_forecast_response(response)
 
-    async def get_bm_data_by_period_async(
-        self, date: datetime, period: int = None, include_accepted_times: bool = False
-    ) -> pd.DataFrame:
-        """Gets BM (Balancing Mechanism) data for a specific date and period asynchronously.
+    async def get_latest_forecast_generated_at_given_time_async(
+        self,
+        series_id: str,
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        forecast_as_of: datetime,
+        option_id: list[str] | None = None,
+    ) -> dict[str, pd.DataFrame]:
+        """Gets the latest forecast generated prior to the given 'forecast_as_of' datetime asynchronously.
 
         Args:
-            date `datetime.datetime`: The date to request BOD data for.
+            series_id `str`: The Enact series ID.
 
-            period `int` (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
+            date_from `datetime.datetime`: The start date to request forecasts for.
 
-            include_accepted_times `bool`: Choose whether object include BOA accepted times or not
+            date_to `datetime.datetime`: The end date to request forecasts for.
+
+            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
+
+            forecast_as_of `datetime.datetime`: The date you want the latest forecast generated for.
+
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
         Returns:
-            Response: A pandas DataFrame containing the BM data.
-
-        Raises:
-            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
+            Response: A dictionary of string and pandas DataFrames, holding the latest forecast generated to the given 'forecast_as_of' datetime for the range of dates requested.
+            The keys are the datetime strings of each of these dates. The first row of each DataFrame will provide the date we have a forecast iteration for, which will be the latest generated
+            forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
-
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
+        request_body = hof_service.generate_latest_forecast_request(
+            series_id, date_from, date_to, country_id, forecast_as_of, option_id
+        )
         response = await self._post_request_async(endpoint, request_body)
-        return bm_service.process_by_period_response(response)
+        return hof_service.process_latest_forecast_response(response)
 
     def get_bm_data_by_period(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
@@ -943,31 +915,29 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return bm_service.process_by_period_response(response)
 
-    async def get_bm_data_by_search_async(
-        self,
-        date: datetime,
-        option: str = "all",
-        search_string: str | None = None,
-        include_accepted_times: bool = False,
+    async def get_bm_data_by_period_async(
+        self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
-        """Gets BM (Balancing Mechanism) data for a specific date and search criteria asynchronously.
+        """Gets BM (Balancing Mechanism) data for a specific date and period asynchronously.
 
         Args:
             date `datetime.datetime`: The date to request BOD data for.
 
-            option `str`: The search option; can be set to "plant", "fuel", or "all".
+            period `int` (optional): The period for which to retrieve the BM data. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
 
-            search_string `str`: The search string to match against the BM data. If option is "plant", this allows you to filter BOA actions by BMU ID (e.g. "CARR" for all Carrington units).
-                                If option is "fuel", this allows you to filter BOA actions by fuel type (e.g. "Coal"). If Option is "all", this must not be passed as an argument.
+            include_accepted_times `bool`: Choose whether object include BOA accepted times or not
 
-            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
         Returns:
             Response: A pandas DataFrame containing the BM data.
+
+        Raises:
+            `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
+
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
+        request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = await self._post_request_async(endpoint, request_body)
-        return bm_service.process_by_search_response(response)
+        return bm_service.process_by_period_response(response)
 
     def get_bm_data_by_search(
         self,
@@ -995,47 +965,31 @@ class APIHelper(APIHelperBase):
         response = self._post_request(endpoint, request_body)
         return bm_service.process_by_search_response(response)
 
-    async def get_leaderboard_data_async(
+    async def get_bm_data_by_search_async(
         self,
-        date_from: datetime,
-        date_to: datetime,
-        type="Plant",
-        revenue_metric="PoundPerMwPerH",
-        market_price_assumption="WeightedAverageDayAheadPrice",
-        gas_price_assumption="DayAheadForward",
-        include_capacity_market_revenues=False,
+        date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = False,
     ) -> pd.DataFrame:
-        """Gets leaderboard data for a given date range asynchronously.
+        """Gets BM (Balancing Mechanism) data for a specific date and search criteria asynchronously.
 
         Args:
-            date_from `datetime.datetime`: The start date.
+            date `datetime.datetime`: The date to request BOD data for.
 
-            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
+            option `str`: The search option; can be set to "plant", "fuel", or "all".
 
-            type `str`: The type of leaderboard to be requested; "Plant", "Owner" or "Battery".
+            search_string `str`: The search string to match against the BM data. If option is "plant", this allows you to filter BOA actions by BMU ID (e.g. "CARR" for all Carrington units).
+                                If option is "fuel", this allows you to filter BOA actions by fuel type (e.g. "Coal"). If Option is "all", this must not be passed as an argument.
 
-            revenue_metric `str` (optional): The unit which revenues will be measured in for the leaderboard; "Pound" or "PoundPerMwPerH" (default).
-
-            market_price_assumption `str` (optional): The price assumption for wholesale revenues on the leaderboard.
-                Possible options are: "WeightedAverageDayAheadPrice" (default), "EpexDayAheadPrice", "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
-
-            gas_price_assumption `str` (optional): The gas price assumption; "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot" or "CheapestPrice".
-
-            include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
+            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
+        Returns:
+            Response: A pandas DataFrame containing the BM data.
         """
-
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
-        response_body = leaderboard_service.generate_request(
-            date_from,
-            date_to,
-            type,
-            revenue_metric,
-            market_price_assumption,
-            gas_price_assumption,
-            include_capacity_market_revenues,
-        )
-        response = await self._post_request_async(endpoint, response_body)
-        return leaderboard_service.process_response(response, type)
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
+        response = await self._post_request_async(endpoint, request_body)
+        return bm_service.process_by_search_response(response)
 
     def get_leaderboard_data(
         self,
@@ -1077,6 +1031,48 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
         )
         response = self._post_request(endpoint, response_body)
+        return leaderboard_service.process_response(response, type)
+
+    async def get_leaderboard_data_async(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        type="Plant",
+        revenue_metric="PoundPerMwPerH",
+        market_price_assumption="WeightedAverageDayAheadPrice",
+        gas_price_assumption="DayAheadForward",
+        include_capacity_market_revenues=False,
+    ) -> pd.DataFrame:
+        """Gets leaderboard data for a given date range asynchronously.
+
+        Args:
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
+
+            type `str`: The type of leaderboard to be requested; "Plant", "Owner" or "Battery".
+
+            revenue_metric `str` (optional): The unit which revenues will be measured in for the leaderboard; "Pound" or "PoundPerMwPerH" (default).
+
+            market_price_assumption `str` (optional): The price assumption for wholesale revenues on the leaderboard.
+                Possible options are: "WeightedAverageDayAheadPrice" (default), "EpexDayAheadPrice", "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
+
+            gas_price_assumption `str` (optional): The gas price assumption; "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot" or "CheapestPrice".
+
+            include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
+        """
+
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
+        response_body = leaderboard_service.generate_request(
+            date_from,
+            date_to,
+            type,
+            revenue_metric,
+            market_price_assumption,
+            gas_price_assumption,
+            include_capacity_market_revenues,
+        )
+        response = await self._post_request_async(endpoint, response_body)
         return leaderboard_service.process_response(response, type)
 
     async def get_ancillary_contract_data_async(
