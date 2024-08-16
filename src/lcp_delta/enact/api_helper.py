@@ -1,5 +1,7 @@
 import pandas as pd
 
+import lcp_delta.enact.endpoints as ep
+
 from datetime import datetime
 from typing import Union
 
@@ -116,7 +118,6 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return self._make_series_request(
             series_id,
@@ -125,7 +126,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_DATA,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -144,7 +145,6 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_data`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return await self._make_series_request_async(
             series_id,
@@ -153,7 +153,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_DATA,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -172,15 +172,13 @@ class APIHelper(APIHelperBase):
             An object containing information about the series. This includes series name, countries with data for that series, options related to the series, whether or not the series has historical data, and whether
             or not the series has historical forecasts.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
         request_body = series_service.generate_series_info_request(series_id, country_id)
-        return self._post_request(endpoint, request_body)
+        return self._post_request(ep.SERIES_INFO, request_body)
 
     async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
         """An asynchronous version of `get_series_info`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
         request_body = series_service.generate_series_info_request(series_id, country_id)
-        return await self._post_request_async(endpoint, request_body)
+        return await self._post_request_async(ep.SERIES_INFO, request_body)
 
     def get_series_by_fuel(
         self,
@@ -220,7 +218,6 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         fuel_type = [option_id]
         return self._make_series_request(
@@ -230,7 +227,7 @@ class APIHelper(APIHelperBase):
             country_id,
             fuel_type,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_BY_FUEL,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -249,7 +246,6 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_by_fuel`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         fuel_type = [option_id]
         return await self._make_series_request_async(
@@ -259,7 +255,7 @@ class APIHelper(APIHelperBase):
             country_id,
             fuel_type,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_BY_FUEL,
             request_time_zone_id,
             time_zone_id,
         )
@@ -302,7 +298,6 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         zone = [option_id]
         return self._make_series_request(
@@ -312,7 +307,7 @@ class APIHelper(APIHelperBase):
             country_id,
             zone,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_BY_ZONE,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -331,7 +326,6 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_by_zone`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         zone = [option_id]
         return await self._make_series_request_async(
@@ -341,7 +335,7 @@ class APIHelper(APIHelperBase):
             country_id,
             zone,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_BY_ZONE,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -385,7 +379,6 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         owner = [option_id]
         return self._make_series_request(
@@ -395,7 +388,7 @@ class APIHelper(APIHelperBase):
             country_id,
             owner,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_BY_OWNER,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -414,7 +407,6 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_by_owner`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         owner = [option_id]
         return await self._make_series_request_async(
@@ -424,7 +416,7 @@ class APIHelper(APIHelperBase):
             country_id,
             owner,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_BY_OWNER,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -468,7 +460,6 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return self._make_series_request(
             series_id,
@@ -477,7 +468,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_MULTI_OPTION,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -496,7 +487,6 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_multi_option`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
         date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return await self._make_series_request_async(
             series_id,
@@ -505,7 +495,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            endpoint,
+            ep.SERIES_MULTI_OPTION,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -517,15 +507,13 @@ class APIHelper(APIHelperBase):
         Args:
             plant_id `str`: The Enact plant ID.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
         request_body = plant_service.generate_plant_request(plant_id)
-        return self._post_request(endpoint, request_body)
+        return self._post_request(ep.PLANT_INFO, request_body)
 
     async def get_plant_details_by_id_async(self, plant_id: str) -> dict:
         """An asynchronous version of `get_pant_details_by_id`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
         request_body = plant_service.generate_plant_request(plant_id)
-        return await self._post_request_async(endpoint, request_body)
+        return await self._post_request_async(ep.PLANT_INFO, request_body)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants for a given fuel and country.
@@ -537,16 +525,14 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the plant data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
         request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.PLANT_IDS, request_body)
         return plant_service.process_country_fuel_response(response)
 
     async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
         """An asynchronous version of `get_plants_by_fuel_and_country`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
         request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.PLANT_IDS, request_body)
         return plant_service.process_country_fuel_response(response)
 
     def get_history_of_forecast_for_given_date(
@@ -570,18 +556,16 @@ class APIHelper(APIHelperBase):
             The first row will provide all the dates we have a forecast iteration for.
             All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
         request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.HOF, request_body)
         return hof_service.process_single_date_response(response)
 
     async def get_history_of_forecast_for_given_date_async(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
     ) -> pd.DataFrame:
         """An asynchronous version of `get_history_of_forecast_for_given_date`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
         request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.HOF, request_body)
         return hof_service.process_single_date_response(response)
 
     def get_history_of_forecast_for_date_range(
@@ -612,9 +596,8 @@ class APIHelper(APIHelperBase):
             The first row will provide all the dates we have a forecast iteration for.
             All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
         response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = self._post_request(endpoint, response_body)
+        response = self._post_request(ep.HOF, response_body)
         return hof_service.process_date_range_response(response)
 
     async def get_history_of_forecast_for_date_range_async(
@@ -626,9 +609,8 @@ class APIHelper(APIHelperBase):
         option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_history_of_forecast_for_date_range_async`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
         response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = await self._post_request_async(endpoint, response_body)
+        response = await self._post_request_async(ep.HOF, response_body)
         return hof_service.process_date_range_response(response)
 
     def get_latest_forecast_generated_at_given_time(
@@ -662,11 +644,10 @@ class APIHelper(APIHelperBase):
             The keys are the datetime strings of each of these dates. The first row of each DataFrame will provide the date we have a forecast iteration for, which will be the latest generated
             forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
         request_body = hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.HOF_LATEST_FORECAST, request_body)
         return hof_service.process_latest_forecast_response(response)
 
     async def get_latest_forecast_generated_at_given_time_async(
@@ -679,11 +660,10 @@ class APIHelper(APIHelperBase):
         option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_latest_forecast_generated_at_given_time`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
         request_body = hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.HOF_LATEST_FORECAST, request_body)
         return hof_service.process_latest_forecast_response(response)
 
     def get_bm_data_by_period(
@@ -704,20 +684,16 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
-
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.BOA, request_body)
         return bm_service.process_by_period_response(response)
 
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_period`."""
-
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.BOA, request_body)
         return bm_service.process_by_period_response(response)
 
     def get_bm_data_by_search(
@@ -741,9 +717,8 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: A pandas DataFrame containing the BM data.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.BOA, request_body)
         return bm_service.process_by_search_response(response)
 
     async def get_bm_data_by_search_async(
@@ -753,10 +728,9 @@ class APIHelper(APIHelperBase):
         search_string: str | None = None,
         include_accepted_times: bool = False,
     ) -> pd.DataFrame:
-        """An asynchronous version of `get_bm_data_bby_search`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+        """An asynchronous version of `get_bm_data_by_search`."""
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.BOA, request_body)
         return bm_service.process_by_search_response(response)
 
     def get_leaderboard_data(
@@ -787,7 +761,6 @@ class APIHelper(APIHelperBase):
 
             include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
         response_body = leaderboard_service.generate_request(
             date_from,
             date_to,
@@ -797,7 +770,7 @@ class APIHelper(APIHelperBase):
             gas_price_assumption,
             include_capacity_market_revenues,
         )
-        response = self._post_request(endpoint, response_body)
+        response = self._post_request(ep.LEADERBOARD, response_body)
         return leaderboard_service.process_response(response, type)
 
     async def get_leaderboard_data_async(
@@ -811,7 +784,6 @@ class APIHelper(APIHelperBase):
         include_capacity_market_revenues=False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
         response_body = leaderboard_service.generate_request(
             date_from,
             date_to,
@@ -821,7 +793,7 @@ class APIHelper(APIHelperBase):
             gas_price_assumption,
             include_capacity_market_revenues,
         )
-        response = await self._post_request_async(endpoint, response_body)
+        response = await self._post_request_async(ep.LEADERBOARD, response_body)
         return leaderboard_service.process_response(response, type)
 
     def get_ancillary_contract_data(
@@ -848,11 +820,10 @@ class APIHelper(APIHelperBase):
             Returns:
                 Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
         request_body = ancillary_service.generate_ancillary_request(
             ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
         )
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.ANCILLARY, request_body)
         return ancillary_service.process_ancillary_response(response, ancillary_contract_group)
 
     async def get_ancillary_contract_data_async(
@@ -864,11 +835,10 @@ class APIHelper(APIHelperBase):
         ancillary_contract_group: AncillaryContractGroup | None = None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_ancillary_contract_data`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
         request_body = ancillary_service.generate_ancillary_request(
             ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
         )
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.ANCILLARY, request_body)
         return ancillary_service.process_ancillary_response(response, ancillary_contract_group)
 
     def get_DCL_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -1156,16 +1126,14 @@ class APIHelper(APIHelperBase):
             "BmStartupDetails" "Bsad" "CapacityChanges" "Traids" "Elexon" "LCP" "Entsoe"
 
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
         request_body = news_table_service.generate_request(table_id)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.NEWS_TABLE, request_body)
         return news_table_service.process_response(response)
 
     async def get_news_table_async(self, table_id: str) -> pd.DataFrame:
         """An asynchronous version of `get_news_table`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
         request_body = news_table_service.generate_request(table_id)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.NEWS_TABLE, request_body)
         return news_table_service.process_response(response)
 
     def get_epex_trades_by_contract_id(self, contract_id: str) -> pd.DataFrame:
@@ -1175,16 +1143,14 @@ class APIHelper(APIHelperBase):
             contract_id `int`: The ID associated with the EPEX contract you would like executed trades for.
 
         """
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.EPEX_TRADES_BY_CONTRACT_ID, request_body)
         return epex_service.process_trades_response(response)
 
     async def get_epex_trades_by_contract_id_async(self, contract_id: str) -> pd.DataFrame:
         """An asynchronous version of `get_epex_trades_by_contract_id`."""
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.EPEX_TRADES_BY_CONTRACT_ID, request_body)
         return epex_service.process_trades_response(response)
 
     def get_epex_trades(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
@@ -1201,16 +1167,14 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.EPEX_TRADES, request_body)
         return epex_service.process_trades_response(response)
 
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """An asynchronous version of `get_epex_trades`."""
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.EPEX_TRADES, request_body)
         return epex_service.process_trades_response(response)
 
     def get_epex_order_book(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
@@ -1227,16 +1191,14 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.EPEX_ORDER_BOOK, request_body)
         return epex_service.process_order_book_response(response)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_epex_order_book`."""
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.EPEX_ORDER_BOOK, request_body)
         return epex_service.process_order_book_response(response)
 
     def get_epex_order_book_by_contract_id(self, contract_id: int) -> dict[str, pd.DataFrame]:
@@ -1246,16 +1208,14 @@ class APIHelper(APIHelperBase):
             contract_id `int`: The ID associated with the EPEX contract you would like the order book for.
 
         """
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.EPEX_ORDER_BOOK_BY_CONTRACT_ID, request_body)
         return epex_service.process_order_book_response(response)
 
     async def get_epex_order_book_by_contract_id_async(self, contract_id: int) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_epex_order_book_by_contract_id`."""
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.EPEX_ORDER_BOOK_BY_CONTRACT_ID, request_body)
         return epex_service.process_order_book_response(response)
 
     def get_epex_contracts(self, date: datetime) -> pd.DataFrame:
@@ -1268,18 +1228,14 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
 
         """
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
-
         request_body = epex_service.generate_contract_request(date)
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.EPEX_CONTRACTS, request_body)
         return epex_service.process_contract_response(response)
 
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_epex_contracts`."""
-        endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
-
         request_body = epex_service.generate_contract_request(date)
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.EPEX_CONTRACTS, request_body)
         return epex_service.process_contract_response(response)
 
     def get_N2EX_buy_sell_curves(self, date: datetime) -> dict:
@@ -1289,15 +1245,13 @@ class APIHelper(APIHelperBase):
             date `datetime.datetime`: The date you would like buy and sell curves for.
 
         """
-        endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
         request_body = nordpool_service.generate_request(date)
-        return self._post_request(endpoint, request_body)
+        return self._post_request(ep.NORDPOOL_CURVES, request_body)
 
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
         """An asynchronous version of `get_N2EX_buy_sell_curves`."""
-        endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
         request_body = nordpool_service.generate_request(date)
-        return await self._post_request_async(endpoint, request_body)
+        return await self._post_request_async(ep.NORDPOOL_CURVES, request_body)
 
     def get_day_ahead_data(
         self,
@@ -1328,11 +1282,10 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the input dates are not of type date or datetime.
 
         """
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
         request_body = day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
-        response = self._post_request(endpoint, request_body)
+        response = self._post_request(ep.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)
 
     async def get_day_ahead_data_async(
@@ -1345,9 +1298,8 @@ class APIHelper(APIHelperBase):
         seriesInput: list[str] = None,
     ) -> dict[int, pd.DataFrame]:
         """An asynchronous version of `get_day_ahead_data`."""
-        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
         request_body = day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
-        response = await self._post_request_async(endpoint, request_body)
+        response = await self._post_request_async(ep.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)
