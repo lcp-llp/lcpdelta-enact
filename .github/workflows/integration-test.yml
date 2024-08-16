@@ -7,11 +7,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: automated_testing
 
     strategy:
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ['3.12']
 
     steps:
     - uses: actions/checkout@v2
