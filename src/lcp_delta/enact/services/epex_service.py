@@ -34,4 +34,4 @@ def generate_contract_request(date: datetime) -> dict:
 
 
 def process_contract_response(response: dict) -> pd.DataFrame:
-    convert_response_to_df(response)
+    return convert_response_to_df(response)
