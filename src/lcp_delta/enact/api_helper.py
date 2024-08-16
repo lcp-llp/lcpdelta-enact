@@ -5,8 +5,8 @@ import lcp_delta.enact.endpoints as ep
 from datetime import datetime
 from typing import Union
 
-from lcp_delta.global_helpers import convert_datetimes_to_iso
-from lcp_delta.common import APIHelperBase, constants
+from lcp_delta.global_helpers import convert_datetimes_to_iso, convert_datetime_to_iso
+from lcp_delta.common import APIHelperBase
 from lcp_delta.enact.helpers import get_month_name
 from lcp_delta.enact.enums import AncillaryContractGroup
 from lcp_delta.enact.services import ancillary_service
@@ -118,11 +118,10 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return self._make_series_request(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
             option_id,
             half_hourly_average,
@@ -145,11 +144,10 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_data`."""
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return await self._make_series_request_async(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
             option_id,
             half_hourly_average,
@@ -218,14 +216,12 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        fuel_type = [option_id]
         return self._make_series_request(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
-            fuel_type,
+            [option_id],  # fuel
             half_hourly_average,
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
@@ -246,14 +242,12 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_by_fuel`."""
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        fuel_type = [option_id]
         return await self._make_series_request_async(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
-            fuel_type,
+            [option_id],  # fuel
             half_hourly_average,
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
@@ -298,14 +292,12 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        zone = [option_id]
         return self._make_series_request(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
-            zone,
+            [option_id],  # zone
             half_hourly_average,
             ep.SERIES_BY_ZONE,
             request_time_zone_id,
@@ -326,14 +318,12 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_by_zone`."""
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        zone = [option_id]
         return await self._make_series_request_async(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
-            zone,
+            [option_id],  # zone
             half_hourly_average,
             ep.SERIES_BY_ZONE,
             request_time_zone_id,
@@ -379,14 +369,12 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: An object containing the series data.
         """
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        owner = [option_id]
         return self._make_series_request(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
-            owner,
+            [option_id],  # owner
             half_hourly_average,
             ep.SERIES_BY_OWNER,
             request_time_zone_id,
@@ -407,14 +395,12 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_by_owner`."""
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
-        owner = [option_id]
         return await self._make_series_request_async(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
-            owner,
+            [option_id],  # owner
             half_hourly_average,
             ep.SERIES_BY_OWNER,
             request_time_zone_id,
@@ -460,11 +446,10 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return self._make_series_request(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
             option_id,
             half_hourly_average,
@@ -487,11 +472,10 @@ class APIHelper(APIHelperBase):
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_series_multi_option`."""
-        date_from_str, date_to_str = convert_datetimes_to_iso(date_from, date_to)
         return await self._make_series_request_async(
             series_id,
-            date_from_str,
-            date_to_str,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
             country_id,
             option_id,
             half_hourly_average,
@@ -851,19 +835,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "DynamicContainmentEfa",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicContainmentEfa", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_DCL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DCL_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "DynamicContainmentEfa",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicContainmentEfa", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_DCH_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -876,19 +854,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "DynamicContainmentEfaHF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicContainmentEfaHF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_DCH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DCH_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "DynamicContainmentEfaHF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicContainmentEfaHF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_DML_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -901,19 +873,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "DynamicModerationLF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicModerationLF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_DML_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DML_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "DynamicModerationLF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicModerationLF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_DMH_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -926,19 +892,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "DynamicModerationHF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicModerationHF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_DMH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DMH_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "DynamicModerationHF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicModerationHF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_DRL_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -951,19 +911,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "DynamicRegulationLF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicRegulationLF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_DRL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DRL_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "DynamicRegulationLF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicRegulationLF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_DRH_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -976,19 +930,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "DynamicRegulationHF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicRegulationHF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_DRH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DRH_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "DynamicRegulationHF",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "DynamicRegulationHF", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_NBR_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -1001,19 +949,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "NegativeBalancingReserve",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "NegativeBalancingReserve", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_NBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_nbr_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "NegativeBalancingReserve",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "NegativeBalancingReserve", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_PBR_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -1026,19 +968,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "PositiveBalancingReserve",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "PositiveBalancingReserve", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     async def get_PBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_PBR_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "PositiveBalancingReserve",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+            "PositiveBalancingReserve", None, date_requested.day, date_requested, AncillaryContractGroup.Dynamic
         )
 
     def get_FFR_contracts(self, tender_number: int) -> pd.DataFrame:
@@ -1086,19 +1022,13 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
         return self.get_ancillary_contract_data(
-            "SFfr",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.SFfr,
+            "SFfr", None, date_requested.day, date_requested, AncillaryContractGroup.SFfr
         )
 
     async def get_SFFR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_SFFR_contracts`."""
         return await self.get_ancillary_contract_data_async(
-            "SFfr",
-            option_two=date_requested.day,
-            date_requested=date_requested,
-            ancillary_contract_group=AncillaryContractGroup.SFfr,
+            "SFfr", None, date_requested.day, date_requested, AncillaryContractGroup.SFfr
         )
 
     def get_MFR_contracts(self, month: int, year: int) -> pd.DataFrame:
