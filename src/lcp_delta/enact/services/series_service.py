@@ -35,7 +35,7 @@ def generate_series_data_request(
     return request_body
 
 
-def series_data_post_process(response: Any):
+def process_series_data_response(response: Any):
     try:
         return convert_response_to_df(response, parse_datetimes=True, nested_key="data")
     except (ValueError, TypeError, IndexError):

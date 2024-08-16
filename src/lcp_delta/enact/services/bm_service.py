@@ -15,7 +15,7 @@ def generate_by_period_request(date: datetime, period: int = None, include_accep
     return request_body
 
 
-def by_period_post_process(response: dict):
+def process_by_period_response(response: dict):
     output: dict[str, pd.DataFrame] = {}
     df_columns = ["acceptedBids", "acceptedOffers", "tableOffers", "tableBids"]
 
@@ -36,5 +36,5 @@ def generate_by_search_request(date: datetime, option: str, search_string: str |
     return request_body
 
 
-def by_search_post_process(response: dict):
+def process_by_search_response(response: dict):
     return pd.DataFrame(response["data"][1:], columns=response["data"][0])

@@ -4,7 +4,7 @@ from lcp_delta.global_helpers import convert_datetimes_to_iso
 from helpers import convert_embedded_list_to_df
 
 
-def generate_leaderboard_request(
+def generate_request(
     date_from: datetime,
     date_to: datetime,
     type="Plant",
@@ -25,6 +25,6 @@ def generate_leaderboard_request(
     }
 
 
-def leaderboard_post_process(response: dict, type: str) -> pd.DataFrame:
+def process_response(response: dict, type: str) -> pd.DataFrame:
     index = "Plant - Owner" if type == "Owner" else "Plant - ID"
     return convert_embedded_list_to_df(response, index)

@@ -1,13 +1,10 @@
 import calendar
 from datetime import date, datetime
 import pandas as pd
-
-import handlers.bm_handler
-import handlers.hof_handler
-from .helpers import convert_response_to_df, convert_dict_to_df, convert_embedded_list_to_df
+from .helpers import convert_response_to_df, convert_dict_to_df, convert_embedded_list_to_df, get_month_name
 from lcp_delta.global_helpers import is_list_of_strings, get_period, convert_datetime_to_iso, convert_datetimes_to_iso
 from typing import Union
-import handlers
+import lcp_delta.enact.services as sv
 from enums import AncillaryContractGroup
 
 from ..common import APIHelperBase, constants
@@ -31,7 +28,7 @@ class APIHelper(APIHelperBase):
         Returns:
              Response: A dictionary or pandas DataFrame containing the series data.
         """
-        request_body = handlers.series_handler.generate_series_data_request(
+        request_body = sv.series_service.generate_series_data_request(
             series_id,
             date_from,
             date_to,
@@ -42,7 +39,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
         response = await self._post_request_async(endpoint, request_body)
-        return handlers.series_handler.series_data_post_process(response)
+        return sv.series_service.process_series_data_response(response)
 
     def _make_series_request(
         self,
@@ -61,7 +58,7 @@ class APIHelper(APIHelperBase):
         Returns:
              Response: A dictionary or pandas DataFrame containing the series data.
         """
-        request_body = handlers.series_handler.generate_series_data_request(
+        request_body = sv.series_service.generate_series_data_request(
             series_id,
             date_from,
             date_to,
@@ -72,7 +69,7 @@ class APIHelper(APIHelperBase):
             time_zone_id,
         )
         response = self._post_request(endpoint, request_body)
-        return handlers.series_handler.series_data_post_process(response)
+        return sv.series_service.process_series_data_response(response)
 
     async def get_series_data_async(
         self,
@@ -194,7 +191,7 @@ class APIHelper(APIHelperBase):
             or not the series has historical forecasts.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_body = handlers.series_handler.generate_series_info_request(series_id, country_id)
+        request_body = sv.series_service.generate_series_info_request(series_id, country_id)
         return await self._post_request_async(endpoint, request_body)
 
     def get_series_info(self, series_id: str, country_id: str | None = None) -> dict:
@@ -211,7 +208,7 @@ class APIHelper(APIHelperBase):
             or not the series has historical forecasts.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-        request_body = handlers.series_handler.generate_series_info_request(series_id, country_id)
+        request_body = sv.series_service.generate_series_info_request(series_id, country_id)
         return self._post_request(endpoint, request_body)
 
     async def get_series_by_fuel_async(
@@ -651,7 +648,7 @@ class APIHelper(APIHelperBase):
             plant_id `str`: The Enact plant ID.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-        request_body = {"PlantId": plant_id}
+        request_body = sv.plant_service.generate_plant_request(plant_id)
         return await self._post_request_async(endpoint, request_body)
 
     def get_plant_details_by_id(self, plant_id: str) -> dict:
@@ -661,7 +658,7 @@ class APIHelper(APIHelperBase):
             plant_id `str`: The Enact plant ID.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-        request_body = {"PlantId": plant_id}
+        request_body = sv.plant_service.generate_plant_request(plant_id)
         return self._post_request(endpoint, request_body)
 
     async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
@@ -675,9 +672,9 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the plant data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
-        request_body = {"Country": country_id, "Fuel": fuel_id}
+        request_body = sv.plant_service.generate_country_fuel_request(country_id, fuel_id)
         response = await self._post_request_async(endpoint, request_body)
-        return response["data"]
+        return sv.plant_service.process_country_fuel_response(response)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants for a given fuel and country.
@@ -690,9 +687,9 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the plant data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
-        request_body = {"Country": country_id, "Fuel": fuel_id}
+        request_body = sv.plant_service.generate_country_fuel_request(country_id, fuel_id)
         response = self._post_request(endpoint, request_body)
-        return response["data"]
+        return sv.plant_service.process_country_fuel_response(response)
 
     async def get_history_of_forecast_for_given_date_async(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
@@ -712,13 +709,13 @@ class APIHelper(APIHelperBase):
 
         Returns:
             Response: A pandas DataFrame holding all data for the requested series on the requested date.
-                    The first row will provide all the dates we have a forecast iteration for.
-                    All other rows correspond to the data-points at each value of the first array.
+            The first row will provide all the dates we have a forecast iteration for.
+            All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        request_body = handlers.hof_handler.generate_hof_request_single_date(series_id, date, country_id, option_id)
+        request_body = sv.hof_service.generate_single_date_request(series_id, date, country_id, option_id)
         response = await self._post_request_async(endpoint, request_body)
-        return convert_response_to_df(response, nested_key="data")
+        return sv.hof_service.process_single_date_response(response)
 
     def get_history_of_forecast_for_given_date(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
@@ -738,13 +735,13 @@ class APIHelper(APIHelperBase):
 
         Returns:
             Response: A pandas DataFrame holding all data for the requested series on the requested date.
-                    The first row will provide all the dates we have a forecast iteration for.
-                    All other rows correspond to the data-points at each value of the first array.
+            The first row will provide all the dates we have a forecast iteration for.
+            All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        request_body = handlers.hof_handler.generate_hof_request_single_date(series_id, date, country_id, option_id)
+        request_body = sv.hof_service.generate_single_date_request(series_id, date, country_id, option_id)
         response = self._post_request(endpoint, request_body)
-        return convert_response_to_df(response, nested_key="data")
+        return sv.hof_service.process_single_date_response(response)
 
     async def get_history_of_forecast_for_date_range_async(
         self,
@@ -771,15 +768,13 @@ class APIHelper(APIHelperBase):
 
         Returns:
             Response: A dictionary of strings and pandas DataFrame holding all data for the requested series on the requested date.
-                    The first row will provide all the dates we have a forecast iteration for.
-                    All other rows correspond to the data-points at each value of the first array.
+            The first row will provide all the dates we have a forecast iteration for.
+            All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        response_body = handlers.hof_handler.generate_hof_request_date_range(
-            series_id, date_from, date_to, country_id, option_id
-        )
+        response_body = sv.hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
         response = await self._post_request_async(endpoint, response_body)
-        return handlers.hof_handler.date_range_post_process(response)
+        return sv.hof_service.process_date_range_response(response)
 
     def get_history_of_forecast_for_date_range(
         self,
@@ -806,15 +801,13 @@ class APIHelper(APIHelperBase):
 
         Returns:
             Response: A dictionary of strings and pandas DataFrames holding all data for the requested series on the requested date.
-                    The first row will provide all the dates we have a forecast iteration for.
-                    All other rows correspond to the data-points at each value of the first array.
+            The first row will provide all the dates we have a forecast iteration for.
+            All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-        response_body = handlers.hof_handler.generate_hof_request_date_range(
-            series_id, date_from, date_to, country_id, option_id
-        )
+        response_body = sv.hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
         response = self._post_request(endpoint, response_body)
-        return handlers.hof_handler.date_range_post_process(response)
+        return sv.hof_service.process_date_range_response(response)
 
     async def get_latest_forecast_generated_at_given_time_async(
         self,
@@ -848,11 +841,11 @@ class APIHelper(APIHelperBase):
             forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
-        request_body = handlers.hof_handler.generate_hof_request_latest_forecast(
+        request_body = sv.hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
         response = await self._post_request_async(endpoint, request_body)
-        return handlers.hof_handler.latest_forecast_post_process(response)
+        return sv.hof_service.process_latest_forecast_response(response)
 
     def get_latest_forecast_generated_at_given_time(
         self,
@@ -886,11 +879,11 @@ class APIHelper(APIHelperBase):
             forecast before the given 'forecast_as_of' datetime. All other rows correspond to the data-points at each value of the first array.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
-        request_body = handlers.hof_handler.generate_hof_request_latest_forecast(
+        request_body = sv.hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
         response = self._post_request(endpoint, request_body)
-        return handlers.hof_handler.latest_forecast_post_process(response)
+        return sv.hof_service.process_latest_forecast_response(response)
 
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
@@ -912,9 +905,9 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = handlers.bm_handler.generate_by_period_request(date, period, include_accepted_times)
+        request_body = sv.bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = await self._post_request_async(endpoint, request_body)
-        return handlers.bm_handler.by_period_post_process(response)
+        return sv.bm_service.process_by_period_response(response)
 
     def get_bm_data_by_period(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
@@ -936,9 +929,9 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = handlers.bm_handler.generate_by_period_request(date, period, include_accepted_times)
+        request_body = sv.bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = self._post_request(endpoint, request_body)
-        return handlers.bm_handler.by_period_post_process(response)
+        return sv.bm_service.process_by_period_response(response)
 
     async def get_bm_data_by_search_async(
         self,
@@ -962,11 +955,9 @@ class APIHelper(APIHelperBase):
             Response: A pandas DataFrame containing the BM data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = handlers.bm_handler.generate_by_search_request(
-            date, option, search_string, include_accepted_times
-        )
+        request_body = sv.bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
         response = await self._post_request_async(endpoint, request_body)
-        return handlers.bm_handler.by_search_post_process(response)
+        return sv.bm_service.process_by_search_response(response)
 
     def get_bm_data_by_search(
         self,
@@ -990,11 +981,9 @@ class APIHelper(APIHelperBase):
             Response: A pandas DataFrame containing the BM data.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
-        request_body = handlers.bm_handler.generate_by_search_request(
-            date, option, search_string, include_accepted_times
-        )
+        request_body = sv.bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
         response = self._post_request(endpoint, request_body)
-        return handlers.bm_handler.by_search_post_process(response)
+        return sv.bm_service.process_by_search_response(response)
 
     async def get_leaderboard_data_async(
         self,
@@ -1026,7 +1015,7 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
-        response_body = handlers.leaderboard_handler.generate_leaderboard_request(
+        response_body = sv.leaderboard_service.generate_request(
             date_from,
             date_to,
             type,
@@ -1036,7 +1025,7 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
         )
         response = await self._post_request_async(endpoint, response_body)
-        return handlers.leaderboard_handler.leaderboard_post_process(response, type)
+        return sv.leaderboard_service.process_response(response, type)
 
     def get_leaderboard_data(
         self,
@@ -1068,7 +1057,7 @@ class APIHelper(APIHelperBase):
         """
 
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
-        response_body = handlers.leaderboard_handler.generate_leaderboard_request(
+        response_body = sv.leaderboard_service.generate_request(
             date_from,
             date_to,
             type,
@@ -1078,10 +1067,40 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
         )
         response = self._post_request(endpoint, response_body)
-        return handlers.leaderboard_handler.leaderboard_post_process(response, type)
+        return sv.leaderboard_service.process_response(response, type)
 
-    # Ancillary Contracts:
     async def get_ancillary_contract_data_async(
+        self,
+        ancillary_contract_type: str,
+        option_one: Union[str, int] | None = None,
+        option_two: Union[int, str] | None = None,
+        date_requested: datetime | None = None,
+        ancillary_contract_group: AncillaryContractGroup | None = None,
+    ) -> pd.DataFrame:
+        """Get data for a specified Ancillary contract type asynchronously.
+
+        Args:
+            ancillary_contract_type `str`: The type of ancillary contract being requested;
+                "DynamicContainmentEfa" (DC-L), "DynamicContainmentEfaHF" (DC-H), "DynamicModerationLF" (DM-L), "DynamicModerationHF" (DM-H),
+                "DynamicRegulationLF" (DR-L), "DynamicRegulationHF" (DR-H), "Ffr" (FFR), "StorDayAhead" (STOR), "ManFr" (MFR), "SFfr" (SFFR).
+
+            option_one `str` or `int`: Additional information dependent on ancillary contract type. Tender Round (e.g. "150") for "FFR",
+                Year-Month-Day (e.g. "2022-11-3") for "STOR", Year (e.g. "2022") for "MFR", and Month-Year (e.g. "11-2022") otherwise.
+
+            option_two `str` (optional): Additional information dependent on ancillary contract type. Not applicable for "FFR" and "STOR".
+                Month (e.g. "November") for "MFR", and Day (e.g. "5") otherwise.
+
+            Returns:
+                Response: A pandas DataFrame containing ancillary contract data for the requested date range.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
+        request_body = sv.ancillary_service.generate_ancillary_contract_request(
+            ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
+
+    def get_ancillary_contract_data(
         self,
         ancillary_contract_type: str,
         option_one: Union[str, int] | None = None,
@@ -1092,66 +1111,28 @@ class APIHelper(APIHelperBase):
         """Get data for a specified Ancillary contract type.
 
         Args:
-            ancillary_contract_type `str`: The type of ancillary contract being requested.
-                                             The options are "DynamicContainmentEfa" (for DC-L), "DynamicContainmentEfaHF" (for DC-H), "DynamicModerationLF" (for DM-L), "DynamicModerationHF" (for DM-H),
-                                               "DynamicRegulationLF" (for DR-L), "DynamicRegulationHF" (for DR-H), "Ffr" (for FFR), "StorDayAhead" (for STOR), "ManFr" (for MFR), "SFfr" (for SFFR).
+            ancillary_contract_type `str`: The type of ancillary contract being requested;
+                "DynamicContainmentEfa" (DC-L), "DynamicContainmentEfaHF" (DC-H), "DynamicModerationLF" (DM-L), "DynamicModerationHF" (DM-H),
+                "DynamicRegulationLF" (DR-L), "DynamicRegulationHF" (DR-H), "Ffr" (FFR), "StorDayAhead" (STOR), "ManFr" (MFR), "SFfr" (SFFR).
 
-            option_one `str` or `int`: Additional information dependent on ancillary contract type. Tender Round (e.g. "150") for "FFR", Year-Month-Day (e.g. "2022-11-3") for "STOR", Year (e.g. "2022") for
-            "MFR", and Month-Year (e.g. "11-2022") otherwise.
+            option_one `str` or `int`: Additional information dependent on ancillary contract type. Tender Round (e.g. "150") for "FFR",
+                Year-Month-Day (e.g. "2022-11-3") for "STOR", Year (e.g. "2022") for "MFR", and Month-Year (e.g. "11-2022") otherwise.
 
-            option_two `str` (optional): Additional information dependent on ancillary contract type. Not applicable for "FFR" and "STOR", Month (e.g. "November") for "MFR", and Day (e.g. "5") otherwise.
+            option_two `str` (optional): Additional information dependent on ancillary contract type. Not applicable for "FFR" and "STOR".
+                Month (e.g. "November") for "MFR", and Day (e.g. "5") otherwise.
 
             Returns:
-                Response: This holds all data for the ancillary contract type on the requested date/date range.
+                Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
-        if date_requested:
-            if not isinstance(date_requested, date | datetime):
-                raise TypeError("Requested date must be a date or datetime")
-            if (
-                ancillary_contract_group == AncillaryContractGroup.Dynamic
-                or ancillary_contract_group == AncillaryContractGroup.SFfr
-            ):
-                option_one = "-".join([str(date_requested.month), str(date_requested.year)])
-            if ancillary_contract_group == AncillaryContractGroup.StorDayAhead:
-                option_one = "-".join([str(date_requested.year), str(date_requested.month), str(date_requested.day)])
-
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
-
-        request_details = {
-            "AncillaryContractType": ancillary_contract_type,
-            "OptionOne": option_one,
-        }
-
-        if option_two is not None:
-            request_details["OptionTwo"] = option_two
-
-        response = await self._post_request_async(endpoint, request_details)
-
-        if "data" not in response or not response["data"]:
-            return pd.DataFrame()
-        first_item = response["data"][0]
-        if ancillary_contract_group == AncillaryContractGroup.SFfr:
-            return pd.DataFrame(first_item["plants"])
-        if ancillary_contract_group == AncillaryContractGroup.ManFr:
-            for entry in first_item["plants"]:
-                entry.update(entry.pop("data"))
-            df = pd.DataFrame(first_item["plants"])
-            if not df.empty:
-                unit_column_name = df.columns[0]
-                df.set_index(unit_column_name, inplace=True)
-            return df
-        if ancillary_contract_group == AncillaryContractGroup.StorDayAhead:
-            return pd.DataFrame(first_item["plants"])
-        if ancillary_contract_group == AncillaryContractGroup.Ffr:
-            df = pd.DataFrame(first_item["plants"])
-            df.set_index("tenderNumber", inplace=True)
-            return df
-        if ancillary_contract_group == AncillaryContractGroup.Dynamic:
-            return self._convert_api_response_for_dynamic_and_balancing_reserve_products(response)
-        return response
+        request_body = sv.ancillary_service.generate_ancillary_contract_request(
+            ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
+        )
+        response = self._post_request(endpoint, request_body)
+        return sv.ancilary_service.process_ancillary_contract_response(response, ancillary_contract_group)
 
     async def get_DCL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns DCL (Dynamic Containment Low) contracts for a provided day
+        """Returns DCL (Dynamic Containment Low) contracts for a provided day asynchronously.
 
         Args:
             date_requested `datetime.datetime`: The date for which to retrieve DCL contracts.
@@ -1159,7 +1140,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "DynamicContainmentEfa",
             option_two=date_requested.day,
@@ -1167,8 +1147,24 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
+    def get_DCL_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns DCL (Dynamic Containment Low) contracts for a provided day.
+
+        Args:
+            date_requested `datetime.datetime`: The date for which to retrieve DCL contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "DynamicContainmentEfa",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
+
     async def get_DCH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns DCH (Dynamic Containment High) contracts for a provided day
+        """Returns DCH (Dynamic Containment High) contracts for a provided day asynchronously.
 
         Args:
             date_requested `datetime.date`: The date for which to retrieve DCH contracts.
@@ -1176,7 +1172,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "DynamicContainmentEfaHF",
             option_two=date_requested.day,
@@ -1184,8 +1179,24 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
+    def get_DCH_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns DCH (Dynamic Containment High) contracts for a provided day.
+
+        Args:
+            date_requested `datetime.date`: The date for which to retrieve DCH contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "DynamicContainmentEfaHF",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
+
     async def get_DML_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns DML (Dynamic Moderation Low) contracts for a provided day
+        """Returns DML (Dynamic Moderation Low) contracts for a provided day asynchronously.
 
         Args:
             date_requested `datetime.datetime`: The date for which to retrieve DML contracts.
@@ -1193,7 +1204,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "DynamicModerationLF",
             option_two=date_requested.day,
@@ -1201,8 +1211,24 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
+    def get_DML_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns DML (Dynamic Moderation Low) contracts for a provided day.
+
+        Args:
+            date_requested `datetime.datetime`: The date for which to retrieve DML contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "DynamicModerationLF",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
+
     async def get_DMH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns DMH (Dynamic Moderation High) contracts for a provided day
+        """Returns DMH (Dynamic Moderation High) contracts for a provided day asynchronously.
 
         Args:
             date_requested `datetime.datetime`: The date for which to retrieve DMH contracts.
@@ -1210,7 +1236,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "DynamicModerationHF",
             option_two=date_requested.day,
@@ -1218,8 +1243,24 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
+    def get_DMH_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns DMH (Dynamic Moderation High) contracts for a provided day.
+
+        Args:
+            date_requested `datetime.datetime`: The date for which to retrieve DMH contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "DynamicModerationHF",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
+
     async def get_DRL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns DRL (Dynamic Regulation Low) contracts for a provided day
+        """Returns DRL (Dynamic Regulation Low) contracts for a provided day asynchronously.
 
         Args:
             date_requested `datetime.date`: The date for which to retrieve DRL contracts.
@@ -1227,7 +1268,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "DynamicRegulationLF",
             option_two=date_requested.day,
@@ -1235,8 +1275,24 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
+    def get_DRL_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns DRL (Dynamic Regulation Low) contracts for a provided day.
+
+        Args:
+            date_requested `datetime.date`: The date for which to retrieve DRL contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "DynamicRegulationLF",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
+
     async def get_DRH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns DRH (Dynamic Regulation High) contracts for a provided day
+        """Returns DRH (Dynamic Regulation High) contracts for a provided day asynchronously.
 
         Args:
             date `datetime.date`: The date for which to retrieve DRH contracts.
@@ -1244,7 +1300,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "DynamicRegulationHF",
             option_two=date_requested.day,
@@ -1252,8 +1307,8 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
-    async def get_NBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns NBR (Negative Balancing Reserve) contracts for a provided day
+    def get_DRH_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns DRH (Dynamic Regulation High) contracts for a provided day.
 
         Args:
             date `datetime.date`: The date for which to retrieve DRH contracts.
@@ -1261,7 +1316,22 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
+        return self.get_ancillary_contract_data(
+            "DynamicRegulationHF",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
 
+    async def get_NBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns NBR (Negative Balancing Reserve) contracts for a provided day asynchronously.
+
+        Args:
+            date `datetime.date`: The date for which to retrieve DRH contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
         return await self.get_ancillary_contract_data_async(
             "NegativeBalancingReserve",
             option_two=date_requested.day,
@@ -1269,8 +1339,8 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
-    async def get_PBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns PBR (Positive Balancing Reserve) contracts for a provided day
+    def get_NBR_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns NBR (Negative Balancing Reserve) contracts for a provided day.
 
         Args:
             date `datetime.date`: The date for which to retrieve DRH contracts.
@@ -1278,7 +1348,22 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
+        return self.get_ancillary_contract_data(
+            "NegativeBalancingReserve",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
 
+    async def get_PBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns PBR (Positive Balancing Reserve) contracts for a provided day asynchronously.
+
+        Args:
+            date `datetime.date`: The date for which to retrieve DRH contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
         return await self.get_ancillary_contract_data_async(
             "PositiveBalancingReserve",
             option_two=date_requested.day,
@@ -1286,14 +1371,24 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.Dynamic,
         )
 
-    def _convert_api_response_for_dynamic_and_balancing_reserve_products(self, response: dict) -> pd.DataFrame:
-        df = pd.DataFrame(response["data"][0]["plants"])
-        if not df.empty:
-            df.set_index("orderId", inplace=True)
-        return df
+    def get_PBR_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns PBR (Positive Balancing Reserve) contracts for a provided day.
+
+        Args:
+            date `datetime.date`: The date for which to retrieve DRH contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "PositiveBalancingReserve",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.Dynamic,
+        )
 
     async def get_FFR_contracts_async(self, tender_number: int) -> pd.DataFrame:
-        """Returns FFR (Firm Frequency Response) tender results for a given tender round
+        """Returns FFR (Firm Frequency Response) tender results for a given tender round asynchronously.
 
         Args:
             tender_number `int`: The tender number for the round that you wish to procure
@@ -1302,8 +1397,18 @@ class APIHelper(APIHelperBase):
             "Ffr", tender_number, ancillary_contract_group=AncillaryContractGroup.Ffr
         )
 
+    def get_FFR_contracts(self, tender_number: int) -> pd.DataFrame:
+        """Returns FFR (Firm Frequency Response) tender results for a given tender round.
+
+        Args:
+            tender_number `int`: The tender number for the round that you wish to procure
+        """
+        return self.get_ancillary_contract_data(
+            "Ffr", tender_number, ancillary_contract_group=AncillaryContractGroup.Ffr
+        )
+
     async def get_STOR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns STOR (Short Term Operating Reserve) results for a given date
+        """Returns STOR (Short Term Operating Reserve) results for a given date asynchronously.
 
         Args:
             date_requested `datetime.date`: The date for which to retrieve STOR contracts.
@@ -1311,13 +1416,25 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "StorDayAhead", date_requested=date_requested, ancillary_contract_group=AncillaryContractGroup.StorDayAhead
         )
 
+    def get_STOR_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns STOR (Short Term Operating Reserve) results for a given date.
+
+        Args:
+            date_requested `datetime.date`: The date for which to retrieve STOR contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "StorDayAhead", date_requested=date_requested, ancillary_contract_group=AncillaryContractGroup.StorDayAhead
+        )
+
     async def get_SFFR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
-        """Returns SFFR (Static Firm Frequency Response) results for a given date
+        """Returns SFFR (Static Firm Frequency Response) results for a given date asynchronously.
 
         Args:
             date_requested `datetime.date`: The date for which to retrieve SFFR contracts.
@@ -1325,7 +1442,6 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-
         return await self.get_ancillary_contract_data_async(
             "SFfr",
             option_two=date_requested.day,
@@ -1333,126 +1449,119 @@ class APIHelper(APIHelperBase):
             ancillary_contract_group=AncillaryContractGroup.SFfr,
         )
 
+    def get_SFFR_contracts(self, date_requested: datetime) -> pd.DataFrame:
+        """Returns SFFR (Static Firm Frequency Response) results for a given date.
+
+        Args:
+            date_requested `datetime.date`: The date for which to retrieve SFFR contracts.
+
+        Raises:
+            `TypeError`: If the inputted date is not of type `date` or `datetime`.
+        """
+        return self.get_ancillary_contract_data(
+            "SFfr",
+            option_two=date_requested.day,
+            date_requested=date_requested,
+            ancillary_contract_group=AncillaryContractGroup.SFfr,
+        )
+
     async def get_MFR_contracts_async(self, month: int, year: int) -> pd.DataFrame:
-        """Returns MFR tender results for a given month and year
+        """Returns MFR tender results for a given month and year asynchronously.
 
         Args:
             month `int`: Corresponding month for the data requested
             year `int`: Corresponding year for the data requested
         """
-        if not 0 < month <= 12:
-            raise ValueError("Month must be an integer less than 12")
-        month_name = calendar.month_name[month]
-
         return await self.get_ancillary_contract_data_async(
-            "ManFr", year, month_name, ancillary_contract_group=AncillaryContractGroup.ManFr
+            "ManFr", year, get_month_name(month), ancillary_contract_group=AncillaryContractGroup.ManFr
         )
 
-    # News table
-    async def get_news_table_async(self, table_id: str) -> pd.DataFrame:
-        """Will return the selected news table you would like data from.
+    def get_MFR_contracts(self, month: int, year: int) -> pd.DataFrame:
+        """Returns MFR tender results for a given month and year asynchronously.
 
         Args:
-            table_id `str`: This is the News table you would like the data from. The options include:
+            month `int`: Corresponding month for the data requested
+            year `int`: Corresponding year for the data requested
+        """
+        return self.get_ancillary_contract_data(
+            "ManFr", year, get_month_name(month), ancillary_contract_group=AncillaryContractGroup.ManFr
+        )
 
-                            Table Header                                            Table ID:
-                            BM Warming Instructions	                                BmStartupDetails
-                            Forward BSAD Trades	                                    Bsad
-                            Additional MW changes (additional GT / SEL reduction	CapacityChanges
-                            Triads	                                                Traids
-                            Elexon System Warnings	                                Elexon
-                            LCP Alerts	                                            LCP
-                            Entsoe News	                                            Entsoe
+    async def get_news_table_async(self, table_id: str) -> pd.DataFrame:
+        """Gets the specified news table asynchronously.
+
+        Args:
+            table_id `str`: This is the News table you would like the data from;
+            "BmStartupDetails" "Bsad" "CapacityChanges" "Traids" "Elexon" "LCP" "Entsoe"
 
         """
-        if table_id.lower() == "lcp":
-            table_id = "Lcp"
-
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
-        request_details = {
-            "TableId": table_id,
-        }
+        request_body = sv.news_table_service.generate_request(table_id)
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.news_table_service.process_response(response)
 
-        response = await self._post_request_async(endpoint, request_details)
+    def get_news_table(self, table_id: str) -> pd.DataFrame:
+        """Gets the specified news table.
 
-        return convert_embedded_list_to_df(response)
+        Args:
+            table_id `str`: This is the News table you would like the data from;
+            "BmStartupDetails" "Bsad" "CapacityChanges" "Traids" "Elexon" "LCP" "Entsoe"
 
-    # EPEX:
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
+        request_body = sv.news_table_service.generate_request(table_id)
+        response = self._post_request(endpoint, request_body)
+        return sv.news_table_service.process_response(response)
+
     async def get_epex_trades_by_contract_id_async(self, contract_id: str) -> pd.DataFrame:
-        """Get executed EPEX trades of a contract, given the Contract ID
+        """Gets executed EPEX trades for a given contract ID asynchronously.
 
         Args:
             contract_id `int`: The ID associated with the EPEX contract you would like executed trades for.
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
-
-        request_details = {
-            "ContractId": contract_id,
-        }
-
-        response = await self._post_request_async(endpoint, request_details)
-        return convert_response_to_df(response, index_on=-1)
+        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.epex_service.process_trades_response(response)
 
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
-        """Get executed EPEX trades of a contract, given the date, period and type
-
-        The date and period can either be specified by a datetime or by passing in an optional period input with a date.
-        If specified by a datetime, the closest period when rounding down to the nearest half an hour will be used.
-        If specified by the period input, and the period should be an integer.
+        """Gets executed EPEX trades of a contract given the date, period and type asynchronously.
 
         Args:
-            type: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
+            type: The EPEX contract type; "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", or "Ext. Peak".
 
-            date: The date associated with the EPEX contract you would like executed trades for.
+            date `datetime.datetime`: The date to request EPEX trades for.
 
-            period (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
+            period `int` (optional): The period for which to retrieve the EPEX trades. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
 
         Raises:
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
-
-        period = get_period(date, period)
-        date = convert_datetime_to_iso(date)
-
-        request_details = {"Type": type, "Date": date, "Period": period}
-
-        response = await self._post_request_async(endpoint, request_details)
-        return convert_response_to_df(response, index_on=-1)
+        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.epex_service.process_trades_response(response)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
-        """Get order book of a contract,given the date, period and type
-
-        The date and period can either be specified by a datetime or by passing in an optional period input with a date.
-        If specified by a datetime, the closest period when rounding down to the nearest half an hour will be used.
-        If specified by the period input, and the period should be an integer.
+        """Gets the order book of a contract given a date, period and type asynchronously.
 
         Args:
-            type: The type associated with the EPEX contract you would like executed trades for. The options are "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", "Ext. Peak".
+            type: The EPEX contract type; "HH", "1H", "2H", "4H", "3 Plus 4", "Overnight", "Peakload", "Baseload", or "Ext. Peak".
 
-            date: The date associated with the EPEX contract you would like executed trades for.
+            date `datetime.datetime`: The date to request EPEX trades for.
 
-            period (optional): The period associated with the EPEX contract you would like executed trades for. If None and date input is of type datetime, the period is calculated.
+            period `int` (optional): The period for which to retrieve the EPEX trades. If None and date input is of type datetime, the period is calculated (rounded down to the nearest half-hour).
 
         Raises:
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
-
-        period = get_period(date, period)
-        date = convert_datetime_to_iso(date)
-
-        request_details = {"Type": type, "Date": date, "Period": period}
-
-        response = await self._post_request_async(endpoint, request_details)
-        output: dict[str, pd.DataFrame] = {}
-        for table_str, data in response["data"].items():
-            output[table_str] = convert_dict_to_df(data)
-
-        return output
+        request_body = sv.epex_service.generate_time_and_type_request(type, date, period)
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.epex_service.process_order_book_response(response)
 
     async def get_epex_order_book_by_contract_id_async(self, contract_id: int) -> dict[str, pd.DataFrame]:
         """Get EPEX order book by contract ID
@@ -1462,17 +1571,9 @@ class APIHelper(APIHelperBase):
 
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
-
-        request_details = {
-            "ContractId": contract_id,
-        }
-
-        response = await self._post_request_async(endpoint, request_details)
-        output: dict[str, pd.DataFrame] = {}
-        for table_str, data in response["data"].items():
-            output[table_str] = convert_dict_to_df(data)
-
-        return output
+        request_body = sv.epex_service.generate_contract_id_request(contract_id)
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.epex_service.process_order_book_response(response)
 
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
         """Get EPEX contracts for a given day
@@ -1486,31 +1587,20 @@ class APIHelper(APIHelperBase):
         """
         endpoint = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
-        date = convert_datetime_to_iso(date)
-
-        request_details = {
-            "Date": date,
-        }
-
-        response = await self._post_request_async(endpoint, request_details)
-        return convert_response_to_df(response)
+        request_body = sv.epex_service.generate_contract_request(date)
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.epex_service.process_contract_response(response)
 
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
-        """Get N2EX buy and sell curves for a given day.
+        """Gets N2EX buy and sell curves for a given day.
 
         Args:
             date `datetime.datetime`: The date you would like buy and sell curves for.
 
         """
         endpoint = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
-
-        date = convert_datetime_to_iso(date)
-
-        request_details = {
-            "Date": date,
-        }
-
-        return await self._post_request_async(endpoint, request_details)
+        request_body = sv.nordpool_service.generate_request(date)
+        return await self._post_request_async(endpoint, request_body)
 
     async def get_day_ahead_data_async(
         self,
@@ -1524,54 +1614,26 @@ class APIHelper(APIHelperBase):
         """Find historical days with day ahead prices most similar to the current day.
 
         Args:
-            from: The start of the date range to compare against.
+            from `datetime.datetime`: The start of the date range to compare against.
 
-            to: The end of the date range for days to compare against.
+            to `datetime.datetime`: The end of the date range for days to compare against.
 
-            aggregate (optional): If set to true, the EFA blocks are considered as a single time range.
+            aggregate `bool` (optional): If set to true, the EFA blocks are considered as a single time range.
 
-            numberOfSimilarDays (optional): The number of the most similar days to include in the response.
+            numberOfSimilarDays `int` (optional): The number of the most similar days to include in the response.
 
-            selectedEfaBlocks (optional): The EFA blocks to find similar days for.
+            selectedEfaBlocks `int` (optional): The EFA blocks to find similar days for.
 
-            seriesInput (optional):The series to find days with similar values to. The array must only contain strings from the following list: "ResidualLoad", "Tsdf", "WindForecast", "SolarForecast"
-            "DynamicContainmentEfa", "DynamicContainmentEfaHF", "DynamicContainmentEfaLF", "DynamicRegulationHF", "DynamicRegulationLF", "DynamicModerationLF", "DynamicModerationHF", "PositiveBalancingReserve",
-            "NegativeBalancingReserve", "SFfr". If none are specified, then all of the series listed are used in the calculation.
+            seriesInput `list[str]` (optional): The series to find days with similar values to. Accepted values: "ResidualLoad", "Tsdf", "WindForecast", "SolarForecast"
+            "DynamicContainmentEfa", "DynamicContainmentEfaHF", "DynamicContainmentEfaLF", "DynamicRegulationHF", "DynamicRegulationLF", "DynamicModerationLF",
+            "DynamicModerationHF", "PositiveBalancingReserve", "NegativeBalancingReserve", "SFfr". If none specified, all are used in the calculation.
         Raises:
             `TypeError`: If the input dates are not of type date or datetime.
 
         """
         endpoint = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
-
-        fromDateString = convert_datetime_to_iso(fromDate)
-        if toDate != None:
-            toDateString = convert_datetime_to_iso(toDate)
-        else:
-            toDateString = None
-
-        request_details = {
-            "from": fromDateString,
-            "to": toDateString,
-            "aggregate": aggregate,
-            "numberOfSimilarDays": numberOfSimilarDays,
-            "selectedEfaBlocks": selectedEfaBlocks,
-            "seriesInput": seriesInput,
-        }
-
-        response = await self._post_request_async(endpoint, request_details)
-        output: dict[int, pd.DataFrame] = {}
-
-        for key, value in response["data"].items():
-            data_list = []
-            for item in value:
-                day = item["day"]
-                score = item["score"]
-                raw_data = item["rawData"]
-                raw_data["day"] = day
-                raw_data["score"] = score
-                data_list.append(raw_data)
-            df = pd.DataFrame(data_list)
-            if not df.empty:
-                df.set_index("score", inplace=True)
-            output[int(key)] = df
-        return output
+        request_body = sv.day_ahead_service.generate_request(
+            fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return sv.day_ahead_service.process_response(response)

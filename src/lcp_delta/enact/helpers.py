@@ -1,4 +1,5 @@
 import pandas as pd
+import calendar
 from lcp_delta.global_helpers import parse_df_datetimes
 
 
@@ -38,3 +39,10 @@ def convert_embedded_list_to_df(data: list, index: str = None, key: str = "data"
         df = df.set_index(index)
 
     return df
+
+
+def get_month_name(month: int):
+    if not 0 < month <= 12:
+        raise ValueError("Month must be an integer less than 12")
+
+    return calendar.month_name[month]

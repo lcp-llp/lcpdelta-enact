@@ -1,10 +1,10 @@
 import pandas as pd
 from datetime import datetime
 from lcp_delta.global_helpers import convert_datetime_to_iso, convert_datetimes_to_iso, is_list_of_strings
-from helpers import convert_dict_to_df
+from helpers import convert_dict_to_df, convert_response_to_df
 
 
-def generate_hof_request_single_date(
+def generate_single_date_request(
     series_id: str,
     date: datetime,
     country_id: str,
@@ -26,7 +26,11 @@ def generate_hof_request_single_date(
     return request_body
 
 
-def generate_hof_request_date_range(
+def process_single_date_response(response):
+    return convert_response_to_df(response, nested_key="data")
+
+
+def generate_date_range_request(
     series_id: str,
     date_from: datetime,
     date_to: datetime,
@@ -45,7 +49,7 @@ def generate_hof_request_date_range(
     return request_body
 
 
-def date_range_post_process(response: dict) -> dict:
+def process_date_range_response(response: dict) -> dict:
     output: dict[str, pd.DataFrame] = {}
     for date_str, data in response["data"]["data"].items():
         df = convert_dict_to_df(data)
@@ -54,7 +58,7 @@ def date_range_post_process(response: dict) -> dict:
     return output
 
 
-def generate_hof_request_latest_forecast(
+def generate_latest_forecast_request(
     series_id: str,
     date_from: datetime,
     date_to: datetime,
@@ -81,7 +85,7 @@ def generate_hof_request_latest_forecast(
     return request_body
 
 
-def latest_forecast_post_process(response: dict) -> dict:
+def process_latest_forecast_response(response: dict) -> dict:
     output: dict[str, pd.DataFrame] = {}
     for date_str, data in response["data"]["data"].items():
         if data is None:
