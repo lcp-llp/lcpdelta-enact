@@ -4,11 +4,10 @@ from functools import partial
 from lcp_delta.global_helpers import is_list_of_strings
 from datetime import datetime as dt
 import pandas as pd
-from .api_helper import APIHelper, add_sync_methods
+from .api_helper import APIHelper
 from typing import Callable
 
 
-@add_sync_methods
 class DPSHelper:
     def __init__(self, username: str, public_api_key: str):
         self.api_helper = APIHelper(username, public_api_key)
@@ -57,7 +56,7 @@ class DPSHelper:
             ),
         )
 
-    async def _initialise_series_subscription_data(
+    def _initialise_series_subscription_data(
         self,
         series_id: str,
         country_id: str,
@@ -67,7 +66,7 @@ class DPSHelper:
     ):
         now = dt.now()
         day_start = dt(now.year, now.month, now.day, tzinfo=now.tzinfo)
-        initial_series_data = await self.api_helper.get_series_data_async(
+        initial_series_data = self.api_helper.get_series_data(
             series_id, day_start, now, country_id, option_id, parse_datetimes=parse_datetimes
         )
         initial_series_data[self.last_updated_header] = now
@@ -135,7 +134,7 @@ class DPSHelper:
         # Add the subscription for EPEX trade updates with the specified callback function
         self._add_subscription(enact_request_object_epex, handle_data_method)
 
-    async def subscribe_to_series_updates_async(
+    def subscribe_to_series_updates(
         self,
         handle_data_method: Callable[[str], None],
         series_id: str,
@@ -172,7 +171,7 @@ class DPSHelper:
             subscription_id, (None, pd.DataFrame(), False)
         )
         if initial_data_from_series_api.empty:
-            await self._initialise_series_subscription_data(
+            self._initialise_series_subscription_data(
                 series_id, country_id, option_id, handle_data_method, parse_datetimes
             )
         else:
