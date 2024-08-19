@@ -1,7 +1,6 @@
 import pytest
 import time
 from datetime import date
-from httpx import HTTPStatusError
 from tests.integration import enact_api_helper
 
 
@@ -9,38 +8,59 @@ def teardown_function():
     time.sleep(1)
 
 
+expected_columns = [
+    "Plant - Name",
+    "Plant - BMU",
+    "Plant - Fuel",
+    "Plant - Owner",
+    "Plant - Zone",
+    "Plant - Capacity",
+    "Plant - Max PN",
+    "Profit Normalised - Net",
+    "Profit Normalised - Balancing",
+    "Profit Normalised - Wholesale",
+    "Profit Normalised - DC",
+    "Profit Normalised - DR",
+    "Profit Normalised - DM",
+    "Profit Normalised - FFR",
+    "Profit Normalised - STOR",
+    "Profit Normalised - BR",
+    "Revenue Normalised - Balancing",
+    "Revenue Normalised - Wholesale",
+    "BM Volume - Bid",
+    "BM Volume - Offer",
+    "BM Bid price - Min",
+    "BM Bid price - Max",
+    "BM Bid price - Average",
+    "BM Offer price - Min",
+    "BM Offer price - Max",
+    "BM Offer price - Average",
+    "Wholesale Volume - Total",
+]
+
+
 @pytest.mark.asyncio
 async def test_get_leaderboard_data_async():
-    try:
-        res = await enact_api_helper.get_leaderboard_data_async(
-            date(2023, 6, 21),
-            date(2023, 6, 23),
-            "Plant",
-            "PoundPerMwPerH",
-            "WeightedAverageDayAheadPrice",
-            "DayAheadForward",
-        )
-        assert res is not None
-    except HTTPStatusError as e:
-        if "UnknownData" in str(e):
-            pass  # accept this error; happens intermittently on leaderboard endpoint
-        else:
-            raise
+    res = await enact_api_helper.get_leaderboard_data_async(
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Plant",
+        "PoundPerMwPerH",
+        "WeightedAverageDayAheadPrice",
+        "DayAheadForward",
+    )
+
+    [column in res.columns for column in expected_columns]
 
 
 def test_get_leaderboard_data_sync():
-    try:
-        res = enact_api_helper.get_leaderboard_data(
-            date(2023, 6, 21),
-            date(2023, 6, 23),
-            "Plant",
-            "PoundPerMwPerH",
-            "WeightedAverageDayAheadPrice",
-            "DayAheadForward",
-        )
-        assert res is not None
-    except HTTPStatusError as e:
-        if "UnknownData" in str(e):
-            pass  # accept this error; happens intermittently on leaderboard endpoint
-        else:
-            raise
+    res = enact_api_helper.get_leaderboard_data(
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Plant",
+        "PoundPerMwPerH",
+        "WeightedAverageDayAheadPrice",
+        "DayAheadForward",
+    )
+
+    [column in res.columns for column in expected_columns]
