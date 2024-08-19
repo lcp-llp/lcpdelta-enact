@@ -252,6 +252,7 @@ class APIHelper(APIHelperBase):
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
             time_zone_id,
+            parse_datetimes,
         )
 
     def get_series_by_zone(
