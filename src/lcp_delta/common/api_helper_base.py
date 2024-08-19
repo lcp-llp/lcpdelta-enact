@@ -17,13 +17,14 @@ class APIHelperBase(ABC):
         """
         self.credentials_holder = CredentialsHolder(username, public_api_key)
         self.enact_credentials = self.credentials_holder  # legacy
+        self.timeout = httpx.Timeout(5.0, read=15.0)
 
     @DEFAULT_RETRY_POLICY
     async def _post_request_async(self, endpoint: str, request_body: dict):
         """
         Sends a post request with a given payload to a given endpoint asynchronously.
         """
-        async with httpx.AsyncClient(verify=True) as client:
+        async with httpx.AsyncClient(verify=True, timeout=self.timeout) as client:
             response = await client.post(endpoint, json=request_body, headers=self._get_headers())
 
         # if bearer token expired, refresh and retry
@@ -40,7 +41,7 @@ class APIHelperBase(ABC):
         """
         Sends a post request with a given payload to a given endpoint.
         """
-        with httpx.Client(verify=True) as client:
+        with httpx.Client(verify=True, timeout=self.timeout) as client:
             response = client.post(endpoint, json=request_body, headers=self._get_headers())
 
         # if bearer token expired, refresh and retry
@@ -59,7 +60,7 @@ class APIHelperBase(ABC):
         """
         self._refresh_headers(headers)
 
-        async with httpx.AsyncClient(verify=True) as client:
+        async with httpx.AsyncClient(verify=True, timeout=self.timeout) as client:
             return await client.post(endpoint, json=request_body, headers=headers)
 
     @UNAUTHORISED_INCLUSIVE_RETRY_POLICY
@@ -69,7 +70,7 @@ class APIHelperBase(ABC):
         """
         self._refresh_headers(headers)
 
-        with httpx.Client(verify=True) as client:
+        with httpx.Client(verify=True, timeout=self.timeout) as client:
             return client.post(endpoint, json=request_body, headers=headers)
 
     def _get_headers(self):
