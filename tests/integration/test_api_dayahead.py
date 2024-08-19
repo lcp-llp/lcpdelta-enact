@@ -11,21 +11,31 @@ def teardown_function():
 @pytest.mark.asyncio
 async def test_get_dayahead_data_async():
     res = await enact_api_helper.get_day_ahead_data_async(
-        date(2023, 6, 1),
-        date(2023, 6, 20),
+        date(2024, 8, 1),
+        date(2024, 8, 10),
         aggregate=False,
         numberOfSimilarDays=10,
         selectedEfaBlocks=[1, 2, 3, 4, 5, 6],
     )
-    assert res is not None
+
+    assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
+    assert res[2].iloc[0]["daPriceEpexAverage"] == -3.68
+    assert res[3].iloc[0]["drlVolume"] == 330.0
+    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -3.13
+    assert res[5].iloc[0]["dmhPrice"] == 6.3
 
 
 def test_get_dayahead_data_sync():
     res = enact_api_helper.get_day_ahead_data(
-        date(2023, 6, 1),
-        date(2023, 6, 20),
+        date(2024, 8, 1),
+        date(2024, 8, 10),
         aggregate=False,
         numberOfSimilarDays=10,
         selectedEfaBlocks=[1, 2, 3, 4, 5, 6],
     )
-    assert res is not None
+
+    assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
+    assert res[2].iloc[0]["daPriceEpexAverage"] == -3.68
+    assert res[3].iloc[0]["drlVolume"] == 330.0
+    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -3.13
+    assert res[5].iloc[0]["dmhPrice"] == 6.3
