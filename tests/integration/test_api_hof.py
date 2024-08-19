@@ -48,7 +48,7 @@ async def test_get_history_of_forecast_for_date_range_async():
     assert res["01/08/2024"].index.name == "Time"
     assert res["01/08/2024"].index[0] == "2024-07-31T23:00:00Z"
     assert res["01/08/2024"].columns[0] == "2024/07/30 07:45:00"
-    assert isinstance(res.iloc[0, 0], np.float64)
+    assert isinstance(res["01/08/2024"].iloc[0, 0], np.float64)
 
 
 def test_get_history_of_forecast_for_date_range_sync():
@@ -62,7 +62,7 @@ def test_get_history_of_forecast_for_date_range_sync():
     assert res["01/08/2024"].index.name == "Time"
     assert res["01/08/2024"].index[0] == "2024-07-31T23:00:00Z"
     assert res["01/08/2024"].columns[0] == "2024/07/30 07:45:00"
-    assert isinstance(res.iloc[0, 0], np.float64)
+    assert isinstance(res["01/08/2024"].iloc[0, 0], np.float64)
 
 
 @pytest.mark.asyncio
@@ -78,7 +78,7 @@ async def test_get_latest_forecast_generated_at_given_time_async():
     assert res["02/08/2024"].index.name == "Time"
     assert res["02/08/2024"].index[0] == "2024-08-01T23:00:00Z"
     assert res["02/08/2024"].columns[0] == "2024/08/01 17:15:00"
-    assert isinstance(res.iloc[0, 0], np.float64)
+    assert isinstance(res["02/08/2024"].iloc[0, 0], np.float64)
 
 
 def test_get_latest_forecast_generated_at_given_time_sync():
@@ -93,4 +93,4 @@ def test_get_latest_forecast_generated_at_given_time_sync():
     assert res["02/08/2024"].index.name == "Time"
     assert res["02/08/2024"].index[0] == "2024-08-01T23:00:00Z"
     assert res["02/08/2024"].columns[0] == "2024/08/01 17:15:00"
-    assert isinstance(res.iloc[0, 0], np.float64)
+    assert isinstance(res["02/08/2024"].iloc[0, 0], np.float64)
