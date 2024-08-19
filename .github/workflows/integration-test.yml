@@ -1,0 +1,38 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: automated_testing
+
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+    
+    - name: Run tests
+      env:
+        LCPDELTA_PACKAGE_TEST_ENACT_USERNAME: ${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_USERNAME }}
+        LCPDELTA_PACKAGE_TEST_ENACT_API_KEY: ${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_API_KEY }}
+        LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME: ${{ secrets.LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME }}
+        LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY: ${{ secrets.LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY }}
+      run: pytest
