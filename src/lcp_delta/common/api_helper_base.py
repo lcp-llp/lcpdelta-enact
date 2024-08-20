@@ -1,6 +1,7 @@
 import httpx
 
 from abc import ABC
+from json import JSONDecodeError
 
 from lcp_delta.common.credentials_holder import CredentialsHolder
 from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
@@ -85,11 +86,14 @@ class APIHelperBase(ABC):
         headers["Authorization"] = "Bearer " + self.credentials_holder.bearer_token
 
     def _handle_unsuccessful_response(self, response: httpx.Response):
-        response_data = response.json()
-        if response.text != "" and "messages" in response_data:
-            error_messages = response_data["messages"]
-            for error_message in error_messages:
-                if "errorCode" in error_message and error_message["errorCode"]:
-                    raise EnactApiError(error_message["errorCode"], error_message["message"], response)
-        else:
-            response.raise_for_status()
+        try:
+            response_data = response.json()
+            if response.text != "" and "messages" in response_data:
+                error_messages = response_data["messages"]
+                for error_message in error_messages:
+                    if "errorCode" in error_message and error_message["errorCode"]:
+                        raise EnactApiError(error_message["errorCode"], error_message["message"], response)
+        except (ValueError, JSONDecodeError):
+            pass
+
+        response.raise_for_status()

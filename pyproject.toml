@@ -24,9 +24,7 @@ dependencies = [
     "signalrcore",
     "matplotlib",
     "httpx",
-    "tenacity",
-    "jupyter",
-    "nbval"
+    "tenacity"
 ]
 
 [project.optional-dependencies]
@@ -34,8 +32,11 @@ dev = [
     "pre-commit",
     "ruff",
     "pytest",
+    "pytest-mock",
     "pytest-asyncio",
-    "python-dotenv"
+    "python-dotenv",
+    "jupyter",
+    "nbval"
 ]
 
 [project.urls]
