@@ -28,7 +28,7 @@ jobs:
 
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
-    
+
     - name: Run tests
       env:
         LCPDELTA_PACKAGE_TEST_ENACT_USERNAME: ${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_USERNAME }}

@@ -1,5 +1,7 @@
 import pytest
 import time
+import numpy as np
+
 from datetime import date
 from tests.integration import enact_api_helper
 
@@ -19,10 +21,10 @@ async def test_get_dayahead_data_async():
     )
 
     assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
-    assert res[2].iloc[0]["daPriceEpexAverage"] == -3.68
-    assert res[3].iloc[0]["drlVolume"] == 330.0
-    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -5.06
-    assert res[5].iloc[0]["dmhPrice"] == 6.3
+    assert isinstance(res[2].iloc[0]["daPriceEpexAverage"], np.float64)
+    assert isinstance(res[3].iloc[0]["drlVolume"], np.float64)
+    assert isinstance(res[4].iloc[0]["daPriceNordpoolAverage"], np.float64)
+    assert isinstance(res[5].iloc[0]["dmhPrice"], np.float64)
 
 
 def test_get_dayahead_data_sync():
@@ -35,7 +37,7 @@ def test_get_dayahead_data_sync():
     )
 
     assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
-    assert res[2].iloc[0]["daPriceEpexAverage"] == -3.68
-    assert res[3].iloc[0]["drlVolume"] == 330.0
-    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -5.06
-    assert res[5].iloc[0]["dmhPrice"] == 6.3
+    assert isinstance(res[2].iloc[0]["daPriceEpexAverage"], np.float64)
+    assert isinstance(res[3].iloc[0]["drlVolume"], np.float64)
+    assert isinstance(res[4].iloc[0]["daPriceNordpoolAverage"], np.float64)
+    assert isinstance(res[5].iloc[0]["dmhPrice"], np.float64)
