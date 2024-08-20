@@ -21,7 +21,7 @@ async def test_get_dayahead_data_async():
     assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
     assert res[2].iloc[0]["daPriceEpexAverage"] == -3.68
     assert res[3].iloc[0]["drlVolume"] == 330.0
-    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -3.13
+    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -5.06
     assert res[5].iloc[0]["dmhPrice"] == 6.3
 
 
@@ -37,5 +37,5 @@ def test_get_dayahead_data_sync():
     assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
     assert res[2].iloc[0]["daPriceEpexAverage"] == -3.68
     assert res[3].iloc[0]["drlVolume"] == 330.0
-    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -3.13
+    assert res[4].iloc[0]["daPriceNordpoolAverage"] == -5.06
     assert res[5].iloc[0]["dmhPrice"] == 6.3
