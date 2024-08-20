@@ -18,20 +18,20 @@ def generate_series_data_request(
         if not is_list_of_strings(option_id):
             raise ValueError("Option ID input must be a list of strings")
 
-        request_body = {
-            "SeriesId": series_id,
-            "CountryId": country_id,
-            "From": date_from,
-            "To": date_to,
-            "OptionId": option_id,
-            "halfHourlyAverage": half_hourly_average,
-        }
+    request_body = {
+        "SeriesId": series_id,
+        "CountryId": country_id,
+        "From": date_from,
+        "To": date_to,
+        "OptionId": option_id,
+        "halfHourlyAverage": half_hourly_average,
+    }
 
-        if request_time_zone_id is not None:
-            request_body["requestTimeZoneId"] = request_time_zone_id
+    if request_time_zone_id is not None:
+        request_body["requestTimeZoneId"] = request_time_zone_id
 
-        if time_zone_id is not None:
-            request_body["timeZoneId"] = time_zone_id
+    if time_zone_id is not None:
+        request_body["timeZoneId"] = time_zone_id
 
     return request_body
 
