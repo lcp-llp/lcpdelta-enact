@@ -24,7 +24,9 @@ dependencies = [
     "signalrcore",
     "matplotlib",
     "httpx",
-    "tenacity"
+    "tenacity",
+    "jupyter",
+    "nbval"
 ]
 
 [project.optional-dependencies]
