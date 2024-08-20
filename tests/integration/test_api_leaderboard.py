@@ -50,7 +50,7 @@ async def test_get_leaderboard_data_async():
         "DayAheadForward",
     )
 
-    [column in res.columns for column in expected_columns]
+    assert [column in res.columns for column in expected_columns]
 
 
 def test_get_leaderboard_data_sync():
@@ -63,4 +63,4 @@ def test_get_leaderboard_data_sync():
         "DayAheadForward",
     )
 
-    [column in res.columns for column in expected_columns]
+    assert [column in res.columns for column in expected_columns]
