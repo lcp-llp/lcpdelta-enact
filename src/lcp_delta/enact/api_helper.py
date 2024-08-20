@@ -486,6 +486,160 @@ class APIHelper(APIHelperBase):
             parse_datetimes,
         )
 
+    def get_multi_series_data(
+        self,
+        series_ids: list[str],
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_ids: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Get data for multiple non-plant series.
+
+        Args:
+            series_id `list[str]`: The Enact series ID.
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that the arguments required for specific enact data can be found on the site.
+
+        Returns:
+            Response: The response object containing the series data.
+        """
+        request_body = series_service.generate_multi_series_data_request(
+            series_ids,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
+            country_id,
+            option_ids,
+            half_hourly_average,
+            request_time_zone_id,
+            time_zone_id,
+        )
+        response = self._post_request(ep.MULTI_SERIES_DATA, request_body)
+        return series_service.process_series_data_response(response, parse_datetimes)
+
+    async def get_multi_series_data_async(
+        self,
+        series_ids: list[str],
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_ids: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_multi_series_data`"""
+        request_body = series_service.generate_multi_series_data_request(
+            series_ids,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
+            country_id,
+            option_ids,
+            half_hourly_average,
+            request_time_zone_id,
+            time_zone_id,
+        )
+        response = await self._post_request_async(ep.MULTI_SERIES_DATA, request_body)
+        return series_service.process_series_data_response(response, parse_datetimes)
+
+    def get_multi_plant_series_data(
+        self,
+        series_ids: list[str],
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_ids: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Get series data for multiple plant series.
+
+        Args:
+            series_id `list[str]`: The Enact series ID.
+
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
+
+            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            half_hourly_average `bool` (optional): Retrieve half-hourly average data. Defaults to False.
+
+            request_time_zone_id `str` (optional): Time zone ID of the requested time range. Defaults to GMT/BST.
+
+            time_zone_id `str` (optional): Time zone ID of the data to be returned. Defaults to UTC.
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+        Note that the arguments required for specific enact data can be found on the site.
+
+        Returns:
+            Response: The response object containing the series data.
+        """
+        request_body = series_service.generate_multi_series_data_request(
+            series_ids,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
+            country_id,
+            option_ids,
+            half_hourly_average,
+            request_time_zone_id,
+            time_zone_id,
+        )
+        response = self._post_request(ep.MULTI_PLANT_SERIES_DATA, request_body)
+        return series_service.process_series_data_response(response, parse_datetimes)
+
+    async def get_multi_plant_series_data_async(
+        self,
+        series_ids: list[str],
+        date_from: datetime,
+        date_to: datetime,
+        country_id: str,
+        option_ids: list[str] | None = None,
+        half_hourly_average: bool = False,
+        request_time_zone_id: str | None = None,
+        time_zone_id: str | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_multi_plant_series_data`"""
+        request_body = series_service.generate_multi_series_data_request(
+            series_ids,
+            convert_datetime_to_iso(date_from),
+            convert_datetime_to_iso(date_to),
+            country_id,
+            option_ids,
+            half_hourly_average,
+            request_time_zone_id,
+            time_zone_id,
+        )
+        response = await self._post_request_async(ep.MULTI_PLANT_SERIES_DATA, request_body)
+        return series_service.process_series_data_response(response, parse_datetimes)
+
     def get_plant_details_by_id(self, plant_id: str) -> dict:
         """Get details of a plant based on the plant ID.
 
