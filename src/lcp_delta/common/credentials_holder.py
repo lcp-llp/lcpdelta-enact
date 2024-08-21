@@ -13,7 +13,7 @@ class CredentialsHolder:
     def __init__(self, username: str, public_api_key: str):
         self._token_lock = threading.Lock()
         self._auth_headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
-        self._credentials_payload = {"Username": self.username, "ApiKey": self.public_api_key}
+        self._credentials_payload = {"Username": username, "ApiKey": public_api_key}
         self.get_bearer_token()
 
     @property
