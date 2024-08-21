@@ -1,13 +1,13 @@
-from datetime import datetime
 import pandas as pd
 
-from ..common import APIHelperBase, add_sync_methods
+from datetime import datetime
+
+from lcp_delta.common import APIHelperBase
+from lcp_delta.flextrack.services import exporter_service
 
 
-@add_sync_methods
 class APIHelper(APIHelperBase):
-    # Series:
-    async def get_exporter_data_async(
+    def get_exporter_data(
         self,
         date_from: datetime,
         date_to: datetime,
@@ -51,45 +51,47 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the series data.
         """
         endpoint = "https://enact-staticchartapi.azurewebsites.net/FLEXTrackAPI/Exporter/Data"
+        request_body = exporter_service.generate_request(
+            date_from,
+            date_to,
+            countries,
+            products,
+            directions,
+            market,
+            metrics,
+            aggregation_types,
+            granularity,
+            weighting_metric,
+        )
+        response = self._post_request(endpoint, request_body)
+        return exporter_service.process_response(response)
 
-        from_year = date_from.year
-        from_month = date_from.month
-        from_day = date_from.day
-        to_year = date_to.year
-        to_month = date_to.month
-        to_day = date_to.day
-
-        dates = [
-            {
-                "fromDay": from_day,
-                "fromMonth": from_month,
-                "fromYear": from_year,
-                "toDay": to_day,
-                "toMonth": to_month,
-                "toYear": to_year,
-            }
-        ]
-
-        request_details = {
-            "Country": countries,
-            "Product": products,
-            "Direction": directions,
-            "Metric": metrics,
-            "Market": market,
-            "SummaryMetric": aggregation_types,
-            "Granularity": granularity,
-            "Dates": dates,
-        }
-
-        if weighting_metric:
-            request_details["WeightingMetric"] = weighting_metric
-
-        response = await self._post_request(endpoint, request_details)
-
-        try:
-            df = pd.DataFrame(response["data"]["dictionaryOutput"])
-            first_key = next(iter(response["data"]["dictionaryOutput"]))
-            return df.set_index(first_key)
-
-        except (ValueError, TypeError, IndexError):
-            return response
+    async def get_exporter_data_async(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        countries: list[str],
+        products: list[str],
+        directions: list[str],
+        market: str,
+        metrics: list[str],
+        aggregation_types: list[str],
+        granularity: str,
+        weighting_metric: list[str] = None,
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_exporter_data`."""
+        endpoint = "https://enact-staticchartapi.azurewebsites.net/FLEXTrackAPI/Exporter/Data"
+        request_body = exporter_service.generate_request(
+            date_from,
+            date_to,
+            countries,
+            products,
+            directions,
+            market,
+            metrics,
+            aggregation_types,
+            granularity,
+            weighting_metric,
+        )
+        response = await self._post_request_async(endpoint, request_body)
+        return exporter_service.process_response(response)

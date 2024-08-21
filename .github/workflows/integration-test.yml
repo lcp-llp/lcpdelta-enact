@@ -28,11 +28,11 @@ jobs:
 
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
-    
+
     - name: Run tests
       env:
         LCPDELTA_PACKAGE_TEST_ENACT_USERNAME: ${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_USERNAME }}
         LCPDELTA_PACKAGE_TEST_ENACT_API_KEY: ${{ secrets.LCPDELTA_PACKAGE_TEST_ENACT_API_KEY }}
         LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME: ${{ secrets.LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME }}
         LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY: ${{ secrets.LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY }}
-      run: pytest
+      run: pytest --nbval --nbval-current-env

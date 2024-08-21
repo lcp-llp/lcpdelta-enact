@@ -1,18 +1,19 @@
-from datetime import datetime
-import httpx
 import json
+import httpx
 import threading
-from ..enact.response_objects.usage_info import UsageInfo
-from . import constants
+
+from datetime import datetime
+
+from lcp_delta.common import constants
+from lcp_delta.common.response_objects.usage_info import UsageInfo
+from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY
 
 
 class CredentialsHolder:
-    MAX_RETRIES = 3
-
     def __init__(self, username: str, public_api_key: str):
-        self.username = username
-        self.public_api_key = public_api_key
         self._token_lock = threading.Lock()
+        self._auth_headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
+        self._credentials_payload = {"Username": username, "ApiKey": public_api_key}
         self.get_bearer_token()
 
     @property
@@ -25,88 +26,34 @@ class CredentialsHolder:
         with self._token_lock:
             self._bearer_token = value
 
-    @constants.DEFAULT_HTTP_RETRY_POLICY
+    @DEFAULT_RETRY_POLICY
     def get_bearer_token(self):
-        """Get the bearer token for authentication.
-
-        This method sends a request to obtain a bearer token for authentication
-        using the Enact API. It takes an Enact username and public API key as
-        input parameters.
-
-        Args:
-            username `str`: The username for Enact authentication.
-            public_api_key `str`: The public API key for Enact authentication.
         """
-
-        headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
-        data = {"Username": self.username, "ApiKey": self.public_api_key}
+        Gets the bearer token for authentication, based on the username and public API key associated with the instance.
+        """
+        endpoint = f"{constants.MAIN_BASE_URL}/auth/token"
         with httpx.Client(verify=True) as client:
-            response = client.post("https://enactapifd.lcp.uk.com/auth/token", headers=headers, json=data)
-
-        if response.status_code == 401 or (response.status_code >= 500 and response.status_code < 600):
-            response = self.retry_request(headers, data)
+            response = client.post(endpoint, headers=self._auth_headers, json=self._credentials_payload)
 
         self.bearer_token = response.text
 
-    @constants.DEFAULT_HTTP_RETRY_POLICY
-    def retry_request(self, headers, data):
-        """Retry the request to obtain a valid bearer token.
-
-        This method retries the request to obtain a valid bearer token for authentication. It takes the request headers and data as input parameters.
-
-        Args:
-            headers `dict`: The headers for the request.
-            data `dict`: The data to be sent with the request.
-
-        Raises:
-            Exception: If a valid bearer token cannot be obtained after
-                    multiple attempts.
-
-        Returns:
-            Response: The response object containing the bearer token.
-        """
-        retry_count = 0
-        while retry_count < self.MAX_RETRIES:
-            with httpx.Client(verify=True) as client:
-                response = client.post("https://enactapifd.lcp.uk.com/auth/token", headers=headers, json=data)
-            if response.status_code != 401 and (response.status_code < 500 or response.status_code >= 600):
-                # Successful response, no need to retry
-                break
-            retry_count += 1
-
-        if retry_count == self.MAX_RETRIES:
-            raise Exception("Failed to obtain a valid bearer token after multiple attempts.")
-
-        return response
-
-    @constants.DEFAULT_HTTP_RETRY_POLICY
+    @DEFAULT_RETRY_POLICY
     def get_remaining_token_count(self) -> UsageInfo:
-        """Get the remaining token count for API calls.
-
-        This method sends a request to obtain the remaining token count for API calls. It retrieves the count based on the Enact username and public API key associated with the instance.
+        """
+        Gets the monthly quota and remaining call count for a particular account, based on the username and public API key associated with the instance.
 
         Returns:
-            `str`: The remaining token count for API calls.
+            `UsageInfo`: An object holding the monthly quota, remaining allowance, and date that monthly usage was last last refreshed.
         """
-        headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
-        data = {"Username": self.username, "ApiKey": self.public_api_key}
-
-        endpoint = "https://enactapifd.lcp.uk.com/auth/usage_v2"
-
+        endpoint = f"{constants.MAIN_BASE_URL}/auth/usage_v2"
         with httpx.Client(verify=True) as client:
-            response = client.post(endpoint, headers=headers, json=data)
+            response = client.post(endpoint, headers=self._auth_headers, json=self._credentials_payload)
 
-        if response.status_code != 200:
-            if response.status_code == 401 or (response.status_code >= 500 and response.status_code < 600):
-                response = self.retry_request(headers, data)
-            if response.status_code == 404:
-                raise httpx.HTTPStatusError(f"Error: {response.text}", request=response.request, response=response)
-
-        data = json.loads(response.content)
+        response_data = json.loads(response.content)
 
         return UsageInfo(
-            data["remainingCallsForMonth"],
-            data["monthlyCallAllowance"],
-            datetime.strptime(data["dateLastRenewed"], "%Y-%m-%dT%H:%M:%S"),
-            data["unlimitedUsage"],
+            response_data["remainingCallsForMonth"],
+            response_data["monthlyCallAllowance"],
+            datetime.strptime(response_data["dateLastRenewed"], "%Y-%m-%dT%H:%M:%S"),
+            response_data["unlimitedUsage"],
         )
