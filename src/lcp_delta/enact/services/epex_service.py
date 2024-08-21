@@ -20,7 +20,7 @@ def process_trades_response(response: dict) -> pd.DataFrame:
     return convert_response_to_df(response, index_on=-1)
 
 
-def process_order_book_response(response: dict) -> pd.DataFrame:
+def process_order_book_response(response: dict) -> dict[str, pd.DataFrame]:
     output: dict[str, pd.DataFrame] = {}
     for table_str, data in response["data"].items():
         output[table_str] = convert_dict_to_df(data)

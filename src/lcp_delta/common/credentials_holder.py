@@ -11,8 +11,6 @@ from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY
 
 class CredentialsHolder:
     def __init__(self, username: str, public_api_key: str):
-        self.username = username
-        self.public_api_key = public_api_key
         self._token_lock = threading.Lock()
         self._auth_headers = {"Content-Type": "application/json", "cache-control": "no-cache"}
         self._credentials_payload = {"Username": self.username, "ApiKey": self.public_api_key}

@@ -51,7 +51,7 @@ def generate_date_range_request(
     return request_body
 
 
-def process_date_range_response(response: dict) -> dict:
+def process_date_range_response(response: dict) -> dict[str, pd.DataFrame]:
     output: dict[str, pd.DataFrame] = {}
     for date_str, data in response["data"]["data"].items():
         df = convert_dict_to_df(data)
