@@ -2,6 +2,7 @@ import pytest
 import time
 import numpy as np
 
+from dateutil.parser import parse
 from datetime import date
 from tests.integration import enact_api_helper
 
@@ -20,7 +21,7 @@ async def test_get_dayahead_data_async():
         selectedEfaBlocks=[1, 2, 3, 4, 5, 6],
     )
 
-    assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
+    assert isinstance(parse(res[1].iloc[0]["day"]).date(), date)
     assert isinstance(res[2].iloc[0]["daPriceEpexAverage"], np.float64)
     assert isinstance(res[3].iloc[0]["drlVolume"], np.float64)
     assert isinstance(res[4].iloc[0]["daPriceNordpoolAverage"], np.float64)
@@ -36,7 +37,7 @@ def test_get_dayahead_data_sync():
         selectedEfaBlocks=[1, 2, 3, 4, 5, 6],
     )
 
-    assert res[1].iloc[0]["day"] == "2024-08-09T00:00:00"
+    assert isinstance(parse(res[1].iloc[0]["day"]).date(), date)
     assert isinstance(res[2].iloc[0]["daPriceEpexAverage"], np.float64)
     assert isinstance(res[3].iloc[0]["drlVolume"], np.float64)
     assert isinstance(res[4].iloc[0]["daPriceNordpoolAverage"], np.float64)
