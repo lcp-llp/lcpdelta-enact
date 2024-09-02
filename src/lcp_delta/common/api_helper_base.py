@@ -21,11 +21,13 @@ class APIHelperBase(ABC):
         self.timeout = httpx.Timeout(5.0, read=15.0)
 
     @DEFAULT_RETRY_POLICY
-    async def _post_request_async(self, endpoint: str, request_body: dict):
+    async def _post_request_async(self, endpoint: str, request_body: dict, override_timeout: bool = False):
         """
         Sends a post request with a given payload to a given endpoint asynchronously.
         """
-        async with httpx.AsyncClient(verify=True, timeout=self.timeout) as client:
+        timeout = httpx.Timeout(5.0, read=60.0) if override_timeout else self.timeout
+
+        async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
             response = await client.post(endpoint, json=request_body, headers=self._get_headers())
 
         # if bearer token expired, refresh and retry
@@ -38,11 +40,13 @@ class APIHelperBase(ABC):
         return response.json()
 
     @DEFAULT_RETRY_POLICY
-    def _post_request(self, endpoint: str, request_body: dict):
+    def _post_request(self, endpoint: str, request_body: dict, override_timeout: bool = False):
         """
         Sends a post request with a given payload to a given endpoint.
         """
-        with httpx.Client(verify=True, timeout=self.timeout) as client:
+        timeout = httpx.Timeout(5.0, read=60.0) if override_timeout else self.timeout
+
+        with httpx.Client(verify=True, timeout=timeout) as client:
             response = client.post(endpoint, json=request_body, headers=self._get_headers())
 
         # if bearer token expired, refresh and retry
