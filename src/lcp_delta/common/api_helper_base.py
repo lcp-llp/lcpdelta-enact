@@ -21,11 +21,11 @@ class APIHelperBase(ABC):
         self.timeout = httpx.Timeout(5.0, read=15.0)
 
     @DEFAULT_RETRY_POLICY
-    async def _post_request_async(self, endpoint: str, request_body: dict, override_timeout: bool = False):
+    async def _post_request_async(self, endpoint: str, request_body: dict, long_timeout: bool = False):
         """
         Sends a post request with a given payload to a given endpoint asynchronously.
         """
-        timeout = httpx.Timeout(5.0, read=60.0) if override_timeout else self.timeout
+        timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
         async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
             response = await client.post(endpoint, json=request_body, headers=self._get_headers())
@@ -40,11 +40,11 @@ class APIHelperBase(ABC):
         return response.json()
 
     @DEFAULT_RETRY_POLICY
-    def _post_request(self, endpoint: str, request_body: dict, override_timeout: bool = False):
+    def _post_request(self, endpoint: str, request_body: dict, long_timeout: bool = False):
         """
         Sends a post request with a given payload to a given endpoint.
         """
-        timeout = httpx.Timeout(5.0, read=60.0) if override_timeout else self.timeout
+        timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
         with httpx.Client(verify=True, timeout=timeout) as client:
             response = client.post(endpoint, json=request_body, headers=self._get_headers())

@@ -670,7 +670,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = self._post_request(ep.BOA, request_body, override_timeout=True)
+        response = self._post_request(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
 
     async def get_bm_data_by_period_async(
@@ -678,7 +678,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_period`."""
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = await self._post_request_async(ep.BOA, request_body, override_timeout=True)
+        response = await self._post_request_async(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
 
     def get_bm_data_by_search(
@@ -703,7 +703,7 @@ class APIHelper(APIHelperBase):
             Response: A pandas DataFrame containing the BM data.
         """
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
-        response = self._post_request(ep.BOA, request_body, override_timeout=True)
+        response = self._post_request(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     async def get_bm_data_by_search_async(
@@ -715,7 +715,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_search`."""
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
-        response = await self._post_request_async(ep.BOA, request_body, override_timeout=True)
+        response = await self._post_request_async(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     def get_leaderboard_data(
