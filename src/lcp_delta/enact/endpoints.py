@@ -6,6 +6,8 @@ SERIES_BY_FUEL = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
 SERIES_BY_ZONE = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
 SERIES_BY_OWNER = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
 SERIES_MULTI_OPTION = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
+MULTI_SERIES_DATA = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesData"
+MULTI_PLANT_SERIES_DATA = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesPlantData"
 
 PLANT_INFO = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
 PLANT_IDS = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"

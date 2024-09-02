@@ -176,3 +176,75 @@ def test_get_series_info_sync():
     assert any(option["id"] == "Biomass" for option in res["data"]["options"][0])
     assert res["data"]["suffix"] == "MW"
     assert any(country["id"] == "Gb" for country in res["data"]["countries"])
+
+
+@pytest.mark.asyncio
+async def test_get_series_multi_series_data_async():
+    res = await enact_api_helper.get_multi_series_data_async(
+        ["OutturnFuel", "Tsdf", "WindForecast"],
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Gb",
+        option_ids=["Wind"],
+        time_zone_id="UTC",
+        parse_datetimes=True,
+    )
+
+    assert res.index.name == "GMT Time"
+    assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
+    assert list(res.columns) == ["Gb&OutturnFuel&Wind", "Gb&Tsdf", "Gb&WindForecast"]
+    assert isinstance(res.iloc[0, 0], float)
+
+
+def test_get_series_multi_series_data():
+    res = enact_api_helper.get_multi_series_data(
+        ["OutturnFuel", "Tsdf", "WindForecast"],
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Gb",
+        option_ids=["Wind"],
+        time_zone_id="UTC",
+        parse_datetimes=True,
+    )
+
+    assert res.index.name == "GMT Time"
+    assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
+    assert list(res.columns) == ["Gb&OutturnFuel&Wind", "Gb&Tsdf", "Gb&WindForecast"]
+    assert isinstance(res.iloc[0, 0], float)
+
+
+@pytest.mark.asyncio
+async def test_get_series_data_multi_option_async():
+    res = await enact_api_helper.get_multi_plant_series_data_async(
+        ["BalancingProfit", "DcEfaRevenue", "WholesaleRevenue"],
+        ["CCGT", "Z5", "Flexitricity"],
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Gb",
+        time_zone_id="UTC",
+        parse_datetimes=True,
+    )
+
+    assert res.index.name == "GMT Time"
+    assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
+    expected_columns = ["Gb&BalancingProfit&T_ROCK-1", "Gb&DcEfaRevenue&E_JAMBB-1", "Gb&WholesaleRevenue&2__AFLEX004"]
+    assert [column in list(res.columns) for column in expected_columns]
+    assert isinstance(res.iloc[0, 0], float)
+
+
+def test_get_series_data_multi_option_sync():
+    res = enact_api_helper.get_multi_plant_series_data(
+        ["BalancingProfit", "DcEfaRevenue", "WholesaleRevenue"],
+        ["CCGT", "Z5", "Flexitricity"],
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Gb",
+        time_zone_id="UTC",
+        parse_datetimes=True,
+    )
+
+    assert res.index.name == "GMT Time"
+    assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
+    expected_columns = ["Gb&BalancingProfit&T_ROCK-1", "Gb&DcEfaRevenue&E_JAMBB-1", "Gb&WholesaleRevenue&2__AFLEX004"]
+    assert [column in list(res.columns) for column in expected_columns]
+    assert isinstance(res.iloc[0, 0], float)

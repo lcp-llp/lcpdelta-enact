@@ -14,7 +14,7 @@ def convert_datetimes_to_iso(date_from: datetime, date_to: datetime) -> tuple[st
     return date_from_str, date_to_str
 
 
-def is_list_of_strings(lst: list):
+def is_list_of_strings_or_empty(lst: list):
     if not isinstance(lst, list):
         return False
     return all(isinstance(item, str) for item in lst)
