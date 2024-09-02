@@ -6,7 +6,7 @@ from functools import partial
 from typing import Callable
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 
-from lcp_delta.global_helpers import is_list_of_strings
+from lcp_delta.global_helpers import is_list_of_strings_or_empty
 from lcp_delta.enact.api_helper import APIHelper
 
 
@@ -164,7 +164,7 @@ class DPSHelper:
         request_details = {"SeriesId": series_id, "CountryId": country_id}
 
         if option_id:
-            if not is_list_of_strings(option_id):
+            if not is_list_of_strings_or_empty(option_id):
                 raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
 

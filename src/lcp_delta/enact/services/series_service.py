@@ -1,6 +1,6 @@
 from typing import Any
 
-from lcp_delta.global_helpers import is_list_of_strings
+from lcp_delta.global_helpers import is_list_of_strings_or_empty
 from lcp_delta.enact.helpers import convert_response_to_df
 
 
@@ -15,7 +15,7 @@ def generate_series_data_request(
     time_zone_id: str | None = None,
 ) -> dict:
     if option_id is not None:
-        if not is_list_of_strings(option_id):
+        if not is_list_of_strings_or_empty(option_id):
             raise ValueError("Option ID input must be a list of strings")
 
     request_body = {
@@ -62,7 +62,7 @@ def generate_multi_series_data_request(
     time_zone_id: str | None = None,
 ) -> dict:
     if option_ids is not None:
-        if not is_list_of_strings(option_ids):
+        if not is_list_of_strings_or_empty(option_ids):
             raise ValueError("Option ID input must be a list of strings")
 
     request_body = {

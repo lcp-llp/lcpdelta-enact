@@ -2,7 +2,7 @@ import pandas as pd
 
 from datetime import datetime
 
-from lcp_delta.global_helpers import convert_datetime_to_iso, convert_datetimes_to_iso, is_list_of_strings
+from lcp_delta.global_helpers import convert_datetime_to_iso, convert_datetimes_to_iso, is_list_of_strings_or_empty
 from lcp_delta.enact.helpers import convert_dict_to_df, convert_response_to_df
 
 
@@ -21,7 +21,7 @@ def generate_single_date_request(
     }
 
     if option_id is not None:
-        if not is_list_of_strings(option_id):
+        if not is_list_of_strings_or_empty(option_id):
             raise ValueError("Option ID input must be a list of strings")
         request_body["OptionId"] = option_id
 
@@ -44,7 +44,7 @@ def generate_date_range_request(
     request_body = {"SeriesId": series_id, "CountryId": country_id, "From": date_from, "To": date_to}
 
     if option_id is not None:
-        if not is_list_of_strings(option_id):
+        if not is_list_of_strings_or_empty(option_id):
             raise ValueError("Option ID input must be a list of strings")
         request_body["OptionId"] = option_id
 
@@ -80,7 +80,7 @@ def generate_latest_forecast_request(
     }
 
     if option_id is not None:
-        if not is_list_of_strings(option_id):
+        if not is_list_of_strings_or_empty(option_id):
             raise ValueError("Option ID input must be a list of strings")
         request_body["OptionId"] = option_id
 
