@@ -217,10 +217,10 @@ def test_get_series_multi_series_data():
 async def test_get_series_data_multi_option_async():
     res = await enact_api_helper.get_multi_plant_series_data_async(
         ["BalancingProfit", "DcEfaRevenue", "WholesaleRevenue"],
+        ["CCGT", "Z5", "Flexitricity"],
         date(2024, 8, 1),
         date(2024, 8, 3),
         "Gb",
-        option_ids=["CCGT", "Z5", "Flexitricity"],
         time_zone_id="UTC",
         parse_datetimes=True,
     )
@@ -235,10 +235,10 @@ async def test_get_series_data_multi_option_async():
 def test_get_series_data_multi_option_sync():
     res = enact_api_helper.get_multi_plant_series_data(
         ["BalancingProfit", "DcEfaRevenue", "WholesaleRevenue"],
+        ["CCGT", "Z5", "Flexitricity"],
         date(2024, 8, 1),
         date(2024, 8, 3),
         "Gb",
-        option_ids=["CCGT", "Z5", "Flexitricity"],
         time_zone_id="UTC",
         parse_datetimes=True,
     )

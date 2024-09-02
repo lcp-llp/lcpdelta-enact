@@ -501,13 +501,13 @@ class APIHelper(APIHelperBase):
         """Get data for multiple non-plant series.
 
         Args:
-            series_id `list[str]`: The Enact series ID.
+            series_ids `list[str]`: A list of Enact series IDs.
 
             date_from `datetime.datetime`: The start date.
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
+            option_ids `list[str]` (optional): The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -566,10 +566,10 @@ class APIHelper(APIHelperBase):
     def get_multi_plant_series_data(
         self,
         series_ids: list[str],
+        option_ids: list[str],
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_ids: list[str] | None = None,
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -578,13 +578,13 @@ class APIHelper(APIHelperBase):
         """Get series data for multiple plant series.
 
         Args:
-            series_id `list[str]`: The Enact series ID.
+            series_ids `list[str]`: A list of Enact series IDs.
+
+            option_ids `list[str]`: The option IDs corresponding to each series requested, e.g. ["Z1", "Wind"].
 
             date_from `datetime.datetime`: The start date.
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
-
-            option_id `list[str]`: The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -617,10 +617,10 @@ class APIHelper(APIHelperBase):
     async def get_multi_plant_series_data_async(
         self,
         series_ids: list[str],
+        option_ids: list[str],
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_ids: list[str] | None = None,
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
