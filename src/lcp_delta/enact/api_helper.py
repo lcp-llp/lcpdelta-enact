@@ -909,7 +909,7 @@ class APIHelper(APIHelperBase):
             gas_price_assumption,
             include_capacity_market_revenues,
         )
-        response = self._post_request(ep.LEADERBOARD, response_body)
+        response = self._post_request(ep.LEADERBOARD_V1, response_body)
         return leaderboard_service.process_response(response, type)
 
     async def get_leaderboard_data_async(
@@ -932,7 +932,7 @@ class APIHelper(APIHelperBase):
             gas_price_assumption,
             include_capacity_market_revenues,
         )
-        response = await self._post_request_async(ep.LEADERBOARD, response_body)
+        response = await self._post_request_async(ep.LEADERBOARD_V1, response_body)
         return leaderboard_service.process_response(response, type)
 
     def get_ancillary_contract_data(

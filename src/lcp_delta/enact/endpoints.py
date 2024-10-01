@@ -17,7 +17,7 @@ HOF_LATEST_FORECAST = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get
 
 BOA = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
-LEADERBOARD = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/Data"
+LEADERBOARD_V1 = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
 
 ANCILLARY = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
 
