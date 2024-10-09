@@ -1314,7 +1314,7 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = epex_service.generate_contract_request(date)
-        response = self._post_request(ep.EPEX_CONTRACTS, request_body, True)
+        response = self._post_request(ep.EPEX_CONTRACTS, request_body, long_timeout=True)
         return epex_service.process_contract_response(response)
 
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
