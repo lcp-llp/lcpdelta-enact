@@ -167,8 +167,9 @@ class DPSHelper:
             if not is_list_of_strings_or_empty(option_id):
                 raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
-
         subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
+        if subscription_id in self.data_by_subscription_id:
+            return
         (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
             subscription_id, (None, pd.DataFrame(), False)
         )
@@ -185,5 +186,5 @@ class DPSHelper:
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
         if option_id:
-            subscription_id + tuple(option_id)
+            subscription_id += tuple(option_id)
         return subscription_id
