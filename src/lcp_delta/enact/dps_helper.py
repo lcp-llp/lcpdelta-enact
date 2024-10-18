@@ -185,5 +185,5 @@ class DPSHelper:
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
         if option_id:
-            subscription_id + tuple(option_id)
+            subscription_id += tuple(option_id)
         return subscription_id
