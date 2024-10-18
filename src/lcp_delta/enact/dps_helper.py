@@ -166,23 +166,22 @@ class DPSHelper:
         if option_id:
             if not is_list_of_strings_or_empty(option_id):
                 raise ValueError("Option ID input must be a list of strings")
-        for option in option_id:
-            request_details["OptionId"] = [option]
-            subscription_id = self.__get_subscription_id(series_id, country_id, [option])
-            if subscription_id in self.data_by_subscription_id:
-                continue
-            (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
-                subscription_id, (None, pd.DataFrame(), False)
+            request_details["OptionId"] = option_id
+        subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
+        if subscription_id in self.data_by_subscription_id:
+            return
+        (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
+            subscription_id, (None, pd.DataFrame(), False)
+        )
+        if initial_data_from_series_api.empty:
+            self._initialise_series_subscription_data(
+                series_id, country_id, option_id, handle_data_method, parse_datetimes
             )
-            if initial_data_from_series_api.empty:
-                self._initialise_series_subscription_data(
-                    series_id, country_id, [option], handle_data_method, parse_datetimes
-                )
-            else:
-                self.data_by_subscription_id[subscription_id][0] = handle_data_method
+        else:
+            self.data_by_subscription_id[subscription_id][0] = handle_data_method
 
-            enact_request_object_series = [request_details]
-            self._add_subscription(enact_request_object_series, subscription_id)
+        enact_request_object_series = [request_details]
+        self._add_subscription(enact_request_object_series, subscription_id)
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
