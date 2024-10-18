@@ -169,6 +169,8 @@ class DPSHelper:
         for option in option_id:
             request_details["OptionId"] = [option]
             subscription_id = self.__get_subscription_id(series_id, country_id, [option])
+            if subscription_id in self.data_by_subscription_id:
+                continue
             (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
                 subscription_id, (None, pd.DataFrame(), False)
             )
