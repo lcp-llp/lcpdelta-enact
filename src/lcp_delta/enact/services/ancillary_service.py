@@ -16,7 +16,7 @@ def generate_ancillary_request(
         if not isinstance(date_requested, date | datetime):
             raise TypeError("Requested date must be a date or datetime")
         if (
-            ancillary_contract_group == AncillaryContractGroup.Dynamic
+            _is_dynamic_enum(ancillary_contract_group)
             or ancillary_contract_group == AncillaryContractGroup.SFfr
         ):
             option_one = "-".join([str(date_requested.month), str(date_requested.year)])
@@ -56,7 +56,7 @@ def process_ancillary_response(
         df = pd.DataFrame(first_item["plants"])
         df.set_index("tenderNumber", inplace=True)
         return df
-    if ancillary_contract_group == AncillaryContractGroup.Dynamic:
+    if _is_dynamic_enum(ancillary_contract_group):
         return _process_dynamic_response(response)
     return response
 
@@ -72,3 +72,14 @@ def try_parse_ancillary_contract_group_enum(contract_type: str) -> AncillaryCont
         return AncillaryContractGroup[contract_type]
     except:
         raise KeyError(f"'{contract_type}' is not a valid value. Value must be one of: {[e.name for e in AncillaryContractGroup]}")
+
+dynamic_group = {
+    AncillaryContractGroup.DynamicContainmentEfa,
+    AncillaryContractGroup.DynamicContainmentEfaHF,
+    AncillaryContractGroup.DynamicModerationLF,
+    AncillaryContractGroup.DynamicModerationHF,
+    AncillaryContractGroup.DynamicRegulationHF
+}
+
+def _is_dynamic_enum(enum_value):
+    return enum_value in dynamic_group
