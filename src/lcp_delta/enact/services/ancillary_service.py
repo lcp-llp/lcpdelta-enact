@@ -7,11 +7,10 @@ from lcp_delta.enact.enums import AncillaryContractGroup
 
 
 def generate_ancillary_request(
-    ancillary_contract_type: str,
+    ancillary_contract_group: AncillaryContractGroup,
     option_one: Union[str, int] | None = None,
     option_two: Union[int, str] | None = None,
     date_requested: datetime | None = None,
-    ancillary_contract_group: AncillaryContractGroup | None = None,
 ) -> dict:
     if date_requested:
         if not isinstance(date_requested, date | datetime):
@@ -25,7 +24,7 @@ def generate_ancillary_request(
             option_one = "-".join([str(date_requested.year), str(date_requested.month), str(date_requested.day)])
 
     request_body = {
-        "AncillaryContractType": ancillary_contract_type,
+        "AncillaryContractType": ancillary_contract_group,
         "OptionOne": option_one,
     }
 
@@ -42,7 +41,7 @@ def process_ancillary_response(
     if "data" not in response or not response["data"]:
         return pd.DataFrame()
     first_item = response["data"][0]
-    if ancillary_contract_group == AncillaryContractGroup.SFfr:
+    if ancillary_contract_group in [AncillaryContractGroup.SFfr, AncillaryContractGroup.PositiveBalancingReserve, AncillaryContractGroup.NegativeBalancingReserve]:
         return pd.DataFrame(first_item["plants"])
     if ancillary_contract_group == AncillaryContractGroup.ManFr:
         for entry in first_item["plants"]:

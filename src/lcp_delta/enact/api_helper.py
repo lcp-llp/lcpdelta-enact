@@ -941,7 +941,6 @@ class APIHelper(APIHelperBase):
         option_one: Union[str, int] | None = None,
         option_two: Union[int, str] | None = None,
         date_requested: datetime | None = None,
-        ancillary_contract_group: AncillaryContractGroup | None = None,
     ) -> pd.DataFrame:
         """Get data for a specified Ancillary contract type.
 
@@ -959,11 +958,12 @@ class APIHelper(APIHelperBase):
             Returns:
                 Response: A pandas DataFrame containing ancillary contract data for the requested date range.
         """
+        contract_type = ancillary_service.try_parse_ancillary_contract_group_enum(ancillary_contract_type)
         request_body = ancillary_service.generate_ancillary_request(
-            ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
+            contract_type, option_one, option_two, date_requested
         )
         response = self._post_request(ep.ANCILLARY, request_body)
-        return ancillary_service.process_ancillary_response(response, ancillary_contract_group)
+        return ancillary_service.process_ancillary_response(response, contract_type)
 
     async def get_ancillary_contract_data_async(
         self,
@@ -974,11 +974,12 @@ class APIHelper(APIHelperBase):
         ancillary_contract_group: AncillaryContractGroup | None = None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_ancillary_contract_data`."""
+        contract_type = ancillary_service.try_parse_ancillary_contract_group_enum(ancillary_contract_type)
         request_body = ancillary_service.generate_ancillary_request(
-            ancillary_contract_type, option_one, option_two, date_requested, ancillary_contract_group
+            contract_type, option_one, option_two, date_requested
         )
         response = await self._post_request_async(ep.ANCILLARY, request_body)
-        return ancillary_service.process_ancillary_response(response, ancillary_contract_group)
+        return ancillary_service.process_ancillary_response(response, contract_type)
 
     def get_DCL_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns DCL (Dynamic Containment Low) contracts for a provided day.
