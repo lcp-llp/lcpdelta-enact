@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class AncillaryContractGroup(StrEnum):
+class AncillaryContracts(StrEnum):
     Ffr = "Ffr"
     StorDayAhead = "StorDayAhead"
     ManFr = "ManFr"

@@ -8,7 +8,7 @@ from typing import Union
 from lcp_delta.global_helpers import convert_datetime_to_iso
 from lcp_delta.common import APIHelperBase
 from lcp_delta.enact.helpers import get_month_name
-from lcp_delta.enact.enums import AncillaryContractGroup
+from lcp_delta.enact.enums import AncillaryContracts
 from lcp_delta.enact.services import ancillary_service
 from lcp_delta.enact.services import bm_service
 from lcp_delta.enact.services import day_ahead_service
