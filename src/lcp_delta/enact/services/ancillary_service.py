@@ -37,7 +37,6 @@ def generate_ancillary_request(
 def process_ancillary_response(
     response: dict, ancillary_contract_group: AncillaryContractGroup | None = None
 ) -> pd.DataFrame:
-    print(ancillary_contract_group)
     if "data" not in response or not response["data"]:
         return pd.DataFrame()
     first_item = response["data"][0]
