@@ -78,7 +78,10 @@ dynamic_group = {
     AncillaryContracts.DynamicContainmentEfaHF,
     AncillaryContracts.DynamicModerationLF,
     AncillaryContracts.DynamicModerationHF,
-    AncillaryContracts.DynamicRegulationHF
+    AncillaryContracts.DynamicRegulationHF,
+    AncillaryContracts.DynamicRegulationLF,
+    AncillaryContracts.PositiveBalancingReserve,
+    AncillaryContracts.NegativeBalancingReserve
 }
 
 def _is_dynamic_enum(enum_value):
