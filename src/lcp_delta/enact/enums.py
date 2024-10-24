@@ -7,3 +7,5 @@ class AncillaryContractGroup(StrEnum):
     StorDayAhead = "StorDayAhead"
     ManFr = "ManFr"
     SFfr = "SFfr"
+    PositiveBalancingReserve = "PositiveBalancingReserve"
+    NegativeBalancingReserve = "NegativeBalancingReserve"
