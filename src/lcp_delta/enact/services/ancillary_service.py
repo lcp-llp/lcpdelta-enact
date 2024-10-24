@@ -68,3 +68,9 @@ def _process_dynamic_response(response: dict) -> pd.DataFrame:
     if not df.empty:
         df.set_index("orderId", inplace=True)
     return df
+
+def try_parse_ancillary_contract_group_enum(contract_type: str) -> AncillaryContractGroup:
+    try:
+        return AncillaryContractGroup[contract_type]
+    except:
+        raise KeyError(f"'{contract_type}' is not a valid value. Value must be one of: {[e.name for e in AncillaryContractGroup]}")
