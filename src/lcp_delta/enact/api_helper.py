@@ -971,7 +971,6 @@ class APIHelper(APIHelperBase):
         option_one: Union[str, int] | None = None,
         option_two: Union[int, str] | None = None,
         date_requested: datetime | None = None,
-        ancillary_contract_group: AncillaryContractGroup | None = None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_ancillary_contract_data`."""
         contract_type = ancillary_service.try_parse_ancillary_contract_group_enum(ancillary_contract_type)
