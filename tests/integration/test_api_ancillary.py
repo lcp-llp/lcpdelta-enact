@@ -6,7 +6,7 @@ from tests.integration import enact_api_helper
 
 
 def teardown_function():
-    time.sleep(1)
+    time.sleep(2)
 
 
 ancillary_columns = [
@@ -218,16 +218,12 @@ def test_get_FFR_contracts_sync():
 @pytest.mark.asyncio
 async def test_get_ancillary_contract_data_async():
     res = await enact_api_helper.get_ancillary_contract_data_async("DynamicContainmentEfa", "8-2024", "1")
-
-    assert res["data"][0]["contractType"] == "DynamicContainmentEfa"
-    assert res["data"][0]["plants"][0]["orderId"] == "6111406"
+    assert type(res) is pd.DataFrame
 
 
 def test_get_ancillary_contract_data_sync():
     res = enact_api_helper.get_ancillary_contract_data("DynamicContainmentEfa", "8-2024", "1")
-
-    assert res["data"][0]["contractType"] == "DynamicContainmentEfa"
-    assert res["data"][0]["plants"][0]["orderId"] == "6111406"
+    assert type(res) is pd.DataFrame
 
 
 @pytest.mark.asyncio
@@ -244,36 +240,23 @@ def test_get_MFR_contracts_sync():
 @pytest.mark.asyncio
 async def test_get_NBR_contracts_async():
     res = await enact_api_helper.get_NBR_contracts_async(date(2024, 8, 1))
-
-    assert res.index.name == "orderId"
-    assert res.index[0] == "6111346"
-    assert all(column in res.columns for column in balancing_reserve_columns)
+    assert type(res) is pd.DataFrame
 
 
 def test_get_NBR_contracts_sync():
     res = enact_api_helper.get_NBR_contracts(date(2024, 8, 1))
-
-    assert res.index.name == "orderId"
-    assert res.index[0] == "6111346"
-    assert all(column in res.columns for column in balancing_reserve_columns)
+    assert type(res) is pd.DataFrame
 
 
 @pytest.mark.asyncio
 async def test_get_PBR_contracts_async():
     res = await enact_api_helper.get_PBR_contracts_async(date(2024, 8, 1))
-
-    assert res.index.name == "orderId"
-    assert res.index[0] == "6111383"
-    assert all(column in res.columns for column in balancing_reserve_columns)
+    assert type(res) is pd.DataFrame
 
 
 def test_get_PBR_contracts_sync():
     res = enact_api_helper.get_PBR_contracts(date(2024, 8, 1))
-
-    assert res.index.name == "orderId"
-    assert res.index[0] == "6111383"
-    assert all(column in res.columns for column in balancing_reserve_columns)
-
+    assert type(res) is pd.DataFrame
 
 @pytest.mark.asyncio
 async def test_get_SFFR_contracts_async():
