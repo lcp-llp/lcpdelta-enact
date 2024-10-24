@@ -13,3 +13,4 @@ class AncillaryContracts(StrEnum):
     DynamicModerationLF = "DynamicModerationLF"
     DynamicModerationHF = "DynamicModerationHF"
     DynamicRegulationHF = "DynamicRegulationHF"
+    DynamicRegulationLF = "DynamicRegulationLF"
