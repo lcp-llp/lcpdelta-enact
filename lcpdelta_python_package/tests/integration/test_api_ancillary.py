@@ -258,6 +258,7 @@ def test_get_PBR_contracts_sync():
     res = enact_api_helper.get_PBR_contracts(date(2024, 8, 1))
     assert type(res) is pd.DataFrame
 
+
 @pytest.mark.asyncio
 async def test_get_SFFR_contracts_async():
     res = await enact_api_helper.get_SFFR_contracts_async(date(2024, 8, 1))

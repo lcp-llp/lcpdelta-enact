@@ -989,9 +989,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "DynamicContainmentEfa", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("DynamicContainmentEfa", None, date_requested.day, date_requested)
 
     async def get_DCL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DCL_contracts`."""
@@ -1008,9 +1006,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "DynamicContainmentEfaHF", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("DynamicContainmentEfaHF", None, date_requested.day, date_requested)
 
     async def get_DCH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DCH_contracts`."""
@@ -1027,9 +1023,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "DynamicModerationLF", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("DynamicModerationLF", None, date_requested.day, date_requested)
 
     async def get_DML_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DML_contracts`."""
@@ -1046,9 +1040,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "DynamicModerationHF", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("DynamicModerationHF", None, date_requested.day, date_requested)
 
     async def get_DMH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DMH_contracts`."""
@@ -1065,9 +1057,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "DynamicRegulationLF", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("DynamicRegulationLF", None, date_requested.day, date_requested)
 
     async def get_DRL_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DRL_contracts`."""
@@ -1084,9 +1074,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "DynamicRegulationHF", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("DynamicRegulationHF", None, date_requested.day, date_requested)
 
     async def get_DRH_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_DRH_contracts`."""
@@ -1103,9 +1091,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "NegativeBalancingReserve", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("NegativeBalancingReserve", None, date_requested.day, date_requested)
 
     async def get_NBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_nbr_contracts`."""
@@ -1122,9 +1108,7 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "PositiveBalancingReserve", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("PositiveBalancingReserve", None, date_requested.day, date_requested)
 
     async def get_PBR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_PBR_contracts`."""
@@ -1138,15 +1122,11 @@ class APIHelper(APIHelperBase):
         Args:
             tender_number `int`: The tender number for the round that you wish to procure
         """
-        return self.get_ancillary_contract_data(
-            "Ffr", tender_number
-        )
+        return self.get_ancillary_contract_data("Ffr", tender_number)
 
     async def get_FFR_contracts_async(self, tender_number: int) -> pd.DataFrame:
         """An asynchronous version of `get_FFR_contracts`."""
-        return await self.get_ancillary_contract_data_async(
-            "Ffr", tender_number
-        )
+        return await self.get_ancillary_contract_data_async("Ffr", tender_number)
 
     def get_STOR_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns STOR (Short Term Operating Reserve) results for a given date.
@@ -1157,15 +1137,11 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "StorDayAhead", date_requested=date_requested
-        )
+        return self.get_ancillary_contract_data("StorDayAhead", date_requested=date_requested)
 
     async def get_STOR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_STOR_contracts`."""
-        return await self.get_ancillary_contract_data_async(
-            "StorDayAhead", date_requested=date_requested
-        )
+        return await self.get_ancillary_contract_data_async("StorDayAhead", date_requested=date_requested)
 
     def get_SFFR_contracts(self, date_requested: datetime) -> pd.DataFrame:
         """Returns SFFR (Static Firm Frequency Response) results for a given date.
@@ -1176,15 +1152,11 @@ class APIHelper(APIHelperBase):
         Raises:
             `TypeError`: If the inputted date is not of type `date` or `datetime`.
         """
-        return self.get_ancillary_contract_data(
-            "SFfr", None, date_requested.day, date_requested
-        )
+        return self.get_ancillary_contract_data("SFfr", None, date_requested.day, date_requested)
 
     async def get_SFFR_contracts_async(self, date_requested: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_SFFR_contracts`."""
-        return await self.get_ancillary_contract_data_async(
-            "SFfr", None, date_requested.day, date_requested
-        )
+        return await self.get_ancillary_contract_data_async("SFfr", None, date_requested.day, date_requested)
 
     def get_MFR_contracts(self, month: int, year: int) -> pd.DataFrame:
         """Returns MFR tender results for a given month and year asynchronously.
@@ -1193,15 +1165,11 @@ class APIHelper(APIHelperBase):
             month `int`: Corresponding month for the data requested
             year `int`: Corresponding year for the data requested
         """
-        return self.get_ancillary_contract_data(
-            "ManFr", year, get_month_name(month)
-        )
+        return self.get_ancillary_contract_data("ManFr", year, get_month_name(month))
 
     async def get_MFR_contracts_async(self, month: int, year: int) -> pd.DataFrame:
         """An asynchronous version of `get_MFR_contracts`."""
-        return await self.get_ancillary_contract_data_async(
-            "ManFr", year, get_month_name(month)
-        )
+        return await self.get_ancillary_contract_data_async("ManFr", year, get_month_name(month))
 
     def get_news_table(self, table_id: str) -> pd.DataFrame:
         """Gets the specified news table.
