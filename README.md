@@ -1,32 +1,43 @@
 # LCPDelta Python Package
-This is the python wrapper to interact with all LCPDelta products through their API or DPS. To get started, install the latest version of the LCPDelta package.
+The LCPDelta Python package provides streamlined access to data available from the [**Enact**][Enact_Homepage], [**FLEXtrack**][FLEXtrack_Homepage] APIs.
 
-To find out more about LCPDelta's data products, click [**here**][LCPDelta_data_portal_link].
-To find out more about Enact, click [**here**][Enact_Homepage].
+It contains helper methods for requesting data from our API endpoints or subscribing to push groups, all of which are detailed on our [**developer documentation site**][Api_Docs].
 
-## Enact API and DPS Instructions
+### Installation
+The Python package requires Python 3.10 or greater, and can be installed via:
 
-Full instructions on how to utilise Enact's full API and DPS can be found [**here**][Enact_instructions_link]. Below are some examples to get you started.
+```
+pip install LCPDelta
+```
 
-### Enact Series API Example Code
+### Usage
+
+The Enact and FLEXtrack modules can be imported as follows:
 
 ```python
 from lcp_delta import enact
-from datetime import date
+import lcp_delta.flextrack as flextrack
+```
 
+The package requires a username and API key, which will be emailed on signup. Helper objects can then be instantiated as follows:
+```python
 username = "insert_username_here"
 public_api_key = "insert_public_api_key_here"
 
-api_helper = enact.APIHelper(username, public_api_key)
+enact_api_helper = enact.APIHelper(username, public_api_key)
+enact_dps_helper = enact.DPSHelper(username, public_api_key)
+flextrack_api_helper = flextrack.APIHelper(username, public_api_key)
+```
 
-# Example dates
-from_date= date(2022,4,1)
-to_date = date(2023,5,31)
+From here, you can call any of the available helper methods to retrieve data in one call or listen for pushes. The following example makes use of Enact's Series Data endpoint:
+```python
 
-# Example series
+from_date = date(2023,10,1)
+to_date = date(2024,10,1)
+
 series_id = "LcpDemandvsGrid"
 
-response = api_helper.get_series_data(
+response = enact_api_helper.get_series_data(
     series_id,
     from_date,
     to_date,
@@ -34,62 +45,17 @@ response = api_helper.get_series_data(
     time_zone_id="UTC"
 )
 
-print(response)
+print(response.head(5))
 ```
 
-### Enact DPS Example Code
+Check out our [**API guides**][Api_Docs] for detailed instructions on getting started with the API.
+Check out our [**Recipes page**][Api_Recipes] for example scripts using our Python package.
+Check out our [**API reference**][Api_Reference] for details on each specific API endpoint, with examples of the corresponding Python package method.
+Full documentation of our API and Python package can be found on our [**documentation site**][Api_Docs].
 
-```python
-from lcp_delta import enact
-
-def handle_new_information(x):
-    # A callback function that will be invoked with the received series updates.
-    # The function should accept one argument, which will be the data received from the series updates.
-    print(x)
-
-username = "insert_username_here"
-public_api_key = "insert_public_api_key_here"
-
-dps_helper = enact.DPSHelper(username, public_api_key)
-# Input method to handle any update to the series, alongside the series ID, that can be found on Enact.
-dps_helper.subscribe_to_series_updates(handle_new_information, "RealtimeDemand")
-
-message = None
-while message != "exit()":
-    message = input(">> ")
-
-#Terminate the connection at the end
-dps_helper.terminate_hub_connection()
-```
-
-### FLEXtrack API Example Code
-
-```python
-import lcp_delta.flextrack as flextrack
-from datetime import datetime as dt
-
-user = "insert_username_here"
-api_key = "insert_public_api_key_here"
-
-api_helper = flextrack.APIHelper(user, api_key)
-
-response = api_helper.get_exporter_data(
-    date_from=dt(2022, 11, 1),
-    date_to=dt(2023, 10, 31),
-    countries=['Austria'],
-    products=["RegelleistungFcrProcuredFourHourly","RegelleistungFcrProcuredDaily","RegelleistungAfrrProcured"],
-    directions=["Symmetric", "Upward", "Downward"],
-    market='Availability',
-    metrics=['Volume', 'Price'],
-    aggregation_types=['Average', 'Average'],
-    granularity='Monthly'
-)
-
-response.head
-```
-
-[Enact_instructions_link]: https://api.lcpdelta.com/
-[LCPDelta_data_portal_link]: https://portal.lcpdelta.com/
+[Api_Docs]: https://api.lcpdelta.com/
+[Api_Recipes]: https://api.lcpdelta.com/recipes
+[Api_Recipes]: https://api.lcpdelta.com/reference
 [Enact_Homepage]: https://enact.lcpdelta.com/
 [FLEXtrack_Homepage]: https://flextrack.lcpdelta.com/
 
