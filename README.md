@@ -49,13 +49,16 @@ print(response.head(5))
 ```
 
 Check out our [**API guides**][Api_Docs] for detailed instructions on getting started with the API.
+
 Check out our [**Recipes page**][Api_Recipes] for example scripts using our Python package.
+
 Check out our [**API reference**][Api_Reference] for details on each specific API endpoint, with examples of the corresponding Python package method.
+
 Full documentation of our API and Python package can be found on our [**documentation site**][Api_Docs].
 
 [Api_Docs]: https://api.lcpdelta.com/
 [Api_Recipes]: https://api.lcpdelta.com/recipes
-[Api_Recipes]: https://api.lcpdelta.com/reference
+[Api_Reference]: https://api.lcpdelta.com/reference
 [Enact_Homepage]: https://enact.lcpdelta.com/
 [FLEXtrack_Homepage]: https://flextrack.lcpdelta.com/
 
