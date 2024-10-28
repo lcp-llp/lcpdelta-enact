@@ -44,7 +44,7 @@ dev = [
 
 
 [tool.ruff]
-src = ["src"]
+src = ["lcpdelta_python_package/src"]
 line-length = 120
 target-version = "py311"
 
