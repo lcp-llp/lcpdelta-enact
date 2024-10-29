@@ -15,10 +15,7 @@ def generate_ancillary_request(
     if date_requested:
         if not isinstance(date_requested, date | datetime):
             raise TypeError("Requested date must be a date or datetime")
-        if (
-            _is_dynamic_enum(ancillary_contract_group)
-            or ancillary_contract_group == AncillaryContracts.SFfr
-        ):
+        if _is_dynamic_enum(ancillary_contract_group) or ancillary_contract_group == AncillaryContracts.SFfr:
             option_one = "-".join([str(date_requested.month), str(date_requested.year)])
         if ancillary_contract_group == AncillaryContracts.StorDayAhead:
             option_one = "-".join([str(date_requested.year), str(date_requested.month), str(date_requested.day)])
@@ -40,7 +37,11 @@ def process_ancillary_response(
     if "data" not in response or not response["data"]:
         return pd.DataFrame()
     first_item = response["data"][0]
-    if ancillary_contract_group in [AncillaryContracts.SFfr, AncillaryContracts.PositiveBalancingReserve, AncillaryContracts.NegativeBalancingReserve]:
+    if ancillary_contract_group in [
+        AncillaryContracts.SFfr,
+        AncillaryContracts.PositiveBalancingReserve,
+        AncillaryContracts.NegativeBalancingReserve,
+    ]:
         return pd.DataFrame(first_item["plants"])
     if ancillary_contract_group == AncillaryContracts.ManFr:
         for entry in first_item["plants"]:
@@ -67,11 +68,15 @@ def _process_dynamic_response(response: dict) -> pd.DataFrame:
         df.set_index("orderId", inplace=True)
     return df
 
+
 def try_parse_ancillary_contract_group_enum(contract_type: str) -> AncillaryContracts:
     try:
         return AncillaryContracts[contract_type]
     except:
-        raise KeyError(f"'{contract_type}' is not a valid value. Value must be one of: {[e.name for e in AncillaryContracts]}")
+        raise KeyError(
+            f"'{contract_type}' is not a valid value. Value must be one of: {[e.name for e in AncillaryContracts]}"
+        )
+
 
 dynamic_group = {
     AncillaryContracts.DynamicContainmentEfa,
@@ -81,8 +86,9 @@ dynamic_group = {
     AncillaryContracts.DynamicRegulationHF,
     AncillaryContracts.DynamicRegulationLF,
     AncillaryContracts.PositiveBalancingReserve,
-    AncillaryContracts.NegativeBalancingReserve
+    AncillaryContracts.NegativeBalancingReserve,
 }
+
 
 def _is_dynamic_enum(enum_value):
     return enum_value in dynamic_group
