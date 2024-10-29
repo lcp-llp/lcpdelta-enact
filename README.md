@@ -48,11 +48,7 @@ response = enact_api_helper.get_series_data(
 print(response.head(5))
 ```
 
-Check out our [**API guides**][Api_Docs] for detailed instructions on getting started with the API.
-
-Check out our [**Recipes page**][Api_Recipes] for example scripts using our Python package.
-
-Check out our [**API reference**][Api_Reference] for details on each specific API endpoint, with examples of the corresponding Python package method.
+Check out our [**API guides**][Api_Docs] for detailed instructions on getting started with the API, our [**Recipes page**][Api_Recipes] for example scripts using our Python package, and our [**API reference**][Api_Reference] for details on each specific API endpoint (and corresponding Python package method).
 
 Full documentation of our API and Python package can be found on our [**documentation site**][Api_Docs].
 
