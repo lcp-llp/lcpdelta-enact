@@ -1,11 +1,12 @@
 import pandas as pd
 
+import lcp_delta.enact.endpoints as ep
+
 from datetime import datetime
 
 from lcp_delta.global_helpers import convert_datetimes_to_iso
 from lcp_delta.enact.helpers import convert_embedded_list_to_df
 
-
 def generate_request(
     date_from: datetime,
     date_to: datetime,
@@ -14,9 +15,11 @@ def generate_request(
     market_price_assumption="WeightedAverageDayAheadPrice",
     gas_price_assumption="DayAheadForward",
     include_capacity_market_revenues=False,
+    ancillaryProfitAggregation = None,
+    groupDx = None,
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
-    return {
+    request_body = {
         "From": date_from,
         "To": date_to,
         "Type": type,
@@ -26,30 +29,15 @@ def generate_request(
         "IncludeCmRevenues": include_capacity_market_revenues,
     }
 
-def generate_request(
-    date_from: datetime,
-    date_to: datetime,
-    ancillaryProfitAggregation: str,
-    type="Plant",
-    revenue_metric="PoundPerMwPerH",
-    market_price_assumption="WeightedAverageDayAheadPrice",
-    gas_price_assumption="DayAheadForward",
-    include_capacity_market_revenues=False,
-    groupDx = False,
-) -> dict:
-    date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
-    return {
-        "From": date_from,
-        "To": date_to,
-        "Type": type,
-        "RevenueMetric": revenue_metric,
-        "MarketPriceAssumption": market_price_assumption,
-        "GasPriceAssumption": gas_price_assumption,
-        "IncludeCmRevenues": include_capacity_market_revenues,
-        "AncillaryProfitAggregation": ancillaryProfitAggregation,
-        "GroupDx": groupDx,
-    }
+    if ancillaryProfitAggregation:
+        request_body["AncillaryProfitAggregation"] = ancillaryProfitAggregation
+    if groupDx is not None:
+        request_body["GroupDx"] = groupDx
 
+    return request_body
+
+def get_endpoint(ancillaryProfitAggregation: str, groupDx: bool) -> str:
+    return ep.LEADERBOARD_V2 if ancillaryProfitAggregation or groupDx else ep.LEADERBOARD_V1
 
 def process_response(response: dict, type: str) -> pd.DataFrame:
     index = "Plant - Owner" if type == "Owner" else "Plant - ID"
