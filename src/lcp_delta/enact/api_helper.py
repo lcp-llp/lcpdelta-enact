@@ -901,6 +901,10 @@ class APIHelper(APIHelperBase):
             gas_price_assumption `str` (optional): The gas price assumption; "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot" or "CheapestPrice".
 
             include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
+
+            ancillaryProfitAggregation `str` (optional): The aggregation option for ancillary profits. Options are: "FrequencyAndReserve", "ByProduct", and "ByDirection". Defaults to None.
+
+            groupDx `bool` (optional): When set to true, DC, DR, and DL profits will be grouped into "Dx". Defaults to None.
         """
         request_body = leaderboard_service.generate_request(
             date_from,
