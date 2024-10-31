@@ -40,6 +40,33 @@ expected_columns = [
 
 
 @pytest.mark.asyncio
+async def test_get_leaderboard_data_legacy_async():
+    res = await enact_api_helper.get_leaderboard_data_legacy_async(
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Plant",
+        "PoundPerMwPerH",
+        "WeightedAverageDayAheadPrice",
+        "DayAheadForward",
+    )
+
+    assert [column in res.columns for column in expected_columns]
+
+
+def test_get_leaderboard_data_legacy_sync():
+    res = enact_api_helper.get_leaderboard_data_legacy(
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Plant",
+        "PoundPerMwPerH",
+        "WeightedAverageDayAheadPrice",
+        "DayAheadForward",
+    )
+
+    assert [column in res.columns for column in expected_columns]
+
+
+@pytest.mark.asyncio
 async def test_get_leaderboard_data_async():
     res = await enact_api_helper.get_leaderboard_data_async(
         date(2024, 8, 1),
@@ -48,6 +75,9 @@ async def test_get_leaderboard_data_async():
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
         "DayAheadForward",
+        include_capacity_market_revenues=False,
+        ancillaryProfitAggregation="FrequencyAndReserve",
+        groupDx=True
     )
 
     assert [column in res.columns for column in expected_columns]
@@ -61,39 +91,9 @@ def test_get_leaderboard_data_sync():
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
         "DayAheadForward",
-    )
-
-    assert [column in res.columns for column in expected_columns]
-
-
-@pytest.mark.asyncio
-async def test_get_leaderboard_data_v2_async():
-    res = await enact_api_helper.get_leaderboard_data_async(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
-        "Plant",
-        "PoundPerMwPerH",
-        "WeightedAverageDayAheadPrice",
-        "DayAheadForward",
-        False,
-        "FrequencyAndReserve",
-        True
-    )
-
-    assert [column in res.columns for column in expected_columns]
-
-
-def test_get_leaderboard_data_v2_sync():
-    res = enact_api_helper.get_leaderboard_data(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
-        "Plant",
-        "PoundPerMwPerH",
-        "WeightedAverageDayAheadPrice",
-        "DayAheadForward",
-        False,
-        "FrequencyAndReserve",
-        True
+        include_capacity_market_revenues=False,
+        ancillaryProfitAggregation="FrequencyAndReserve",
+        groupDx=True
     )
 
     assert [column in res.columns for column in expected_columns]
