@@ -64,3 +64,36 @@ def test_get_leaderboard_data_sync():
     )
 
     assert [column in res.columns for column in expected_columns]
+
+
+@pytest.mark.asyncio
+async def test_get_leaderboard_data_v2_async():
+    res = await enact_api_helper.get_leaderboard_data_async(
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Plant",
+        "PoundPerMwPerH",
+        "WeightedAverageDayAheadPrice",
+        "DayAheadForward",
+        False,
+        "FrequencyAndReserve",
+        True
+    )
+
+    assert [column in res.columns for column in expected_columns]
+
+
+def test_get_leaderboard_data_v2_sync():
+    res = enact_api_helper.get_leaderboard_data(
+        date(2024, 8, 1),
+        date(2024, 8, 3),
+        "Plant",
+        "PoundPerMwPerH",
+        "WeightedAverageDayAheadPrice",
+        "DayAheadForward",
+        False,
+        "FrequencyAndReserve",
+        True
+    )
+
+    assert [column in res.columns for column in expected_columns]
