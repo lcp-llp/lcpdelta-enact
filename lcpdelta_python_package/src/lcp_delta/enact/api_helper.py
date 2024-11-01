@@ -912,7 +912,6 @@ class APIHelper(APIHelperBase):
         response = self._post_request(ep.LEADERBOARD_V1, request_body)
         return leaderboard_service.process_response(response, type)
 
-
     async def get_leaderboard_data_legacy_async(
         self,
         date_from: datetime,
@@ -945,8 +944,8 @@ class APIHelper(APIHelperBase):
         market_price_assumption="WeightedAverageDayAheadPrice",
         gas_price_assumption="DayAheadForward",
         include_capacity_market_revenues=False,
-        ancillaryProfitAggregation =  "FrequencyAndReserve",
-        groupDx = False,
+        ancillary_profit_aggregation="FrequencyAndReserve",
+        group_dx=False,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -966,9 +965,9 @@ class APIHelper(APIHelperBase):
 
             include_capacity_market_revenues `bool` (optional): Shows the Capacity Market revenue column and factors them into net revenues. Defaults to false.
 
-            ancillaryProfitAggregation `str` (optional): The aggregation option for ancillary profits. Options are: "FrequencyAndReserve", "ByProduct", and "ByDirection". Defaults to "FrequencyAndReserve".
+            ancillary_profit_aggregation `str` (optional): The aggregation option for ancillary profits. Options are: "FrequencyAndReserve", "ByProduct", and "ByDirection". Defaults to "FrequencyAndReserve".
 
-            groupDx `bool` (optional): When set to true, DC, DR, and DL profits will be grouped into "Dx". Defaults to False.
+            group_dx `bool` (optional): When set to true, DC, DR, and DL profits will be grouped into "Dx". Defaults to False.
         """
         request_body = leaderboard_service.generate_request_v2(
             date_from,
@@ -978,8 +977,8 @@ class APIHelper(APIHelperBase):
             market_price_assumption,
             gas_price_assumption,
             include_capacity_market_revenues,
-            ancillaryProfitAggregation,
-            groupDx
+            ancillary_profit_aggregation,
+            group_dx,
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -993,8 +992,8 @@ class APIHelper(APIHelperBase):
         market_price_assumption="WeightedAverageDayAheadPrice",
         gas_price_assumption="DayAheadForward",
         include_capacity_market_revenues=False,
-        ancillaryProfitAggregation =  "FrequencyAndReserve",
-        groupDx = False,
+        ancillary_profit_aggregation="FrequencyAndReserve",
+        group_dx=False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1005,8 +1004,8 @@ class APIHelper(APIHelperBase):
             market_price_assumption,
             gas_price_assumption,
             include_capacity_market_revenues,
-            ancillaryProfitAggregation,
-            groupDx
+            ancillary_profit_aggregation,
+            group_dx,
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)

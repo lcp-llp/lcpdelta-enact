@@ -7,6 +7,7 @@ from datetime import datetime
 from lcp_delta.global_helpers import convert_datetimes_to_iso
 from lcp_delta.enact.helpers import convert_embedded_list_to_df
 
+
 def generate_request_v1(
     date_from: datetime,
     date_to: datetime,
@@ -27,6 +28,7 @@ def generate_request_v1(
         "IncludeCmRevenues": include_capacity_market_revenues,
     }
 
+
 def generate_request_v2(
     date_from: datetime,
     date_to: datetime,
@@ -35,8 +37,8 @@ def generate_request_v2(
     market_price_assumption="WeightedAverageDayAheadPrice",
     gas_price_assumption="DayAheadForward",
     include_capacity_market_revenues=False,
-    ancillaryProfitAggregation = "FrequencyAndReserve",
-    groupDx = False,
+    ancillary_profit_aggregation="FrequencyAndReserve",
+    group_dx=False,
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -47,8 +49,8 @@ def generate_request_v2(
         "MarketPriceAssumption": market_price_assumption,
         "GasPriceAssumption": gas_price_assumption,
         "IncludeCmRevenues": include_capacity_market_revenues,
-        "AncillaryProfitAggregation": ancillaryProfitAggregation,
-        "GroupDx": groupDx
+        "AncillaryProfitAggregation": ancillary_profit_aggregation,
+        "GroupDx": group_dx,
     }
 
 
