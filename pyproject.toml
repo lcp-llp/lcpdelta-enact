@@ -42,15 +42,16 @@ dev = [
 [project.urls]
 "Homepage" = "https://portal.lcpdelta.com/"
 
-
 [tool.ruff]
-src = ["src"]
+src = ["lcpdelta_python_package/src"]
 line-length = 120
 target-version = "py311"
-
 
 [tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = ["E402", "F401"]
 
 [tool.ruff.lint]
 select = ["FBT003", "RET504"]
+
+[tool.setuptools.packages.find]
+where = ["lcpdelta_python_package/src"]

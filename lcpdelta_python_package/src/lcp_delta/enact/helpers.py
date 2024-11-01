@@ -13,7 +13,8 @@ def convert_response_to_df(
 
     if isinstance(data, list):
         df = pd.DataFrame(data)
-        df.set_index(df.columns[index_on], inplace=True)
+        if len(df.columns) > 0:
+            df.set_index(df.columns[index_on], inplace=True)
     elif isinstance(data, dict):
         df = convert_dict_to_df(data, parse_datetimes, index_on)
     else:

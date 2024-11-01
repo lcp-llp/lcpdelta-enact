@@ -5,7 +5,7 @@ from tests.integration import enact_api_helper
 
 
 def teardown_function():
-    time.sleep(1)
+    time.sleep(2)
 
 
 def get_series_data():
