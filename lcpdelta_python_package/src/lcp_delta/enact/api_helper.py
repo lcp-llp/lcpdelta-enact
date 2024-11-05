@@ -735,8 +735,8 @@ class APIHelper(APIHelperBase):
             The first row will provide all the dates we have a forecast iteration for.
             All other rows correspond to the data-points at each value of the first array.
         """
-        request_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = self._post_request(ep.HOF, request_body)
+        response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
+        response = self._post_request(ep.HOF, response_body)
         return hof_service.process_date_range_response(response)
 
     async def get_history_of_forecast_for_date_range_async(
@@ -748,8 +748,8 @@ class APIHelper(APIHelperBase):
         option_id: list[str] | None = None,
     ) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_history_of_forecast_for_date_range_async`."""
-        request_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = await self._post_request_async(ep.HOF, request_body)
+        response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
+        response = await self._post_request_async(ep.HOF, response_body)
         return hof_service.process_date_range_response(response)
 
     def get_latest_forecast_generated_at_given_time(
@@ -826,42 +826,6 @@ class APIHelper(APIHelperBase):
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = self._post_request(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
-
-    def get_history_of_forecast_by_forecast_horizon(
-        self,
-        series_id: str,
-        date_from: datetime,
-        date_to: datetime,
-        forecast_horizons_minutes: list[int],
-        country_id: str,
-        option_id: str | None = None,
-    ) -> pd.DataFrame:
-        """Gets the history of a series forecast for a given date range at specific horizons (e.g. 30 minutes, 1 hour and 2 hours before).
-
-        This is useful for series forecasts with regular forecast times at or close to your time horizon. It is less suited for forecasts with highly irregular forecast times.
-
-        Args:
-            series_id `str`: The Enact series ID.
-
-            date_from `datetime.datetime`: The start date to request forecasts for.
-
-            date_to `datetime.datetime`: The end date to request forecasts for.
-
-            forecast_horizons_minutes `list[int]`: The time horizons to get the forecast for, in minutes (e.g. [30, 60, 120]).
-
-            country_id `str` (optional): This Enact country ID. Defaults to "Gb".
-
-            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
-
-        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
-
-        Returns:
-            Response: A pandas DataFrame holding forecasts for the requested series at the requested lead times.
-        """
-
-        request_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = self._post_request(ep.HOF, request_body)
-        return hof_service.process_response_for_time_horizon(list(response.values()), forecast_horizons_minutes)
 
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False

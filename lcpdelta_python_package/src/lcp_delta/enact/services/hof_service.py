@@ -1,6 +1,6 @@
 import pandas as pd
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from lcp_delta.global_helpers import convert_datetime_to_iso, convert_datetimes_to_iso, is_list_of_strings_or_empty
 from lcp_delta.enact.helpers import convert_dict_to_df, convert_response_to_df
@@ -95,35 +95,3 @@ def process_latest_forecast_response(response: dict) -> dict:
         output[date_str] = convert_dict_to_df(data)
 
     return output
-
-
-def get_nearest_forecast_for_horizon(
-    forecast_target_time: datetime, horizon_offset: timedelta, forecasts: pd.DataFrame
-):
-    horizon_time = forecast_target_time - horizon_offset
-    forecast_issue_times = pd.to_datetime(forecasts.columns).tz_localize(None)
-    closest_forecast_index = forecast_issue_times.get_indexer([horizon_time], method="nearest")[0]
-    return forecasts.iloc[forecasts.index.get_loc(forecast_target_time), closest_forecast_index]
-
-
-def process_response_for_time_horizon(forecasts: list[pd.DataFrame], horizons: list[int]) -> pd.DataFrame:
-    if not all(isinstance(item, int) for item in horizons):
-        raise ValueError("Horizon input must be a list of integers")
-
-    horizon_forecasts_combined = pd.DataFrame()
-    for forecast in forecasts:
-        forecast.index = pd.to_datetime(forecast.index).tz_localize(None)
-
-        horizon_data = {"Time": forecast.index}
-
-        for horizon in horizons:
-            horizon_data[f"T-{horizon}m Forecast"] = forecast.index.map(
-                lambda x: get_nearest_forecast_for_horizon(x, pd.Timedelta(minutes=horizon), forecast)
-            )
-
-        horizon_forecast = pd.DataFrame(horizon_data)
-        horizon_forecasts_combined = pd.concat([horizon_forecasts_combined, horizon_forecast])
-
-    horizon_forecasts_combined.set_index("Time", inplace=True)
-
-    return horizon_forecasts_combined

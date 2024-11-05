@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 
 def convert_datetime_to_iso(datetime_to_check: date | datetime) -> str:
@@ -74,8 +74,3 @@ def get_period(datetime_input: datetime, period: int = None) -> int:
         raise TypeError("If no period is given, the inputted date must be of the type datetime")
 
     return get_period_from_datetime(datetime_input)
-
-
-def get_date_range(date_from: datetime, date_to: datetime):
-    for i in range((date_from - date_to).days + 1):
-        yield date_from + timedelta(i)
