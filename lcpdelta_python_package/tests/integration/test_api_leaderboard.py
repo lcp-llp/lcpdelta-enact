@@ -76,8 +76,8 @@ async def test_get_leaderboard_data_async():
         "WeightedAverageDayAheadPrice",
         "DayAheadForward",
         include_capacity_market_revenues=False,
-        ancillaryProfitAggregation="FrequencyAndReserve",
-        groupDx=True
+        ancillary_profit_aggregation="FrequencyAndReserve",
+        group_dx=True,
     )
 
     assert [column in res.columns for column in expected_columns]
@@ -92,8 +92,8 @@ def test_get_leaderboard_data_sync():
         "WeightedAverageDayAheadPrice",
         "DayAheadForward",
         include_capacity_market_revenues=False,
-        ancillaryProfitAggregation="FrequencyAndReserve",
-        groupDx=True
+        ancillary_profit_aggregation="FrequencyAndReserve",
+        group_dx=True,
     )
 
     assert [column in res.columns for column in expected_columns]
