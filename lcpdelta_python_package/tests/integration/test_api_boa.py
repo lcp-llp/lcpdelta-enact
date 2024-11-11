@@ -8,44 +8,51 @@ def teardown_function():
     time.sleep(1)
 
 
+expected_bsad_columns = ["bsadAssetId", "bsadPartyName", "bsadFuelType"]
+
+
 @pytest.mark.asyncio
 async def test_get_bm_data_by_period_async():
-    res = await enact_api_helper.get_bm_data_by_period_async(date(2024, 8, 1), 1)
+    # request a day and period with BSADs
+    res = await enact_api_helper.get_bm_data_by_period_async(date(2024, 11, 8), 15)
 
-    assert res["acceptedBids"].index[0] == "T_HUMR-1"
-    assert res["acceptedBids"].iloc[0]["volume"] == -91.7857142857143
-    assert res["acceptedBids"].iloc[0]["bidPrice"] == 61.01
+    assert res["acceptedBids"].index[0] == "T_SGRWO-2"
+    assert res["acceptedBids"].iloc[0]["volume"] == -14.000000
+    assert res["acceptedBids"].iloc[0]["bidPrice"] == -15.97
 
-    assert res["acceptedOffers"].index[0] == "T_DINO-1"
-    assert res["acceptedOffers"].iloc[0]["volume"] == 20.0
-    assert res["acceptedOffers"].iloc[0]["offerPrice"] == 97.00
+    assert res["acceptedOffers"].index[0] == "T_CRUA-1"
+    assert res["acceptedOffers"].iloc[0]["volume"] == 10.000000
+    assert res["acceptedOffers"].iloc[0]["offerPrice"] == 140.00
+    assert [column in res["acceptedOffers"].columns for column in expected_bsad_columns]
 
-    assert res["tableBids"].index[0] == "T_CGTHW-1"
-    assert res["tableBids"].iloc[0]["volume"] == -1.0
-    assert res["tableBids"].iloc[0]["bidPrice"] == -116.00
+    assert res["tableBids"].index[0] == "T_GNAPW-1"
+    assert res["tableBids"].iloc[0]["volume"] == -5.016666666666667
+    assert res["tableBids"].iloc[0]["bidPrice"] == -92.78
 
     assert res["tableOffers"].index[0] == "T_GNAPW-1"
-    assert res["tableOffers"].iloc[0]["volume"] == 18.0
+    assert res["tableOffers"].iloc[0]["volume"] == 14.666666666666666
     assert res["tableOffers"].iloc[0]["offerPrice"] == 9999.00
 
 
 def test_get_bm_data_by_period_sync():
-    res = enact_api_helper.get_bm_data_by_period(date(2024, 8, 1), 1)
+    # request a day and period with BSADs
+    res = enact_api_helper.get_bm_data_by_period(date(2024, 11, 8), 15)
 
-    assert res["acceptedBids"].index[0] == "T_HUMR-1"
-    assert res["acceptedBids"].iloc[0]["volume"] == -91.7857142857143
-    assert res["acceptedBids"].iloc[0]["bidPrice"] == 61.01
+    assert res["acceptedBids"].index[0] == "T_SGRWO-2"
+    assert res["acceptedBids"].iloc[0]["volume"] == -14.000000
+    assert res["acceptedBids"].iloc[0]["bidPrice"] == -15.97
 
-    assert res["acceptedOffers"].index[0] == "T_DINO-1"
-    assert res["acceptedOffers"].iloc[0]["volume"] == 20.0
-    assert res["acceptedOffers"].iloc[0]["offerPrice"] == 97.00
+    assert res["acceptedOffers"].index[0] == "T_CRUA-1"
+    assert res["acceptedOffers"].iloc[0]["volume"] == 10.000000
+    assert res["acceptedOffers"].iloc[0]["offerPrice"] == 140.00
+    assert [column in res["acceptedOffers"].columns for column in expected_bsad_columns]
 
-    assert res["tableBids"].index[0] == "T_CGTHW-1"
-    assert res["tableBids"].iloc[0]["volume"] == -1.0
-    assert res["tableBids"].iloc[0]["bidPrice"] == -116.00
+    assert res["tableBids"].index[0] == "T_GNAPW-1"
+    assert res["tableBids"].iloc[0]["volume"] == -5.016666666666667
+    assert res["tableBids"].iloc[0]["bidPrice"] == -92.78
 
     assert res["tableOffers"].index[0] == "T_GNAPW-1"
-    assert res["tableOffers"].iloc[0]["volume"] == 18.0
+    assert res["tableOffers"].iloc[0]["volume"] == 14.666666666666666
     assert res["tableOffers"].iloc[0]["offerPrice"] == 9999.00
 
 

@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 
 from datetime import datetime
 
@@ -23,7 +24,9 @@ def process_by_period_response(response: dict):
 
     for key_str in df_columns:
         if key_str in response["data"]:
-            output[key_str] = convert_response_to_df(response, nested_key=key_str)
+            df = convert_response_to_df(response, nested_key=key_str)
+            expand_bsad_metadata(df)
+            output[key_str] = df
 
     return output
 
@@ -40,3 +43,21 @@ def generate_by_search_request(date: datetime, option: str, search_string: str |
 
 def process_by_search_response(response: dict):
     return pd.DataFrame(response["data"][1:], columns=response["data"][0])
+
+
+def expand_bsad_metadata(df: pd.DataFrame):
+    bsad_rows = df.index.str.contains("BSAD_")
+    if bsad_rows.any():
+        bsad_additional_data = df.loc[bsad_rows, "additionalBsadData"].apply(
+            lambda x: json.loads(x) if isinstance(x, str) else x
+        )
+
+        df.loc[bsad_rows, "bsadAssetId"] = bsad_additional_data.apply(
+            lambda x: x.get("plantId") if isinstance(x, dict) else None
+        )
+        df.loc[bsad_rows, "bsadPartyName"] = bsad_additional_data.apply(
+            lambda x: x.get("partyName") if isinstance(x, dict) else None
+        )
+        df.loc[bsad_rows, "bsadFuelType"] = bsad_additional_data.apply(
+            lambda x: x.get("fuelType") if isinstance(x, dict) else None
+        )
