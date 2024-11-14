@@ -106,7 +106,10 @@ def get_nearest_forecast_for_horizon(
     return forecasts.iloc[forecasts.index.get_loc(forecast_target_time), closest_forecast_index]
 
 
-def process_response_for_time_horizon(forecasts: list[pd.DataFrame], horizons: list[int]) -> pd.DataFrame:
+def process_response_for_time_horizon(response: dict, horizons: list[int]) -> pd.DataFrame:
+    formatted_response = process_date_range_response(response)
+    forecasts = list(formatted_response.values())
+
     if not all(isinstance(item, int) for item in horizons):
         raise ValueError("Horizon input must be a list of integers")
 

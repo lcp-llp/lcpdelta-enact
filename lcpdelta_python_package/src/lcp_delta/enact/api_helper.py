@@ -861,7 +861,7 @@ class APIHelper(APIHelperBase):
 
         request_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
         response = self._post_request(ep.HOF, request_body)
-        return hof_service.process_response_for_time_horizon(list(response.values()), forecast_horizons_minutes)
+        return hof_service.process_response_for_time_horizon(response, forecast_horizons_minutes)
 
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
