@@ -183,8 +183,93 @@ class DPSHelper:
         enact_request_object_series = [request_details]
         self._add_subscription(enact_request_object_series, subscription_id)
 
+    def subscribe_to_multiple_series(
+        self,
+        handle_data_method: Callable[[str], None],
+        series_ids: list[str],
+        option_ids: list[list[str]] = None,
+        country_id="Gb",
+        parse_datetimes: bool = False,
+    ) -> None:
+        """
+        Subscribe to multiple series at once with the specified Series IDs, and Option IDs if applicable.
+
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+
+            series_ids `list[str]`: A list of Enact series IDs.
+
+            option_id `list[list[str]]` (optional): If none of the requested series have options, this can be omitted. Otherwise, the Enact option IDs should be entered in the
+                positions corresponding to the series ID they apply to. If some of the series do not have options, `None` should be sent in this array.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        """
+        request_details = {"SeriesIds": series_ids, "CountryId": country_id}
+
+        if option_ids:
+            if not self.__is_string_matrix(option_ids):
+                raise ValueError("Option ID input must be a matrix of strings")
+            request_details["OptionIds"] = option_ids
+
+        subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
+        ## if subscription_id in self.data_by_subscription_id:
+        ## return
+        (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
+            subscription_id, (None, pd.DataFrame(), False)
+        )
+        if initial_data_from_series_api.empty:
+            self._initialise_series_subscription_data(
+                series_id, country_id, option_id, handle_data_method, parse_datetimes
+            )
+        else:
+            self.data_by_subscription_id[subscription_id][0] = handle_data_method
+
+        enact_request_object_series = [request_details]
+        self._add_subscription(enact_request_object_series, subscription_id)
+
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
         if option_id:
             subscription_id += tuple(option_id)
         return subscription_id
+
+    def __is_string_matrix(lst):
+        if lst is None:
+            return True
+        if not isinstance(lst, list):
+            return False
+        for sublst in lst:
+            if sublst is None:
+                continue
+            if not isinstance(sublst, list):
+                return False
+            for item in sublst:
+                if item is None:
+                    continue
+                if not isinstance(item, str):
+                    return False
+        return True
+
+    def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
+        subscription_id = (series_id, country_id)
+        if option_id:
+            subscription_id += tuple(option_id)
+        return subscription_id
+
+    def __get_subscription_ids(
+        self, series_ids: list[str], country_id: str, option_ids: list[list[str]]
+    ) -> list[tuple]:
+        output = []
+        for i in range(0, len(series_ids)):
+            subscription_id = (series_ids[i], country_id)
+            if option_ids and option_ids[i]:
+                subscription_id += tuple(option_ids[i])
+            output.append(subscription_id)
+
+        return output
