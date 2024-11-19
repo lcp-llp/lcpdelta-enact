@@ -23,7 +23,7 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                "https://enact-signalrhub.azurewebsites.net/dataHub",
+                "https://enact-signalrhub-staging.azurewebsites.net/dataHub",  # revert
                 options={"access_token_factory": access_token_factory},
             )
             .with_automatic_reconnect(
@@ -195,7 +195,7 @@ class DPSHelper:
         enact_request_object_series = [request_details]
         self._add_subscription(enact_request_object_series, subscription_id)
 
-    def subscribe_to_multiple_series(
+    def subscribe_to_multiple_series_updates(
         self,
         handle_data_method: Callable[[str], None],
         series_ids: list[str],
@@ -204,7 +204,7 @@ class DPSHelper:
         parse_datetimes: bool = False,
     ) -> None:
         """
-        Subscribe to multiple series at once with the specified Series IDs, and Option IDs if applicable.
+        Subscribe to multiple series at once with the specified Series IDs, Option IDs if applicable and Country ID.
 
         Args:
             handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
@@ -213,7 +213,7 @@ class DPSHelper:
             series_ids `list[str]`: A list of Enact series IDs.
 
             option_id `list[list[str]]` (optional): If none of the requested series have options, this can be omitted. Otherwise, the Enact option IDs should be entered in the
-                positions corresponding to the series ID they apply to. If some of the series do not have options, `None` should be sent in this array.
+                positions corresponding to the series ID they apply to. If some of the series do not have options, `None` should be entered in the corresponding position.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -245,6 +245,68 @@ class DPSHelper:
                 self.data_by_subscription_id[subscription_id][0] = handle_data_method
 
         self._add_multi_series_subscription([join_payload], subscription_ids)
+
+    def subscribe_to_series_updates_for_multiple_plants(
+        self,
+        handle_data_method: Callable[[str], None],
+        series_id: str,
+        plant_ids: list[str],
+        country_id="Gb",
+        parse_datetimes: bool = False,
+    ) -> None:
+        """
+        Subscribe to a plant series for multiple plants at once with the specified Series ID, Plant IDs and Country ID.
+
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+
+            series_id `str`: The Enact series ID.
+
+            plant_ids `list[str]`: The Enact plant IDs.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+
+        Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        """
+        series_id_repeated = [series_id for _ in range(len(plant_ids))]
+        self.subscribe_to_multiple_series(
+            handle_data_method, series_id_repeated, plant_ids, country_id, parse_datetimes
+        )
+
+    def subscribe_to_multiple_series_updates_for_plant(
+        self,
+        handle_data_method: Callable[[str], None],
+        series_ids: list[str],
+        plant_id: str,
+        country_id="Gb",
+        parse_datetimes: bool = False,
+    ) -> None:
+        """
+        Subscribe to multiple plant series for a single plant at once with the specified Series IDs, Plant ID and Country ID.
+
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+
+            series_ids `list[str]`: The Enact series IDs.
+
+            plant_ids `str`: The Enact plant ID.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+
+        Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        """
+        plant_id_repeated = [plant_id for _ in range(len(series_ids))]
+        self.subscribe_to_multiple_series(
+            handle_data_method, series_ids, plant_id_repeated, country_id, parse_datetimes
+        )
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
