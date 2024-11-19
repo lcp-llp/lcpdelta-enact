@@ -44,9 +44,16 @@ class DPSHelper:
     def _fetch_bearer_token(self):
         return self.enact_credentials.bearer_token
 
-    def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
+    def _add_subscription(self, join_payload: list[dict[str, str]], subscription_id: str):
         self.hub_connection.send(
-            "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
+            "JoinEnactPush", join_payload, lambda m: self._callback_received(m.result, subscription_id)
+        )
+
+    def _add_multi_series_subscription(self, join_payload: dict[str, str], subscription_ids: list[str]):
+        self.hub_connection.send(
+            "JoinMultiSeriesPush",
+            join_payload,
+            lambda m: self._callback_received_multi_series(m.result, subscription_ids),
         )
 
     def subscribe_to_notifications(self, handle_notification_method: Callable[[str], None]):
@@ -81,10 +88,15 @@ class DPSHelper:
     def _callback_received(self, m, subscription_id: str):
         self.hub_connection.on(m["data"]["pushName"], lambda x: self._process_push_data(x, subscription_id))
 
-    def _process_push_data(self, data, subscription_id):
+    def _callback_received_multi_series(self, m, subscription_ids: str):
+        push_names = m["data"]["pushNames"]
+        for subscription_id, push_name in zip(subscription_ids, push_names):
+            self.hub_connection.on(push_name, lambda x, id_value=subscription_id: self._process_push_data(x, id_value))
+
+    def _process_push_data(self, data_push, subscription_id):
         (user_callback, all_data, parse_datetimes) = self.data_by_subscription_id[subscription_id]
-        modified_data = self._handle_new_series_data(all_data, data, parse_datetimes)
-        user_callback(modified_data)
+        updated_data = self._handle_new_series_data(all_data, data_push, parse_datetimes)
+        user_callback(updated_data)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -210,28 +222,29 @@ class DPSHelper:
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
-        request_details = {"SeriesIds": series_ids, "CountryId": country_id}
-
+        join_payload = {"SeriesIds": series_ids, "CountryId": country_id}
         if option_ids:
-            if not self.__is_string_matrix(option_ids):
-                raise ValueError("Option ID input must be a matrix of strings")
-            request_details["OptionIds"] = option_ids
+            if len(option_ids) != len(series_ids):
+                raise ValueError(
+                    "The option ID array, if passed, must be the same length as the series ID array. Use 'None' for series without options."
+                )
+            join_payload["OptionIds"] = option_ids
 
-        subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
-        ## if subscription_id in self.data_by_subscription_id:
-        ## return
-        (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
-            subscription_id, (None, pd.DataFrame(), False)
-        )
-        if initial_data_from_series_api.empty:
-            self._initialise_series_subscription_data(
-                series_id, country_id, option_id, handle_data_method, parse_datetimes
-            )
-        else:
-            self.data_by_subscription_id[subscription_id][0] = handle_data_method
+        subscription_ids = []
+        for i in range(len(series_ids)):
+            option_id = None if not option_ids else option_ids[i]
+            series_id = series_ids[i]
+            subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
+            subscription_ids.append(subscription_id)
+            _, initial_data, _ = self.data_by_subscription_id.get(subscription_id, (None, pd.DataFrame(), None))
+            if initial_data.empty:
+                self._initialise_series_subscription_data(
+                    series_id, country_id, option_id, handle_data_method, parse_datetimes
+                )
+            else:
+                self.data_by_subscription_id[subscription_id][0] = handle_data_method
 
-        enact_request_object_series = [request_details]
-        self._add_subscription(enact_request_object_series, subscription_id)
+        self._add_multi_series_subscription([join_payload], subscription_ids)
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
         subscription_id = (series_id, country_id)
@@ -239,37 +252,8 @@ class DPSHelper:
             subscription_id += tuple(option_id)
         return subscription_id
 
-    def __is_string_matrix(lst):
-        if lst is None:
-            return True
-        if not isinstance(lst, list):
-            return False
-        for sublst in lst:
-            if sublst is None:
-                continue
-            if not isinstance(sublst, list):
-                return False
-            for item in sublst:
-                if item is None:
-                    continue
-                if not isinstance(item, str):
-                    return False
-        return True
-
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
         if option_id:
             subscription_id += tuple(option_id)
         return subscription_id
-
-    def __get_subscription_ids(
-        self, series_ids: list[str], country_id: str, option_ids: list[list[str]]
-    ) -> list[tuple]:
-        output = []
-        for i in range(0, len(series_ids)):
-            subscription_id = (series_ids[i], country_id)
-            if option_ids and option_ids[i]:
-                subscription_id += tuple(option_ids[i])
-            output.append(subscription_id)
-
-        return output
