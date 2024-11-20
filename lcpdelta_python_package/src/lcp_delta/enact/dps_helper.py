@@ -91,6 +91,7 @@ class DPSHelper:
     def _callback_received_multi_series(self, m, subscription_ids: str):
         push_names = m["data"]["pushNames"]
         for subscription_id, push_name in zip(subscription_ids, push_names):
+            print(f"COMBO: {push_name} : {subscription_id}")
             self.hub_connection.on(push_name, lambda x, id_value=subscription_id: self._process_push_data(x, id_value))
 
     def _process_push_data(self, data_push, subscription_id):
@@ -273,8 +274,9 @@ class DPSHelper:
         Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
         series_id_repeated = [series_id for _ in range(len(plant_ids))]
-        self.subscribe_to_multiple_series(
-            handle_data_method, series_id_repeated, plant_ids, country_id, parse_datetimes
+        plant_id_options = [[id] for id in plant_ids]
+        self.subscribe_to_multiple_series_updates(
+            handle_data_method, series_id_repeated, plant_id_options, country_id, parse_datetimes
         )
 
     def subscribe_to_multiple_series_updates_for_plant(
@@ -303,8 +305,8 @@ class DPSHelper:
 
         Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
-        plant_id_repeated = [plant_id for _ in range(len(series_ids))]
-        self.subscribe_to_multiple_series(
+        plant_id_repeated = [[plant_id] for _ in range(len(series_ids))]
+        self.subscribe_to_multiple_series_updates(
             handle_data_method, series_ids, plant_id_repeated, country_id, parse_datetimes
         )
 
