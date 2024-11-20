@@ -44,15 +44,15 @@ class DPSHelper:
     def _fetch_bearer_token(self):
         return self.enact_credentials.bearer_token
 
-    def _add_subscription(self, join_payload: list[dict[str, str]], subscription_id: str):
+    def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
         self.hub_connection.send(
-            "JoinEnactPush", join_payload, lambda m: self._callback_received(m.result, subscription_id)
+            "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
         )
 
-    def _add_multi_series_subscription(self, join_payload: dict[str, str], subscription_ids: list[str]):
+    def _add_multi_series_subscription(self, request_object: dict[str, str], subscription_ids: list[str]):
         self.hub_connection.send(
             "JoinMultiSeriesPush",
-            join_payload,
+            request_object,
             lambda m: self._callback_received_multi_series(m.result, subscription_ids),
         )
 
@@ -91,7 +91,6 @@ class DPSHelper:
     def _callback_received_multi_series(self, m, subscription_ids: str):
         push_names = m["data"]["pushNames"]
         for subscription_id, push_name in zip(subscription_ids, push_names):
-            print(f"COMBO: {push_name} : {subscription_id}")
             self.hub_connection.on(push_name, lambda x, id_value=subscription_id: self._process_push_data(x, id_value))
 
     def _process_push_data(self, data_push, subscription_id):
@@ -205,7 +204,7 @@ class DPSHelper:
         parse_datetimes: bool = False,
     ) -> None:
         """
-        Subscribe to multiple series at once with the specified Series IDs, Option IDs if applicable and Country ID.
+        Subscribe to multiple series at once with the specified series IDs, option IDs (if applicable) and country ID.
 
         Args:
             handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
@@ -256,7 +255,7 @@ class DPSHelper:
         parse_datetimes: bool = False,
     ) -> None:
         """
-        Subscribe to a plant series for multiple plants at once with the specified Series ID, Plant IDs and Country ID.
+        Subscribe to a plant series for multiple plants at once with the specified series ID, plant IDs and country ID.
 
         Args:
             handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
@@ -288,7 +287,7 @@ class DPSHelper:
         parse_datetimes: bool = False,
     ) -> None:
         """
-        Subscribe to multiple plant series for a single plant at once with the specified Series IDs, Plant ID and Country ID.
+        Subscribe to multiple plant series for a single plant at once with the specified series IDs, plant ID and country ID.
 
         Args:
             handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
@@ -309,12 +308,6 @@ class DPSHelper:
         self.subscribe_to_multiple_series_updates(
             handle_data_method, series_ids, plant_id_repeated, country_id, parse_datetimes
         )
-
-    def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
-        subscription_id = (series_id, country_id)
-        if option_id:
-            subscription_id += tuple(option_id)
-        return subscription_id
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
