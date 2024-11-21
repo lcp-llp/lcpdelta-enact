@@ -6,7 +6,7 @@ from functools import partial
 from typing import Callable
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 
-from lcp_delta.global_helpers import is_list_of_strings_or_empty
+from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
 from lcp_delta.enact.api_helper import APIHelper
 
 
@@ -49,7 +49,7 @@ class DPSHelper:
             "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
         )
 
-    def _add_multi_series_subscription(self, request_object: dict[str, str], subscription_ids: list[str]):
+    def _add_multi_series_subscription(self, request_object: list, subscription_ids: list[str]):
         self.hub_connection.send(
             "JoinMultiSeriesPush",
             request_object,
@@ -198,8 +198,7 @@ class DPSHelper:
     def subscribe_to_multiple_series_updates(
         self,
         handle_data_method: Callable[[str], None],
-        series_ids: list[str],
-        option_ids: list[list[str]] = None,
+        series_dictionary: dict[str, dict],
         country_id="Gb",
         parse_datetimes: bool = False,
     ) -> None:
@@ -210,10 +209,7 @@ class DPSHelper:
             handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
                 The function should accept one argument, which will be the data received from the series updates.
 
-            series_ids `list[str]`: A list of Enact series IDs.
-
-            option_id `list[list[str]]` (optional): If none of the requested series have options, this can be omitted. Otherwise, the Enact option IDs should be entered in the
-                positions corresponding to the series ID they apply to. If some of the series do not have options, `None` should be entered in the corresponding position.
+            series_dictionary `dict[str, dict]`: A dictionary with the Enact series IDs as keys and a list of option ID lists, if applicable, as values. If not applicable, enter `None` as the value.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -222,24 +218,34 @@ class DPSHelper:
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
-        join_payload = {"SeriesIds": series_ids, "CountryId": country_id}
-        if option_ids:
-            if len(option_ids) != len(series_ids):
+        join_payload = []
+        series_option_pairs = []
+        for series_id, option_ids in series_dictionary.items():
+            if not isinstance(series_id, str):
+                raise ValueError("Please ensure that all keys of `series_dictionary` are string types.")
+            series_payload = {"seriesId": series_id}
+            if is_2d_list_of_strings(option_ids):
+                series_payload["optionIds"] = option_ids
+                for option_id in option_ids:
+                    series_option_pairs.append((series_id, option_id))
+            elif option_ids is None:
+                series_option_pairs.append((series_id, None))
+            else:
                 raise ValueError(
-                    "The option ID array, if passed, must be the same length as the series ID array. Use 'None' for series without options."
+                    f"Series options incorrectly formatted for series {series_id}. Please use a 2-Dimensional list of string values, or `None` for series without options."
                 )
-            join_payload["OptionIds"] = option_ids
+
+            series_payload["countryId"] = country_id
+            join_payload.append(series_payload)
 
         subscription_ids = []
-        for i in range(len(series_ids)):
-            option_id = None if not option_ids else option_ids[i]
-            series_id = series_ids[i]
-            subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
+        for series_option_pair in series_option_pairs:
+            subscription_id = self.__get_subscription_id(series_option_pair[0], country_id, series_option_pair[1])
             subscription_ids.append(subscription_id)
             _, initial_data, _ = self.data_by_subscription_id.get(subscription_id, (None, pd.DataFrame(), None))
             if initial_data.empty:
                 self._initialise_series_subscription_data(
-                    series_id, country_id, option_id, handle_data_method, parse_datetimes
+                    series_option_pair[0], country_id, series_option_pair[1], handle_data_method, parse_datetimes
                 )
             else:
                 self.data_by_subscription_id[subscription_id][0] = handle_data_method
