@@ -278,11 +278,8 @@ class DPSHelper:
 
         Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
-        series_id_repeated = [series_id for _ in range(len(plant_ids))]
-        plant_id_options = [[id] for id in plant_ids]
-        self.subscribe_to_multiple_series_updates(
-            handle_data_method, series_id_repeated, plant_id_options, country_id, parse_datetimes
-        )
+        series_dictionary = {series_id: [[plant_id] for plant_id in plant_ids]}
+        self.subscribe_to_multiple_series_updates(handle_data_method, series_dictionary, country_id, parse_datetimes)
 
     def subscribe_to_multiple_series_updates_for_plant(
         self,
@@ -310,10 +307,10 @@ class DPSHelper:
 
         Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
-        plant_id_repeated = [[plant_id] for _ in range(len(series_ids))]
-        self.subscribe_to_multiple_series_updates(
-            handle_data_method, series_ids, plant_id_repeated, country_id, parse_datetimes
-        )
+        series_dictionary = {}
+        for series_id in series_ids:
+            series_dictionary[series_id] = [[plant_id]]
+        self.subscribe_to_multiple_series_updates(handle_data_method, series_dictionary, country_id, parse_datetimes)
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
