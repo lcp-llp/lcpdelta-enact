@@ -6,7 +6,7 @@ from functools import partial
 from typing import Callable
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 
-from lcp_delta.global_helpers import is_list_of_strings_or_empty
+from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
 from lcp_delta.enact.api_helper import APIHelper
 
 
@@ -49,6 +49,13 @@ class DPSHelper:
             "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
         )
 
+    def _add_multi_series_subscription(self, request_object: list, subscription_ids: list[str]):
+        self.hub_connection.send(
+            "JoinMultiSeriesPush",
+            request_object,
+            lambda m: self._callback_received_multi_series(m.result, subscription_ids),
+        )
+
     def subscribe_to_notifications(self, handle_notification_method: Callable[[str], None]):
         self.hub_connection.send(
             "JoinParentCompanyNotificationPush",
@@ -81,10 +88,15 @@ class DPSHelper:
     def _callback_received(self, m, subscription_id: str):
         self.hub_connection.on(m["data"]["pushName"], lambda x: self._process_push_data(x, subscription_id))
 
-    def _process_push_data(self, data, subscription_id):
+    def _callback_received_multi_series(self, m, subscription_ids: str):
+        push_names = m["data"]["pushNames"]
+        for subscription_id, push_name in zip(subscription_ids, push_names):
+            self.hub_connection.on(push_name, lambda x, id_value=subscription_id: self._process_push_data(x, id_value))
+
+    def _process_push_data(self, data_push, subscription_id):
         (user_callback, all_data, parse_datetimes) = self.data_by_subscription_id[subscription_id]
-        modified_data = self._handle_new_series_data(all_data, data, parse_datetimes)
-        user_callback(modified_data)
+        updated_data = self._handle_new_series_data(all_data, data_push, parse_datetimes)
+        user_callback(updated_data)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -183,7 +195,124 @@ class DPSHelper:
         enact_request_object_series = [request_details]
         self._add_subscription(enact_request_object_series, subscription_id)
 
-    def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> str:
+    def subscribe_to_multiple_series_updates(
+        self,
+        handle_data_method: Callable[[str], None],
+        series_dictionary: dict[str, dict],
+        country_id="Gb",
+        parse_datetimes: bool = False,
+    ) -> None:
+        """
+        Subscribe to multiple series at once with the specified series IDs, option IDs (if applicable) and country ID.
+
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+
+            series_dictionary `dict[str, dict]`: A dictionary with the Enact series IDs as keys and a list of option ID lists, if applicable, as values. If not applicable, enter `None` as the value.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        """
+        join_payload = []
+        series_option_pairs = []
+        for series_id, option_ids in series_dictionary.items():
+            if not isinstance(series_id, str):
+                raise ValueError("Please ensure that all keys of `series_dictionary` are string types.")
+            series_payload = {"seriesId": series_id}
+            if is_2d_list_of_strings(option_ids):
+                series_payload["optionIds"] = option_ids
+                for option_id in option_ids:
+                    series_option_pairs.append((series_id, option_id))
+            elif option_ids is None:
+                series_option_pairs.append((series_id, None))
+            else:
+                raise ValueError(
+                    f"Series options incorrectly formatted for series {series_id}. Please use a 2-Dimensional list of string values, or `None` for series without options."
+                )
+
+            series_payload["countryId"] = country_id
+            join_payload.append(series_payload)
+
+        subscription_ids = []
+        for series_option_pair in series_option_pairs:
+            subscription_id = self.__get_subscription_id(series_option_pair[0], country_id, series_option_pair[1])
+            subscription_ids.append(subscription_id)
+            _, initial_data, _ = self.data_by_subscription_id.get(subscription_id, (None, pd.DataFrame(), None))
+            if initial_data.empty:
+                self._initialise_series_subscription_data(
+                    series_option_pair[0], country_id, series_option_pair[1], handle_data_method, parse_datetimes
+                )
+            else:
+                self.data_by_subscription_id[subscription_id][0] = handle_data_method
+
+        self._add_multi_series_subscription([join_payload], subscription_ids)
+
+    def subscribe_to_series_updates_for_multiple_plants(
+        self,
+        handle_data_method: Callable[[str], None],
+        series_id: str,
+        plant_ids: list[str],
+        country_id="Gb",
+        parse_datetimes: bool = False,
+    ) -> None:
+        """
+        Subscribe to a plant series for multiple plants at once with the specified series ID, plant IDs and country ID.
+
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+
+            series_id `str`: The Enact series ID.
+
+            plant_ids `list[str]`: The Enact plant IDs.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+
+        Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        """
+        series_dictionary = {series_id: [[plant_id] for plant_id in plant_ids]}
+        self.subscribe_to_multiple_series_updates(handle_data_method, series_dictionary, country_id, parse_datetimes)
+
+    def subscribe_to_multiple_series_updates_for_plant(
+        self,
+        handle_data_method: Callable[[str], None],
+        series_ids: list[str],
+        plant_id: str,
+        country_id="Gb",
+        parse_datetimes: bool = False,
+    ) -> None:
+        """
+        Subscribe to multiple plant series for a single plant at once with the specified series IDs, plant ID and country ID.
+
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+
+            series_ids `list[str]`: The Enact series IDs.
+
+            plant_ids `str`: The Enact plant ID.
+
+            country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
+
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+
+
+        Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
+        """
+        series_dictionary = {}
+        for series_id in series_ids:
+            series_dictionary[series_id] = [[plant_id]]
+        self.subscribe_to_multiple_series_updates(handle_data_method, series_dictionary, country_id, parse_datetimes)
+
+    def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
         if option_id:
             subscription_id += tuple(option_id)
