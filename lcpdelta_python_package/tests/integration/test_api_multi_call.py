@@ -22,7 +22,7 @@ async def get_series_data_async():
 
 def validate_series_response(res):
     assert res.index.name == "GMT Time"
-    assert res.index[0] == "2024-08-07T23:00:00Z"
+    assert res.index[0] == "2024-08-08T23:00:00Z"
     assert res.columns[0] == "Gb&DayAheadPrices"
     assert isinstance(res.iloc[0, 0], float)
 

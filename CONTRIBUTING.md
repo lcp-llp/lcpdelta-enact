@@ -42,10 +42,10 @@ The integration tests verify that each publicly exposed function is able to conn
 
 **To run integration tests locally**, you will need to have created a .env file in the root directory of the repository as follows:
 ```dotenv
-LCPDELTA_PACKAGE_TEST_ENACT_USERNAME=""
-LCPDELTA_PACKAGE_TEST_ENACT_API_KEY=""
-LCPDELTA_PACKAGE_TEST_FLEXTRACK_USERNAME=""
-LCPDELTA_PACKAGE_TEST_FLEXTRACK_API_KEY=""
+INTEGRATION_TEST_ENACT_USERNAME=""
+INTEGRATION_TEST_ENACT_API_KEY=""
+INTEGRATION_TEST_FLEXTRACK_USERNAME=""
+INTEGRATION_TEST_FLEXTRACK_API_KEY=""
 ```
 And populate the entries with your credentials.
 
