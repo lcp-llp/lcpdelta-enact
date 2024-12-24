@@ -38,6 +38,11 @@ expected_columns = [
     "Wholesale Volume - Total",
 ]
 
+v2_columns = [
+    "Plant - Co-located fuel",
+    "Aggregate",
+]
+
 
 @pytest.mark.asyncio
 async def test_get_leaderboard_data_legacy_async():
@@ -81,6 +86,7 @@ async def test_get_leaderboard_data_async():
     )
 
     assert [column in res.columns for column in expected_columns]
+    assert [column in res.columns for column in v2_columns]
 
 
 def test_get_leaderboard_data_sync():
@@ -97,3 +103,4 @@ def test_get_leaderboard_data_sync():
     )
 
     assert [column in res.columns for column in expected_columns]
+    assert [column in res.columns for column in v2_columns]
