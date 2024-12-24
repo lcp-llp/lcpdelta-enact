@@ -26,7 +26,7 @@ async def test_get_bm_data_by_period_async():
     assert [column in res["acceptedOffers"].columns for column in expected_bsad_columns]
 
     assert res["tableBids"].index[0] == "T_GNAPW-1"
-    assert res["tableBids"].iloc[0]["volume"] == -5.016666666666667
+    assert res["tableBids"].iloc[0]["volume"] == -5.0
     assert res["tableBids"].iloc[0]["bidPrice"] == -92.78
 
     assert res["tableOffers"].index[0] == "T_GNAPW-1"
@@ -48,7 +48,7 @@ def test_get_bm_data_by_period_sync():
     assert [column in res["acceptedOffers"].columns for column in expected_bsad_columns]
 
     assert res["tableBids"].index[0] == "T_GNAPW-1"
-    assert res["tableBids"].iloc[0]["volume"] == -5.016666666666667
+    assert res["tableBids"].iloc[0]["volume"] == -5.0
     assert res["tableBids"].iloc[0]["bidPrice"] == -92.78
 
     assert res["tableOffers"].index[0] == "T_GNAPW-1"

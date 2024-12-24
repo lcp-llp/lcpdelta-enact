@@ -102,7 +102,10 @@ async def test_get_DCH_contracts_async():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111407"
-    assert all(column in res.columns for column in ancillary_columns)
+
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DCH_contracts_sync():
@@ -110,7 +113,9 @@ def test_get_DCH_contracts_sync():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111407"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -119,7 +124,9 @@ async def test_get_DCL_contracts_async():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111406"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DCL_contracts_sync():
@@ -127,7 +134,9 @@ def test_get_DCL_contracts_sync():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111406"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -136,7 +145,9 @@ async def test_get_DMH_contracts_async():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6112209"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DMH_contracts_sync():
@@ -144,7 +155,9 @@ def test_get_DMH_contracts_sync():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6112209"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -153,7 +166,9 @@ async def test_get_DML_contracts_async():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111969"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DML_contracts_sync():
@@ -161,7 +176,9 @@ def test_get_DML_contracts_sync():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111969"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -170,7 +187,9 @@ async def test_get_DRH_contracts_async():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111970"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DRH_contracts_sync():
@@ -178,7 +197,9 @@ def test_get_DRH_contracts_sync():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111970"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -187,7 +208,9 @@ async def test_get_DRL_contracts_async():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111971"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DRL_contracts_sync():
@@ -195,7 +218,9 @@ def test_get_DRL_contracts_sync():
 
     assert res.index.name == "orderId"
     assert res.index[0] == "6111971"
-    assert all(column in res.columns for column in ancillary_columns)
+    missing_columns = set(ancillary_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
+    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
