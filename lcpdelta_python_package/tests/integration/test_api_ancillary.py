@@ -12,8 +12,6 @@ def teardown_function():
 ancillary_columns = [
     "acceptanceRatio",
     "marketName",
-    "biddingLevelName",
-    "marketProductId",
     "auctionId",
     "deliveryStartGmt",
     "deliveryEndGmt",
@@ -29,7 +27,6 @@ ancillary_columns = [
     "volumeAccepted",
     "availabilityFee",
     "reasonRejected",
-    "settlementCurrency",
     "optimiser",
     "enactId",
     "owner",
@@ -105,7 +102,6 @@ async def test_get_DCH_contracts_async():
 
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DCH_contracts_sync():
@@ -115,7 +111,6 @@ def test_get_DCH_contracts_sync():
     assert res.index[0] == "6111407"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -126,7 +121,6 @@ async def test_get_DCL_contracts_async():
     assert res.index[0] == "6111406"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DCL_contracts_sync():
@@ -136,7 +130,6 @@ def test_get_DCL_contracts_sync():
     assert res.index[0] == "6111406"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -147,7 +140,6 @@ async def test_get_DMH_contracts_async():
     assert res.index[0] == "6112209"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DMH_contracts_sync():
@@ -157,7 +149,6 @@ def test_get_DMH_contracts_sync():
     assert res.index[0] == "6112209"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -168,7 +159,6 @@ async def test_get_DML_contracts_async():
     assert res.index[0] == "6111969"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DML_contracts_sync():
@@ -178,7 +168,6 @@ def test_get_DML_contracts_sync():
     assert res.index[0] == "6111969"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -189,7 +178,6 @@ async def test_get_DRH_contracts_async():
     assert res.index[0] == "6111970"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DRH_contracts_sync():
@@ -199,7 +187,6 @@ def test_get_DRH_contracts_sync():
     assert res.index[0] == "6111970"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -210,7 +197,6 @@ async def test_get_DRL_contracts_async():
     assert res.index[0] == "6111971"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 def test_get_DRL_contracts_sync():
@@ -220,7 +206,6 @@ def test_get_DRL_contracts_sync():
     assert res.index[0] == "6111971"
     missing_columns = set(ancillary_columns) - set(res.columns)
     assert not missing_columns, f"Missing columns: {missing_columns}"
-    # assert all(column in res.columns for column in ancillary_columns)
 
 
 @pytest.mark.asyncio
@@ -291,7 +276,8 @@ async def test_get_SFFR_contracts_async():
     assert res.iloc[0]["enactId"] == "IPSWA-1"
     assert res.iloc[0]["offeredVolume"] == 20.0
     assert res.iloc[0]["offeredPrice"] == 0.01
-    assert all(column in res.columns for column in sffr_columns)
+    missing_columns = set(sffr_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
 
 
 def test_get_SFFR_contracts_sync():
@@ -300,7 +286,8 @@ def test_get_SFFR_contracts_sync():
     assert res.iloc[0]["enactId"] == "IPSWA-1"
     assert res.iloc[0]["offeredVolume"] == 20.0
     assert res.iloc[0]["offeredPrice"] == 0.01
-    assert all(column in res.columns for column in sffr_columns)
+    missing_columns = set(sffr_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
 
 
 @pytest.mark.asyncio
@@ -310,7 +297,8 @@ async def test_get_STOR_contracts_async():
     assert res.iloc[0]["tenderRoundId"] == "TRN-2949"
     assert res.iloc[0]["clearingVolume"] == 60.0
     assert res.iloc[0]["clearingPrice"] == 0.72
-    assert all(column in res.columns for column in stor_columns)
+    missing_columns = set(stor_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
 
 
 def test_get_STOR_contracts_sync():
@@ -319,4 +307,5 @@ def test_get_STOR_contracts_sync():
     assert res.iloc[0]["tenderRoundId"] == "TRN-2949"
     assert res.iloc[0]["clearingVolume"] == 60.0
     assert res.iloc[0]["clearingPrice"] == 0.72
-    assert all(column in res.columns for column in stor_columns)
+    missing_columns = set(stor_columns) - set(res.columns)
+    assert not missing_columns, f"Missing columns: {missing_columns}"
