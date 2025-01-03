@@ -39,6 +39,8 @@ def generate_request_v2(
     include_capacity_market_revenues=False,
     ancillary_profit_aggregation="FrequencyAndReserve",
     group_dx=False,
+    aggregate=None,
+    show_co_located_fuels=False,
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -51,6 +53,8 @@ def generate_request_v2(
         "IncludeCmRevenues": include_capacity_market_revenues,
         "AncillaryProfitAggregation": ancillary_profit_aggregation,
         "GroupDx": group_dx,
+        "Aggregate": aggregate,
+        "ShowCoLocatedFuels": show_co_located_fuels,
     }
 
 

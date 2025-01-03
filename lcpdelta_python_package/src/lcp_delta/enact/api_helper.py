@@ -946,6 +946,8 @@ class APIHelper(APIHelperBase):
         include_capacity_market_revenues=False,
         ancillary_profit_aggregation="FrequencyAndReserve",
         group_dx=False,
+        aggregate=None,
+        show_co_located_fuels=False,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -968,7 +970,10 @@ class APIHelper(APIHelperBase):
             ancillary_profit_aggregation `str` (optional): The aggregation option for ancillary profits. Options are: "FrequencyAndReserve", "ByProduct", and "ByDirection". Defaults to "FrequencyAndReserve".
 
             group_dx `bool` (optional): When set to true, DC, DR, and DL profits will be grouped into "Dx". Defaults to False.
-        """
+
+            aggregate (optional, str): Aggregation level ("Day", "Week", "Month"). Defaults to None. For the given date range, data is aggregated by the specified period (e.g., "Month" splits the original date range into months creating rows in the dataframe for each month). An aggregate column indicates the start date of each aggregation.
+
+            show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -979,6 +984,8 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
             ancillary_profit_aggregation,
             group_dx,
+            aggregate,
+            show_co_located_fuels,
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -994,6 +1001,8 @@ class APIHelper(APIHelperBase):
         include_capacity_market_revenues=False,
         ancillary_profit_aggregation="FrequencyAndReserve",
         group_dx=False,
+        aggregate=None,
+        show_co_located_fuels=False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1006,6 +1015,8 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
             ancillary_profit_aggregation,
             group_dx,
+            aggregate,
+            show_co_located_fuels,
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
