@@ -184,7 +184,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -199,7 +199,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: The fuel option for the request, e.g. "Coal".
+            option_ids `list[str]`: The fuel option for the request with any other options required for the series, e.g. ["Coal",...].
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -221,7 +221,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # fuel
+            option_ids,  # fuel and other options
             half_hourly_average,
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
@@ -235,7 +235,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -247,7 +247,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # fuel
+            option_ids,  # fuel and other options
             half_hourly_average,
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
@@ -261,7 +261,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -276,7 +276,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: The fuel option for the request, e.g. "Z1".
+            option_ids `list[str]`: The zone option for the request with any other options required for the series, e.g. ["Z1",...].
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -298,7 +298,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # zone
+            option_ids,  # zone and other options
             half_hourly_average,
             ep.SERIES_BY_ZONE,
             request_time_zone_id,
@@ -312,7 +312,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -324,7 +324,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # zone
+            option_ids,  # zone and other options
             half_hourly_average,
             ep.SERIES_BY_ZONE,
             request_time_zone_id,
@@ -338,7 +338,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -353,7 +353,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: The owner option for the request, e.g. "Adela Energy".
+            option_ids `list[str]`: The owner option for the request with any other options required for the series, e.g. ["Adela Energy",...].
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -375,7 +375,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # owner
+            option_ids,  # owner and other options
             half_hourly_average,
             ep.SERIES_BY_OWNER,
             request_time_zone_id,
@@ -389,7 +389,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -401,7 +401,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # owner
+            option_ids,  # owner and other options
             half_hourly_average,
             ep.SERIES_BY_OWNER,
             request_time_zone_id,
@@ -424,7 +424,7 @@ class APIHelper(APIHelperBase):
         """Get series data for a specific series with multiple options available.
 
         Args:
-            series_id `str`: The Enact series ID (must be a plant series).
+            series_id `str`: The Enact series ID (must not be a plant series).
 
             date_from `datetime.datetime`: The start date.
 
@@ -501,7 +501,7 @@ class APIHelper(APIHelperBase):
         """Get data for multiple non-plant series.
 
         Args:
-            series_ids `list[str]`: A list of Enact series IDs.
+            series_ids `list[str]`: A list of Enact series IDs (must not be a plant series).
 
             date_from `datetime.datetime`: The start date.
 
