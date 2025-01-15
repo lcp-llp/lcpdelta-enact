@@ -101,7 +101,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: The Enact option ID, if an option is applicable.
+            option_id `list[str]`: The Enact option IDs, if options are applicable, e.g. ["Coal"]. The input is a list as some series require multiple options, e.g. ["Z1", "Median"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -199,7 +199,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_ids `list[str]`: The fuel option for the request with any other options required for the series, e.g. ["Coal",...].
+            option_ids `list[str]`: The fuel option for the request with any other options required for the series, e.g. ["Coal",...]. The input is a list as some plant series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -276,7 +276,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_ids `list[str]`: The zone option for the request with any other options required for the series, e.g. ["Z1",...].
+            option_ids `list[str]`: The zone option for the request with any other options required for the series, e.g. ["Z1",...]. The input is a list as some plant series require multiple options, e.g. ["Z1", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Z1", "Z2"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -353,7 +353,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_ids `list[str]`: The owner option for the request with any other options required for the series, e.g. ["Adela Energy",...].
+            option_ids `list[str]`: The owner option for the request with any other options required for the series, e.g. ["Adela Energy",...]. The input is a list as some plant series require multiple options, e.g. ["Adela Energy", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Adela Energy", "SSE"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -421,7 +421,7 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific series with multiple options available.
+        """Get series data for a specific non-plant series with multiple options available.
 
         Args:
             series_id `str`: The Enact series ID (must not be a plant series).
@@ -507,7 +507,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_ids `list[str]` (optional): The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
+            option_ids `list[str]` (optional): The option IDs, e.g. ["Coal"]. The same option_ids will be used for all series_ids. If left empty all possible options will be returned.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -580,7 +580,7 @@ class APIHelper(APIHelperBase):
         Args:
             series_ids `list[str]`: A list of Enact series IDs.
 
-            option_ids `list[str]`: The option IDs corresponding to each series requested, e.g. ["Z1", "Wind"].
+            option_ids `list[str]`: The plant IDs corresponding to each series index requested, e.g. ["E_BHOLB-1", "T_RYHPS-1"].
 
             date_from `datetime.datetime`: The start date.
 
@@ -686,7 +686,7 @@ class APIHelper(APIHelperBase):
 
             country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None. The input is a list as some series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
@@ -726,7 +726,7 @@ class APIHelper(APIHelperBase):
 
             country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None. The input is a list as some series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
@@ -774,7 +774,7 @@ class APIHelper(APIHelperBase):
 
             forecast_as_of `datetime.datetime`: The date you want the latest forecast generated for.
 
-            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None. The input is a list as some series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
