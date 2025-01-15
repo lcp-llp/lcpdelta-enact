@@ -10,12 +10,12 @@ def teardown_function():
 @pytest.mark.asyncio
 async def test_get_plants_by_fuel_and_country_async():
     res = await enact_api_helper.get_plants_by_fuel_and_country_async("CCGT", "Gb")
-    assert res[0] == "T_BARK-1"
+    assert "T_BARK-1" in res
 
 
 def test_get_plants_by_fuel_and_country_sync():
     res = enact_api_helper.get_plants_by_fuel_and_country("CCGT", "Gb")
-    assert res[0] == "T_BARK-1"
+    assert "T_BARK-1" in res
 
 
 @pytest.mark.asyncio

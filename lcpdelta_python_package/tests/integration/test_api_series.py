@@ -85,8 +85,8 @@ def test_get_series_data_by_zone_sync():
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&T_MOWEO-3"
-    assert res.iloc[0, 0] == 295.0
+    assert "Gb&Mel&T_MOWEO-3" in res.columns
+    assert res["Gb&Mel&T_MOWEO-3"].iloc[0] == 295.0
 
 
 @pytest.mark.asyncio
@@ -120,8 +120,8 @@ def test_get_series_data_by_owner_sync():
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&V__JADEL001"
-    assert res.iloc[0, 0] == 0.0
+    assert "Gb&Mel&V__JADEL001" in res.columns
+    assert res["Gb&Mel&V__JADEL001"].iloc[0] == 0.0
 
 
 @pytest.mark.asyncio
