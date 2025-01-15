@@ -46,7 +46,7 @@ def test_get_series_data_sync():
 @pytest.mark.asyncio
 async def test_get_series_data_by_fuel_async():
     res = await enact_api_helper.get_series_by_fuel_async(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Coal", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Coal"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
@@ -57,7 +57,7 @@ async def test_get_series_data_by_fuel_async():
 
 def test_get_series_data_by_fuel_sync():
     res = enact_api_helper.get_series_by_fuel(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Coal", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Coal"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
@@ -69,7 +69,7 @@ def test_get_series_data_by_fuel_sync():
 @pytest.mark.asyncio
 async def test_get_series_data_by_zone_async():
     res = await enact_api_helper.get_series_by_zone_async(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Z2", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Z2"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
@@ -80,7 +80,7 @@ async def test_get_series_data_by_zone_async():
 
 def test_get_series_data_by_zone_sync():
     res = enact_api_helper.get_series_by_zone(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Z2", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Z2"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
@@ -96,7 +96,7 @@ async def test_get_series_data_by_owner_async():
         date(2024, 8, 1),
         date(2024, 8, 3),
         "Gb",
-        option_id="Adela Energy",
+        option_ids=["Adela Energy"],
         time_zone_id="UTC",
         parse_datetimes=True,
     )
@@ -113,7 +113,7 @@ def test_get_series_data_by_owner_sync():
         date(2024, 8, 1),
         date(2024, 8, 3),
         "Gb",
-        option_id="Adela Energy",
+        option_ids=["Adela Energy"],
         time_zone_id="UTC",
         parse_datetimes=True,
     )
