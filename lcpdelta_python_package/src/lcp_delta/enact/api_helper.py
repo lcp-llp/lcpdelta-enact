@@ -653,6 +653,22 @@ class APIHelper(APIHelperBase):
         """An asynchronous version of `get_pant_details_by_id`."""
         request_body = plant_service.generate_plant_request(plant_id)
         return await self._post_request_async(ep.PLANT_INFO, request_body)
+    
+    def get_plant_details_by_fuel(self, fuel: str) -> dict:
+        """Get details of all plants of a particular fuel.
+
+        Args:
+            fuel `str`: The fuel.
+        """
+        request_body = plant_service.generate_fuel_request(fuel)
+        response =  self._post_request(ep.PLANT_INFO_BY_FUEL, request_body)
+        return plant_service.process_country_fuel_response(response)
+
+    async def get_plant_details_by_fuel_async(self, fuel: str) -> dict:
+        """An asynchronous version of `get_pant_details_by_id`."""
+        request_body = plant_service.generate_fuel_request(fuel)
+        response = await self._post_request_async(ep.PLANT_INFO_BY_FUEL, request_body)
+        return plant_service.process_country_fuel_response(response)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants for a given fuel and country.
