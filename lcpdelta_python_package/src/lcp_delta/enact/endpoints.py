@@ -1,5 +1,7 @@
 import lcp_delta.common.constants as constants
-from lcp_delta.enact.base_endpoints import base_endpoints
+from lcp_delta.enact.loader import get_base_endpoints
+
+base_endpoints = get_base_endpoints()
 
 MAIN_BASE_URL = base_endpoints.MAIN_BASE_URL
 SERIES_BASE_URL = base_endpoints.SERIES_BASE_URL
