@@ -16,6 +16,7 @@ MULTI_SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesData"
 MULTI_PLANT_SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesPlantData"
 
 PLANT_INFO = f"{MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
+PLANT_INFO_BY_FUEL = f"{MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfoByFuelType"
 PLANT_IDS = f"{MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
 
 HOF = f"{MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
