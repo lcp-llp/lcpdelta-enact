@@ -11,9 +11,7 @@ for mod in submodules_to_reload:
     importlib.reload(sys.modules[mod])
 
 from ..common.credentials_holder import CredentialsHolder
-from .loader import get_base_endpoints
 from .api_helper import APIHelper
 from .dps_helper import DPSHelper
 from .chart_helper import ChartHelper
-
-base_endpoints = get_base_endpoints()
+from .base_endpoints import base_endpoints
