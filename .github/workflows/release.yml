@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'main'
+        ref: ${{ github.event.release.target_commitish }}
     
     - name: Set up Python
       uses: actions/setup-python@v2
