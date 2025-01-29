@@ -6,7 +6,7 @@ def load_endpoints():
     module_name = f".configs.endpoints_{env}" if env != "default" else ".endpoints"
 
     try:
-        return importlib.import_module(module_name)
+        return importlib.import_module(module_name, package=__package__)
     except ModuleNotFoundError:
         raise ImportError(f"Could not load endpoint configuration: {module_name}")
 
