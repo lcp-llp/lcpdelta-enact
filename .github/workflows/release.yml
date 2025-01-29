@@ -29,6 +29,14 @@ jobs:
     - name: Install dependencies
       run: pip install build wheel setuptools
 
+    - name: Enforce pre-release for non-main branches
+      run: |
+        if [[ "${{ github.event.release.prerelease }}" == "false" && "${{ github.event.release.target_commitish }}" != "main" ]]; then
+          echo "❌ Error: Full releases are only allowed from the main branch."
+          exit 1
+        fi
+      shell: bash
+
     - name: Update version in pyproject.toml
       run: |
         version=${{ github.event.release.tag_name }}
