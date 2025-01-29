@@ -1,6 +1,6 @@
 import pandas as pd
 
-from lcp_delta.enact import endpoints as ep
+import lcp_delta.enact.endpoints as ep
 
 from datetime import datetime
 from typing import Union
