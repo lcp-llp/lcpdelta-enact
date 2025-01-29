@@ -3,8 +3,7 @@ import importlib
 
 def load_endpoints():
     env = os.getenv("ENACT_ENV", "default")  # Read from an environment variable
-    print(env)
-    module_name = f".configs.endpoints_{env}" if env != "default" else ".endpoints"
+    module_name = f".configs.endpoints_{env}"
 
     try:
         return importlib.import_module(module_name, package=__package__)
