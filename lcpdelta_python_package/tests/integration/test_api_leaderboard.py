@@ -8,7 +8,7 @@ def teardown_function():
     time.sleep(2)
 
 
-expected_columns = [
+v1_columns = [
     "Plant - Name",
     "Plant - BMU",
     "Plant - Fuel",
@@ -38,9 +38,57 @@ expected_columns = [
     "Wholesale Volume - Total",
 ]
 
-v2_columns = [
-    "Plant - Co-located fuel",
-    "Aggregate",
+
+v2_columns = [ # Plant - Co-located fuel, Profit - CM and Plant - Availability are optional extras, also return is dependant on the ancillary split and dx grouping options chosen.
+    'Plant - Name',
+    'Plant - Fuel',
+    'Plant - Co-located fuel',
+    'Plant - Owner',
+    'Plant - Time First Active',
+    'Plant - Zone',
+    'Plant - Capacity',
+    'Plant - Demand Capacity',
+    'Plant - Max PN',
+    'Plant - Availability',
+    'BESS - BM Status',
+    'BESS - Optimiser',
+    'BESS - Energy',
+    'BESS - Duration',
+    'BESS - No. Cycles',
+    'Profit - Net',
+    'Profit - BM',
+    'Profit - Wholesale',
+    'Profit - Wholesale Import',
+    'Profit - Wholesale Export',
+    'Profit - Frequency',
+    'Profit - Reserve',
+    'Profit - CM',
+    'Profit - Non-Delivery Charge',
+    'BM Profit Breakdown - Bids',
+    'BM Profit Breakdown - Offers',
+    'BM Profit Breakdown - System',
+    'BM Profit Breakdown - Energy',
+    'Revenue - BM',
+    'Revenue - Wholesale',
+    'BM Revenue Breakdown - Bids',
+    'BM Revenue Breakdown - Offers',
+    'BM Revenue Breakdown - System',
+    'BM Revenue Breakdown - Energy',
+    'BM Volume - Bid',
+    'BM Volume - Offer',
+    'BM Volume - System',
+    'BM Volume - Energy',
+    'BM Volume - Non-Delivered Bid',
+    'BM Volume - Non-Delivered Offer',
+    'BM Bid Price - Min',
+    'BM Bid Price - Max',
+    'BM Bid Price - Average',
+    'BM Offer Price - Min',
+    'BM Offer Price - Max',
+    'BM Offer Price - Average',
+    'Wholesale Volume - Total',
+    'Wholesale Volume - Import',
+    'Wholesale Volume - Export'
 ]
 
 
@@ -55,7 +103,8 @@ async def test_get_leaderboard_data_legacy_async():
         "DayAheadForward",
     )
 
-    assert [column in res.columns for column in expected_columns]
+    assert all(column in res.columns for column in v1_columns), f"Missing columns: {[col for col in v1_columns if col not in res.columns]}"
+
 
 
 def test_get_leaderboard_data_legacy_sync():
@@ -68,7 +117,7 @@ def test_get_leaderboard_data_legacy_sync():
         "DayAheadForward",
     )
 
-    assert [column in res.columns for column in expected_columns]
+    assert all(column in res.columns for column in v1_columns), f"Missing columns: {[col for col in v1_columns if col not in res.columns]}"
 
 
 @pytest.mark.asyncio
@@ -80,13 +129,15 @@ async def test_get_leaderboard_data_async():
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
         "DayAheadForward",
-        include_capacity_market_revenues=False,
+        include_capacity_market_revenues=True,
         ancillary_profit_aggregation="FrequencyAndReserve",
         group_dx=True,
+        show_co_located_fuels=True,
+        account_for_availability_in_normalisation=True,
     )
-
-    assert [column in res.columns for column in expected_columns]
-    assert [column in res.columns for column in v2_columns]
+    col_list = res.columns.tolist()
+    print(col_list)
+    assert all(column in res.columns for column in v2_columns), f"Missing columns: {[col for col in v2_columns if col not in res.columns]}"
 
 
 def test_get_leaderboard_data_sync():
@@ -97,10 +148,11 @@ def test_get_leaderboard_data_sync():
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
         "DayAheadForward",
-        include_capacity_market_revenues=False,
+        include_capacity_market_revenues=True,
         ancillary_profit_aggregation="FrequencyAndReserve",
         group_dx=True,
+        show_co_located_fuels=True,
+        account_for_availability_in_normalisation=True,
     )
 
-    assert [column in res.columns for column in expected_columns]
-    assert [column in res.columns for column in v2_columns]
+    assert all(column in res.columns for column in v2_columns), f"Missing columns: {[col for col in v2_columns if col not in res.columns]}"
