@@ -39,7 +39,7 @@ v1_columns = [
 ]
 
 
-v2_columns = [ # Plant - Co-located fuel, Profit - CM and Plant - Availability are optional extras, also return is dependant on the ancillary split and dx grouping options chosen.
+v2_columns = [ # Plant - Co-located fuel, Profit - CM are optional extras, also return is dependant on the ancillary split and dx grouping options chosen. Availability columns always show even though its use in the values is optional.
     'Plant - Name',
     'Plant - Fuel',
     'Plant - Co-located fuel',
@@ -49,6 +49,8 @@ v2_columns = [ # Plant - Co-located fuel, Profit - CM and Plant - Availability a
     'Plant - Capacity',
     'Plant - Demand Capacity',
     'Plant - Max PN',
+    'Plant - Max MEL',
+    'Plant - Min MIL',
     'Plant - Availability',
     'BESS - BM Status',
     'BESS - Optimiser',
@@ -135,8 +137,7 @@ async def test_get_leaderboard_data_async():
         show_co_located_fuels=True,
         account_for_availability_in_normalisation=True,
     )
-    col_list = res.columns.tolist()
-    print(col_list)
+
     assert all(column in res.columns for column in v2_columns), f"Missing columns: {[col for col in v2_columns if col not in res.columns]}"
 
 
