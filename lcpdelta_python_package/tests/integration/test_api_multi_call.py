@@ -10,13 +10,13 @@ def teardown_function():
 
 def get_series_data():
     return enact_api_helper.get_series_data(
-        "DayAheadPrices", date(2025, 1, 1), date(2025, 2, 1), country_id="Gb", time_zone_id="UTC"
+        "DayAheadPrices", date(2025, 1, 1), date(2025, 2, 1), country_id="Gb", time_zone_id="UTC", parse_datetimes=True
     )
 
 
 async def get_series_data_async():
     return await enact_api_helper.get_series_data_async(
-        "DayAheadPrices", date(2025, 1, 1), date(2025, 2, 1), country_id="Gb", time_zone_id="UTC"
+        "DayAheadPrices", date(2025, 1, 1), date(2025, 2, 1), country_id="Gb", time_zone_id="UTC", parse_datetimes=True
     )
 
 
