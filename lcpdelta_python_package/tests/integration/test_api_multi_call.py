@@ -1,5 +1,6 @@
 import pytest
 import time
+import pandas as pd
 from datetime import date, datetime, timezone as tz
 from tests.integration import enact_api_helper
 
@@ -22,7 +23,7 @@ async def get_series_data_async():
 
 def validate_series_response(res):
     assert res.index.name == "GMT Time"
-    assert res.index[0] == "2025-01-01T00:00:00Z"
+    assert res.index[0] == pd.Timestamp("2025-01-01T00:00:00Z")
     assert res.columns[0] == "Gb&DayAheadPrices"
     assert isinstance(res.iloc[0, 0], float)
 
