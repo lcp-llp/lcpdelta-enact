@@ -36,7 +36,10 @@ dev = [
     "pytest-asyncio",
     "python-dotenv",
     "jupyter",
-    "nbval"
+    "nbval",
+    "pandas",
+    "numpy",
+    "dateutil"
 ]
 
 [project.urls]
