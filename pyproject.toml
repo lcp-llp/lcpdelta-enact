@@ -38,8 +38,7 @@ dev = [
     "jupyter",
     "nbval",
     "pandas",
-    "numpy",
-    "dateutil"
+    "numpy"
 ]
 
 [project.urls]
