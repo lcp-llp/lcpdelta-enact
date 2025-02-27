@@ -46,47 +46,47 @@ def test_get_series_data_sync():
 @pytest.mark.asyncio
 async def test_get_series_data_by_fuel_async():
     res = await enact_api_helper.get_series_by_fuel_async(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Coal", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Coal"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&T_RATS-3"
-    assert res.iloc[0, 0] == 370.0
+    assert "Gb&Mel&T_RATS-3" in res.columns 
+    assert res["Gb&Mel&T_RATS-3"].iloc[0] == 370.0
 
 
 def test_get_series_data_by_fuel_sync():
     res = enact_api_helper.get_series_by_fuel(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Coal", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Coal"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&T_RATS-3"
-    assert res.iloc[0, 0] == 370.0
+    assert "Gb&Mel&T_RATS-3" in res.columns
+    assert res["Gb&Mel&T_RATS-3"].iloc[0] == 370.0
 
 
 @pytest.mark.asyncio
 async def test_get_series_data_by_zone_async():
     res = await enact_api_helper.get_series_by_zone_async(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Z2", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Z2"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&T_MOWEO-3"
-    assert res.iloc[0, 0] == 295.0
+    assert "Gb&Mel&T_MOWEO-3" in res.columns
+    assert res["Gb&Mel&T_MOWEO-3"].iloc[0] == 295.0
 
 
 def test_get_series_data_by_zone_sync():
     res = enact_api_helper.get_series_by_zone(
-        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_id="Z2", time_zone_id="UTC", parse_datetimes=True
+        "Mel", date(2024, 8, 1), date(2024, 8, 3), "Gb", option_ids=["Z2"], time_zone_id="UTC", parse_datetimes=True
     )
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&T_MOWEO-3"
-    assert res.iloc[0, 0] == 295.0
+    assert "Gb&Mel&T_MOWEO-3" in res.columns
+    assert res["Gb&Mel&T_MOWEO-3"].iloc[0] == 295.0
 
 
 @pytest.mark.asyncio
@@ -96,15 +96,15 @@ async def test_get_series_data_by_owner_async():
         date(2024, 8, 1),
         date(2024, 8, 3),
         "Gb",
-        option_id="Adela Energy",
+        option_ids=["Adela Energy"],
         time_zone_id="UTC",
         parse_datetimes=True,
     )
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&V__JADEL001"
-    assert res.iloc[0, 0] == 0.0
+    assert "Gb&Mel&V__JADEL001" in res.columns
+    assert res["Gb&Mel&V__JADEL001"].iloc[0] == 0.0
 
 
 def test_get_series_data_by_owner_sync():
@@ -113,15 +113,15 @@ def test_get_series_data_by_owner_sync():
         date(2024, 8, 1),
         date(2024, 8, 3),
         "Gb",
-        option_id="Adela Energy",
+        option_ids=["Adela Energy"],
         time_zone_id="UTC",
         parse_datetimes=True,
     )
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&Mel&V__JADEL001"
-    assert res.iloc[0, 0] == 0.0
+    assert "Gb&Mel&V__JADEL001" in res.columns
+    assert res["Gb&Mel&V__JADEL001"].iloc[0] == 0.0
 
 
 @pytest.mark.asyncio
@@ -138,8 +138,8 @@ async def test_get_series_data_multi_option_async():
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&OutturnFuel&Biomass"
-    assert res.iloc[0, 0] == 2572.0
+    assert "Gb&OutturnFuel&Biomass" in res.columns
+    assert res["Gb&OutturnFuel&Biomass"].iloc[0] == 2572.0
 
 
 def test_get_series_data_multi_option_sync():
@@ -155,8 +155,8 @@ def test_get_series_data_multi_option_sync():
 
     assert res.index.name == "GMT Time"
     assert res.index[0].isoformat() == "2024-07-31T23:00:00+00:00"
-    assert list(res.columns)[0] == "Gb&OutturnFuel&Biomass"
-    assert res.iloc[0, 0] == 2572.0
+    assert "Gb&OutturnFuel&Biomass" in res.columns
+    assert res["Gb&OutturnFuel&Biomass"].iloc[0] == 2572.0
 
 
 @pytest.mark.asyncio

@@ -1,28 +1,35 @@
 import lcp_delta.common.constants as constants
+from lcp_delta.enact.loader import get_base_endpoints
 
-SERIES_DATA = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
-SERIES_INFO = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Info"
-SERIES_BY_FUEL = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
-SERIES_BY_ZONE = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Zone"
-SERIES_BY_OWNER = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/Owner"
-SERIES_MULTI_OPTION = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
-MULTI_SERIES_DATA = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesData"
-MULTI_PLANT_SERIES_DATA = f"{constants.MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesPlantData"
+base_endpoints = get_base_endpoints()
 
-PLANT_INFO = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
-PLANT_IDS = f"{constants.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
+MAIN_BASE_URL = base_endpoints.MAIN_BASE_URL
+SERIES_BASE_URL = base_endpoints.SERIES_BASE_URL
 
-HOF = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
-HOF_LATEST_FORECAST = f"{constants.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
+SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
+SERIES_INFO = f"{MAIN_BASE_URL}/EnactAPI/Series/Info"
+SERIES_BY_FUEL = f"{MAIN_BASE_URL}/EnactAPI/Series/Fuel"
+SERIES_BY_ZONE = f"{MAIN_BASE_URL}/EnactAPI/Series/Zone"
+SERIES_BY_OWNER = f"{MAIN_BASE_URL}/EnactAPI/Series/Owner"
+SERIES_MULTI_OPTION = f"{MAIN_BASE_URL}/EnactAPI/Series/multiOption"
+MULTI_SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesData"
+MULTI_PLANT_SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesPlantData"
 
-BOA = f"{constants.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+PLANT_INFO = f"{MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
+PLANT_INFO_BY_FUEL = f"{MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfoByFuelType"
+PLANT_IDS = f"{MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
 
-LEADERBOARD_V1 = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
-LEADERBOARD_V2 = f"{constants.MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
+HOF = f"{MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+HOF_LATEST_FORECAST = f"{MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
 
-ANCILLARY = f"{constants.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
+BOA = f"{MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
-NEWS_TABLE = f"{constants.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
+LEADERBOARD_V1 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
+LEADERBOARD_V2 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
+
+ANCILLARY = f"{MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
+
+NEWS_TABLE = f"{MAIN_BASE_URL}/EnactAPI/Newstable/Data"
 
 EPEX_TRADES = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
 EPEX_TRADES_BY_CONTRACT_ID = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
@@ -30,6 +37,6 @@ EPEX_ORDER_BOOK = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
 EPEX_ORDER_BOOK_BY_CONTRACT_ID = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
 EPEX_CONTRACTS = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
-NORDPOOL_CURVES = f"{constants.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
+NORDPOOL_CURVES = f"{SERIES_BASE_URL}/api/NordpoolBuySellCurves"
 
-DAY_AHEAD = f"{constants.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
+DAY_AHEAD = f"{MAIN_BASE_URL}/EnactAPI/DayAhead/data"

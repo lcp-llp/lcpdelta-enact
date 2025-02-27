@@ -101,7 +101,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: The Enact option ID, if an option is applicable.
+            option_id `list[str]`: The Enact option IDs, if options are applicable, e.g. ["Coal"]. The input is a list as some series require multiple options, e.g. ["Z1", "Median"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -184,7 +184,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -199,7 +199,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `list[str]`: The fuel option for the request, e.g. "Coal".
+            option_ids `list[str]`: The fuel option for the request with any other options required for the series, e.g. ["Coal",...]. The input is a list as some plant series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -221,7 +221,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # fuel
+            option_ids,  # fuel and other options
             half_hourly_average,
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
@@ -235,7 +235,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -247,7 +247,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # fuel
+            option_ids,  # fuel and other options
             half_hourly_average,
             ep.SERIES_BY_FUEL,
             request_time_zone_id,
@@ -261,7 +261,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -276,7 +276,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: The fuel option for the request, e.g. "Z1".
+            option_ids `list[str]`: The zone option for the request with any other options required for the series, e.g. ["Z1",...]. The input is a list as some plant series require multiple options, e.g. ["Z1", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Z1", "Z2"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -298,7 +298,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # zone
+            option_ids,  # zone and other options
             half_hourly_average,
             ep.SERIES_BY_ZONE,
             request_time_zone_id,
@@ -312,7 +312,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -324,7 +324,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # zone
+            option_ids,  # zone and other options
             half_hourly_average,
             ep.SERIES_BY_ZONE,
             request_time_zone_id,
@@ -338,7 +338,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -353,7 +353,7 @@ class APIHelper(APIHelperBase):
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_id `str`: The owner option for the request, e.g. "Adela Energy".
+            option_ids `list[str]`: The owner option for the request with any other options required for the series, e.g. ["Adela Energy",...]. The input is a list as some plant series require multiple options, e.g. ["Adela Energy", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Adela Energy", "SSE"], you will need to make two separate requests to get values for different options.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -375,7 +375,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # owner
+            option_ids,  # owner and other options
             half_hourly_average,
             ep.SERIES_BY_OWNER,
             request_time_zone_id,
@@ -389,7 +389,7 @@ class APIHelper(APIHelperBase):
         date_from: datetime,
         date_to: datetime,
         country_id: str,
-        option_id: str,
+        option_ids: list[str],
         half_hourly_average: bool = False,
         request_time_zone_id: str | None = None,
         time_zone_id: str | None = None,
@@ -401,7 +401,7 @@ class APIHelper(APIHelperBase):
             convert_datetime_to_iso(date_from),
             convert_datetime_to_iso(date_to),
             country_id,
-            [option_id],  # owner
+            option_ids,  # owner and other options
             half_hourly_average,
             ep.SERIES_BY_OWNER,
             request_time_zone_id,
@@ -421,10 +421,10 @@ class APIHelper(APIHelperBase):
         time_zone_id: str | None = None,
         parse_datetimes: bool = False,
     ) -> pd.DataFrame:
-        """Get series data for a specific series with multiple options available.
+        """Get series data for a specific non-plant series with multiple options available.
 
         Args:
-            series_id `str`: The Enact series ID (must be a plant series).
+            series_id `str`: The Enact series ID (must not be a plant series).
 
             date_from `datetime.datetime`: The start date.
 
@@ -501,13 +501,13 @@ class APIHelper(APIHelperBase):
         """Get data for multiple non-plant series.
 
         Args:
-            series_ids `list[str]`: A list of Enact series IDs.
+            series_ids `list[str]`: A list of Enact series IDs (must not be a plant series).
 
             date_from `datetime.datetime`: The start date.
 
             date_to `datetime.datetime`: The end date. Can be set equal to start date to return one days' data.
 
-            option_ids `list[str]` (optional): The option IDs, e.g. ["Coal", "Wind"]. If left empty all possible options will be returned.
+            option_ids `list[str]` (optional): The option IDs, e.g. ["Coal"]. The same option_ids will be used for all series_ids. If left empty all possible options will be returned.
 
             country_id `str` (optional): The country ID for filtering the data. Defaults to "Gb".
 
@@ -580,7 +580,7 @@ class APIHelper(APIHelperBase):
         Args:
             series_ids `list[str]`: A list of Enact series IDs.
 
-            option_ids `list[str]`: The option IDs corresponding to each series requested, e.g. ["Z1", "Wind"].
+            option_ids `list[str]`: The plant IDs corresponding to each series index requested, e.g. ["E_BHOLB-1", "T_RYHPS-1"].
 
             date_from `datetime.datetime`: The start date.
 
@@ -653,6 +653,22 @@ class APIHelper(APIHelperBase):
         """An asynchronous version of `get_pant_details_by_id`."""
         request_body = plant_service.generate_plant_request(plant_id)
         return await self._post_request_async(ep.PLANT_INFO, request_body)
+    
+    def get_plant_details_by_fuel(self, fuel: str) -> dict:
+        """Get details of all plants of a particular fuel.
+
+        Args:
+            fuel `str`: The fuel.
+        """
+        request_body = plant_service.generate_fuel_request(fuel)
+        response =  self._post_request(ep.PLANT_INFO_BY_FUEL, request_body)
+        return plant_service.process_country_fuel_response(response)
+
+    async def get_plant_details_by_fuel_async(self, fuel: str) -> dict:
+        """An asynchronous version of `get_pant_details_by_id`."""
+        request_body = plant_service.generate_fuel_request(fuel)
+        response = await self._post_request_async(ep.PLANT_INFO_BY_FUEL, request_body)
+        return plant_service.process_country_fuel_response(response)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
         """Get a list of plants for a given fuel and country.
@@ -686,7 +702,7 @@ class APIHelper(APIHelperBase):
 
             country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option ID, if an option is applicable. Defaults to None. The input is a list as some series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
@@ -726,7 +742,7 @@ class APIHelper(APIHelperBase):
 
             country_id `str` (optional): This Enact country ID. Defaults to "Gb".
 
-            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None. The input is a list as some series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
@@ -774,7 +790,7 @@ class APIHelper(APIHelperBase):
 
             forecast_as_of `datetime.datetime`: The date you want the latest forecast generated for.
 
-            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None.
+            option_id `list[str]` (optional): The Enact option IDs, if an options are applicable. Defaults to None. The input is a list as some series require multiple options, e.g. ["Coal", "Offer"].  You cannot use the list to get the values for multiple options, e.g. ["Coal", "Wind"], you will need to make two separate requests to get values for different options.
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
 
@@ -946,6 +962,9 @@ class APIHelper(APIHelperBase):
         include_capacity_market_revenues=False,
         ancillary_profit_aggregation="FrequencyAndReserve",
         group_dx=False,
+        aggregate=None,
+        show_co_located_fuels=False,
+        account_for_availability_in_normalisation=False,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -968,7 +987,12 @@ class APIHelper(APIHelperBase):
             ancillary_profit_aggregation `str` (optional): The aggregation option for ancillary profits. Options are: "FrequencyAndReserve", "ByProduct", and "ByDirection". Defaults to "FrequencyAndReserve".
 
             group_dx `bool` (optional): When set to true, DC, DR, and DL profits will be grouped into "Dx". Defaults to False.
-        """
+
+            aggregate (optional, str): Aggregation level ("Day", "Week", "Month"). Defaults to None. For the given date range, data is aggregated by the specified period (e.g., "Month" splits the original date range into months creating rows in the dataframe for each month). An aggregate column indicates the start date of each aggregation.
+
+            show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False.
+
+            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -979,6 +1003,9 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
             ancillary_profit_aggregation,
             group_dx,
+            aggregate,
+            show_co_located_fuels,
+            account_for_availability_in_normalisation,
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -994,6 +1021,9 @@ class APIHelper(APIHelperBase):
         include_capacity_market_revenues=False,
         ancillary_profit_aggregation="FrequencyAndReserve",
         group_dx=False,
+        aggregate=None,
+        show_co_located_fuels=False,
+        account_for_availability_in_normalisation=False,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1006,6 +1036,9 @@ class APIHelper(APIHelperBase):
             include_capacity_market_revenues,
             ancillary_profit_aggregation,
             group_dx,
+            aggregate,
+            show_co_located_fuels,
+            account_for_availability_in_normalisation,
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
