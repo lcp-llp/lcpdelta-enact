@@ -965,6 +965,7 @@ class APIHelper(APIHelperBase):
         aggregate=None,
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
+        fuels=None,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1006,6 +1007,7 @@ class APIHelper(APIHelperBase):
             aggregate,
             show_co_located_fuels,
             account_for_availability_in_normalisation,
+            fuels,
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1024,6 +1026,7 @@ class APIHelper(APIHelperBase):
         aggregate=None,
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
+        fuels=None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1039,6 +1042,7 @@ class APIHelper(APIHelperBase):
             aggregate,
             show_co_located_fuels,
             account_for_availability_in_normalisation,
+            fuels,
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)

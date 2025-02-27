@@ -14,8 +14,8 @@ def teardown_function():
 @pytest.mark.asyncio
 async def test_get_dayahead_data_async():
     res = await enact_api_helper.get_day_ahead_data_async(
-        date(2024, 8, 1),
-        date(2024, 8, 10),
+        date(2025, 1, 1),
+        date(2025, 2, 1),
         aggregate=False,
         numberOfSimilarDays=10,
         selectedEfaBlocks=[1, 2, 3, 4, 5, 6],
@@ -30,8 +30,8 @@ async def test_get_dayahead_data_async():
 
 def test_get_dayahead_data_sync():
     res = enact_api_helper.get_day_ahead_data(
-        date(2024, 8, 1),
-        date(2024, 8, 10),
+        date(2025, 1, 1),
+        date(2025, 2, 1),
         aggregate=False,
         numberOfSimilarDays=10,
         selectedEfaBlocks=[1, 2, 3, 4, 5, 6],
