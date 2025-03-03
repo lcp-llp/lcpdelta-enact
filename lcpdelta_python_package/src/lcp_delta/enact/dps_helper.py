@@ -1,6 +1,6 @@
 import time as pytime
 import pandas as pd
-
+import ssl
 from datetime import datetime as dt
 from functools import partial
 from typing import Callable
@@ -8,7 +8,6 @@ from signalrcore.hub_connection_builder import HubConnectionBuilder
 
 from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
 from lcp_delta.enact.api_helper import APIHelper
-
 
 class DPSHelper:
     def __init__(self, username: str, public_api_key: str):
@@ -23,8 +22,9 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                "https://enact-signalrhub.azurewebsites.net/dataHub",
-                options={"access_token_factory": access_token_factory},
+                "https://localhost:44330/dataHub",
+                options={"access_token_factory": access_token_factory,
+                         "verify_ssl": False}
             )
             .with_automatic_reconnect(
                 {"type": "raw", "keep_alive_interval": 10, "reconnect_interval": 5, "max_attempts": 5}
@@ -51,7 +51,7 @@ class DPSHelper:
 
     def _add_multi_series_subscription(self, request_object: list, subscription_ids: list[str]):
         self.hub_connection.send(
-            "JoinMultiSeriesPush",
+            "JoinMultiSystemSeries",
             request_object,
             lambda m: self._callback_received_multi_series(m.result, subscription_ids),
         )
@@ -220,22 +220,25 @@ class DPSHelper:
         """
         join_payload = []
         series_option_pairs = []
-        for series_id, option_ids in series_dictionary.items():
+        for series_entry in series_dictionary:
+            series_id = series_entry["seriesId"]
             if not isinstance(series_id, str):
-                raise ValueError("Please ensure that all keys of `series_dictionary` are string types.")
-            series_payload = {"seriesId": series_id}
-            if is_2d_list_of_strings(option_ids):
-                series_payload["optionIds"] = option_ids
-                for option_id in option_ids:
-                    series_option_pairs.append((series_id, option_id))
-            elif option_ids is None:
-                series_option_pairs.append((series_id, None))
-            else:
-                raise ValueError(
-                    f"Series options incorrectly formatted for series {series_id}. Please use a 2-Dimensional list of string values, or `None` for series without options."
-                )
+                    raise ValueError("Please ensure that all series ids are string types.")
+            series_payload = {"seriesId": series_id, "countryId": country_id}
 
-            series_payload["countryId"] = country_id
+            if "optionIds" in series_entry:
+                option_ids = series_entry["optionIds"]
+                if not is_2d_list_of_strings(option_ids):
+                    raise ValueError(
+                        f"Series options incorrectly formatted for series {series_id}. Please use a 2-Dimensional list of string values, or `None` for series without options."
+                    )
+                series_payload["optionIds"] = option_ids
+                for option_group in option_ids:
+                    for option in option_group:
+                        series_option_pairs.append((series_id, option))
+            else:
+                series_option_pairs.append((series_id, None))
+
             join_payload.append(series_payload)
 
         subscription_ids = []
