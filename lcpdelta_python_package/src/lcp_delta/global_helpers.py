@@ -74,3 +74,16 @@ def get_period(datetime_input: datetime, period: int = None) -> int:
         raise TypeError("If no period is given, the inputted date must be of the type datetime")
 
     return get_period_from_datetime(datetime_input)
+
+
+def is_2d_list_of_strings(candidate):
+    if not isinstance(candidate, list):
+        return False
+
+    for item in candidate:
+        if not isinstance(item, list):
+            return False
+        if not all(isinstance(inner_item, str) for inner_item in item):
+            return False
+
+    return True
