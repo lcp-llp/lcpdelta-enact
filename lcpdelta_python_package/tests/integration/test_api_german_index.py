@@ -3,13 +3,10 @@ import time
 from datetime import date
 from tests.integration import enact_api_helper
 
-
 def teardown_function():
     time.sleep(2)
 
-
-expected_columns = [
-    "Day",
+expected_data_columns = [
     "Total",
     "Fcr",
     "AfrrCapacity",
@@ -18,64 +15,25 @@ expected_columns = [
     "IntradayContinuous"
 ]
 
-
-@pytest.mark.asyncio
-async def test_get_index():
-
+def test_get_index_sync():
     response_dataframe = enact_api_helper.get_german_index_data(
         date(2024,1,21),
         date(2024,1,23),
-        'DA, IDC, aFRR Energy 1Hr 2 Cycle 50MW',
+        '0196fb45-e59c-44a9-907a-cd76033bd504',
         granularity="Day",
         normalisation = "EuroPerMw"
     )
 
-    assert [column in response_dataframe.columns for column in expected_columns]
-
-
-def test_get_leaderboard_data_legacy_sync():
-    res = enact_api_helper.get_leaderboard_data_legacy(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
-        "Plant",
-        "PoundPerMwPerH",
-        "WeightedAverageDayAheadPrice",
-        "DayAheadForward",
-    )
-
-    assert [column in res.columns for column in expected_columns]
-
+    assert all(column in response_dataframe.columns for column in expected_data_columns), f"Missing columns: {[col for col in expected_data_columns if col not in response_dataframe.columns]}"
 
 @pytest.mark.asyncio
-async def test_get_leaderboard_data_async():
-    res = await enact_api_helper.get_leaderboard_data_async(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
-        "Plant",
-        "PoundPerMwPerH",
-        "WeightedAverageDayAheadPrice",
-        "DayAheadForward",
-        include_capacity_market_revenues=False,
-        ancillary_profit_aggregation="FrequencyAndReserve",
-        group_dx=True,
+async def test_get_index_async():
+    response_dataframe = await enact_api_helper.get_german_index_data_async(
+        date(2024,1,21),
+        date(2024,1,23),
+        '0196fb45-e59c-44a9-907a-cd76033bd504',
+        granularity="Day",
+        normalisation = "EuroPerMw"
     )
 
-    assert [column in res.columns for column in expected_columns]
-    assert [column in res.columns for column in v2_columns]
-
-
-def test_get_leaderboard_data_sync():
-    res = enact_api_helper.get_leaderboard_data(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
-        "Plant",
-        "PoundPerMwPerH",
-        "WeightedAverageDayAheadPrice",
-        "DayAheadForward",
-        include_capacity_market_revenues=False,
-        ancillary_profit_aggregation="FrequencyAndReserve",
-        group_dx=True,
-    )
-
-    assert [column in res.columns for column in expected_columns]
-    assert [column in res.columns for column in v2_columns]
+    assert all(column in response_dataframe.columns for column in expected_data_columns), f"Missing columns: {[col for col in expected_data_columns if col not in response_dataframe.columns]}"

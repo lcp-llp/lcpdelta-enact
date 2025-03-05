@@ -1048,6 +1048,18 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
 
+    def get_default_german_indices(self) -> pd.DataFrame:
+        """ Get the defining information of the default german indices, including the GUID that allows querying of that indices data via `get_german_index_data` """
+
+        response = self._get_request(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        return index_service.process_default_index_info_response(response)
+
+    async def get_default_german_indices_async(self) -> pd.DataFrame:
+        """An asynchronous version of `get_default_german_indices`."""
+
+        response = await self._get_request_async(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        return index_service.process_default_index_info_response(response)
+
     def get_german_index_data(
         self,
         date_from: datetime,
@@ -1075,8 +1087,27 @@ class APIHelper(APIHelperBase):
             normalisation,
             granularity,
         )
-        response = self._post_request(ep.EUROPE_INDEX, request_body)
-        return index_service.process_response(response)
+        response = self._post_request(ep.EUROPE_INDEX_DATA, request_body)
+        return index_service.process_index_data_response(response)
+
+    async def get_german_index_data_async(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        index_id: str,
+        normalisation="PoundPerKwPerYear",
+        granularity="Week",
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_german_index_data`."""
+        request_body = index_service.generate_request(
+            date_from,
+            date_to,
+            index_id,
+            normalisation,
+            granularity,
+        )
+        response = await self._post_request_async(ep.EUROPE_INDEX_DATA, request_body)
+        return index_service.process_index_data_response(response)
 
     def get_ancillary_contract_data(
         self,

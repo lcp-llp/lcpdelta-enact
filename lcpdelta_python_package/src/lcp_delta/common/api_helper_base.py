@@ -32,7 +32,7 @@ class APIHelperBase(ABC):
 
         # if bearer token expired, refresh and retry
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
-            response = await self._retry_with_refreshed_token_async(endpoint, request_body, self._get_headers())
+            response = await self._retry_with_refreshed_token_async(endpoint, headers=self._get_headers(), request_body=request_body)
 
         if response.status_code != 200:
             self._handle_unsuccessful_response(response)
@@ -51,7 +51,43 @@ class APIHelperBase(ABC):
 
         # if bearer token expired, refresh and retry
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
-            response = self._retry_with_refreshed_token(endpoint, request_body, self._get_headers())
+            response = self._retry_with_refreshed_token(endpoint, headers=self._get_headers(), request_body=request_body)
+
+        if response.status_code != 200:
+            self._handle_unsuccessful_response(response)
+
+        return response.json()
+
+    @DEFAULT_RETRY_POLICY
+    async def _get_request_async(self, endpoint: str, params: dict = None, long_timeout: bool = False):
+        """
+        Sends a GET request with given parameters to a given endpoint asynchronously.
+        """
+        timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
+
+        async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
+            response = await client.get(endpoint, params=params, headers=self._get_headers())
+
+        if response.status_code == 401 and "WWW-Authenticate" in response.headers:
+            response = await self._retry_with_refreshed_token_async(endpoint, params=params, headers=self._get_headers(), method="GET")
+
+        if response.status_code != 200:
+            self._handle_unsuccessful_response(response)
+
+        return response.json()
+
+    @DEFAULT_RETRY_POLICY
+    def _get_request(self, endpoint: str, params: dict = None, long_timeout: bool = False):
+        """
+        Sends a GET request with given parameters to a given endpoint.
+        """
+        timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
+
+        with httpx.Client(verify=False, timeout=timeout) as client:
+            response = client.get(endpoint, params=params, headers=self._get_headers())
+
+        if response.status_code == 401 and "WWW-Authenticate" in response.headers:
+            response = self._retry_with_refreshed_token(endpoint, headers=self._get_headers(), params=params, method="GET")
 
         if response.status_code != 200:
             self._handle_unsuccessful_response(response)
@@ -59,24 +95,34 @@ class APIHelperBase(ABC):
         return response.json()
 
     @UNAUTHORISED_INCLUSIVE_RETRY_POLICY
-    async def _retry_with_refreshed_token_async(self, endpoint: str, request_body: dict, headers: dict):
+    async def _retry_with_refreshed_token_async(self, endpoint: str, headers: dict, request_body: dict = None, params: dict = None, method: str = "POST"):
         """
-        Retries a given POST request with a refreshed bearer token asynchronously.
+        Retries a given request with a refreshed bearer token asynchronously.
         """
         self._refresh_headers(headers)
 
         async with httpx.AsyncClient(verify=False, timeout=self.timeout) as client:
-            return await client.post(endpoint, json=request_body, headers=headers)
+            if method.upper() == "POST":
+                return await client.post(endpoint, json=request_body, headers=headers)
+            elif method.upper() == "GET":
+                return await client.get(endpoint, params=params, headers=headers)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
 
     @UNAUTHORISED_INCLUSIVE_RETRY_POLICY
-    def _retry_with_refreshed_token(self, endpoint: str, request_body: dict, headers: dict):
+    def _retry_with_refreshed_token(self, endpoint: str, headers: dict, request_body: dict = None, params: dict = None, method: str = "POST"):
         """
-        Retries a given POST request with a refreshed bearer token.
+        Retries a given request with a refreshed bearer token.
         """
         self._refresh_headers(headers)
 
         with httpx.Client(verify=False, timeout=self.timeout) as client:
-            return client.post(endpoint, json=request_body, headers=headers)
+            if method.upper() == "POST":
+                return client.post(endpoint, json=request_body, headers=headers)
+            elif method.upper() == "GET":
+                return client.get(endpoint, params=params, headers=headers)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
 
     def _get_headers(self):
         return {
