@@ -965,6 +965,8 @@ class APIHelper(APIHelperBase):
         group_dx=False,
         aggregate=None,
         show_co_located_fuels=False,
+        account_for_availability_in_normalisation=False,
+        fuels=None,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -990,7 +992,9 @@ class APIHelper(APIHelperBase):
 
             aggregate (optional, str): Aggregation level ("Day", "Week", "Month"). Defaults to None. For the given date range, data is aggregated by the specified period (e.g., "Month" splits the original date range into months creating rows in the dataframe for each month). An aggregate column indicates the start date of each aggregation.
 
-            show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False."""
+            show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False.
+
+            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -1003,6 +1007,8 @@ class APIHelper(APIHelperBase):
             group_dx,
             aggregate,
             show_co_located_fuels,
+            account_for_availability_in_normalisation,
+            fuels,
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1020,6 +1026,8 @@ class APIHelper(APIHelperBase):
         group_dx=False,
         aggregate=None,
         show_co_located_fuels=False,
+        account_for_availability_in_normalisation=False,
+        fuels=None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1034,6 +1042,8 @@ class APIHelper(APIHelperBase):
             group_dx,
             aggregate,
             show_co_located_fuels,
+            account_for_availability_in_normalisation,
+            fuels,
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)

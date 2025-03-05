@@ -39,6 +39,8 @@ def generate_request_v2(
     group_dx=False,
     aggregate=None,
     show_co_located_fuels=False,
+    account_for_availability_in_normalisation=False,
+    fuels=None,
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -53,6 +55,8 @@ def generate_request_v2(
         "GroupDx": group_dx,
         "Aggregate": aggregate,
         "ShowCoLocatedFuels": show_co_located_fuels,
+        "AccountForAvailabilityInNormalisation": account_for_availability_in_normalisation,
+        "Fuels": fuels,
     }
 
 
