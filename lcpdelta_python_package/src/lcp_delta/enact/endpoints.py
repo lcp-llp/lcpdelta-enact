@@ -4,6 +4,7 @@ from lcp_delta.enact.loader import get_base_endpoints
 base_endpoints = get_base_endpoints()
 
 MAIN_BASE_URL = base_endpoints.MAIN_BASE_URL
+MAIN_BASE_URL = "https://localhost:44312"
 SERIES_BASE_URL = base_endpoints.SERIES_BASE_URL
 
 SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
@@ -26,6 +27,8 @@ BOA = f"{MAIN_BASE_URL}/EnactAPI/BOA/Data"
 
 LEADERBOARD_V1 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
 LEADERBOARD_V2 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
+
+EUROPE_INDEX = f"{MAIN_BASE_URL}/EnactAPI/EuropeIndex/data"
 
 ANCILLARY = f"{MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
 

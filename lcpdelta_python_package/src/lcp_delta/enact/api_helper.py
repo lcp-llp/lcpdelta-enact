@@ -15,6 +15,7 @@ from lcp_delta.enact.services import day_ahead_service
 from lcp_delta.enact.services import epex_service
 from lcp_delta.enact.services import hof_service
 from lcp_delta.enact.services import leaderboard_service
+from lcp_delta.enact.services import index_service
 from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
@@ -1036,6 +1037,36 @@ class APIHelper(APIHelperBase):
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
+
+    def get_german_index_data(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        index_id: str,
+        normalisation="PoundPerKwPerYear",
+        granularity="Week",
+    ) -> pd.DataFrame:
+        """Gets german index data for a given date range and index ID.
+
+        Args:
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
+
+            index_id `str`: The index ID denoting which index to get data for. Index ID's of the default german indices can be found via the #### method.
+
+            normalisation `str` (optional): The normalisation to apply. "Euro", "EuroPerMw", "EuroPerMwh" or "EuroPerKwPerYear" (default).
+
+            granularity `str` (optional): The granularity of the data. "Day", "Week" (default) or "Month". """
+        request_body = index_service.generate_request(
+            date_from,
+            date_to,
+            index_id,
+            normalisation,
+            granularity,
+        )
+        response = self._post_request(ep.EUROPE_INDEX, request_body)
+        return index_service.process_response(response)
 
     def get_ancillary_contract_data(
         self,
