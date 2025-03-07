@@ -994,7 +994,11 @@ class APIHelper(APIHelperBase):
 
             show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False.
 
-            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False."""
+            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False.
+
+            fuels `list[str]` (optional): Used to filter the leaderboard to only shows assets of specified fuel types.
+
+            includeBessCarbonAbatement `bool` (optional): If True, will show the BESS carbon abatement column calculated via our carbon calculator. Defaults to False."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
