@@ -966,6 +966,7 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        includeBessCarbonAbatement=False
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -993,7 +994,11 @@ class APIHelper(APIHelperBase):
 
             show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False.
 
-            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False."""
+            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False.
+
+            fuels `list[str]` (optional): Used to filter the leaderboard to only shows assets of specified fuel types.
+
+            includeBessCarbonAbatement `bool` (optional): If True, will show the BESS carbon abatement column calculated via our carbon calculator. Defaults to False."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -1008,6 +1013,7 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            includeBessCarbonAbatement
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1027,6 +1033,7 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        includeBessCarbonAbatement=False
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1043,6 +1050,7 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            includeBessCarbonAbatement
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
