@@ -1079,7 +1079,7 @@ class APIHelper(APIHelperBase):
 
             normalisation `str` (optional): The normalisation to apply. "Euro", "EuroPerMw", "EuroPerMwh" or "EuroPerKwPerYear" (default).
 
-            granularity `str` (optional): The granularity of the data. "Day", "Week" (default) or "Month". """
+            granularity `str` (optional): The granularity of the data. "Day", "Week" (default), "Month" or "Year". """
         request_body = index_service.generate_request(
             date_from,
             date_to,
