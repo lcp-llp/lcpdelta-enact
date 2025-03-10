@@ -27,7 +27,7 @@ class APIHelperBase(ABC):
         """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
+        async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
             response = await client.post(endpoint, json=request_body, headers=self._get_headers())
 
         # if bearer token expired, refresh and retry
@@ -46,7 +46,7 @@ class APIHelperBase(ABC):
         """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        with httpx.Client(verify=False, timeout=timeout) as client:
+        with httpx.Client(verify=True, timeout=timeout) as client:
             response = client.post(endpoint, json=request_body, headers=self._get_headers())
 
         # if bearer token expired, refresh and retry
@@ -65,7 +65,7 @@ class APIHelperBase(ABC):
         """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        async with httpx.AsyncClient(verify=False, timeout=timeout) as client:
+        async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
             response = await client.get(endpoint, params=params, headers=self._get_headers())
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
@@ -83,7 +83,7 @@ class APIHelperBase(ABC):
         """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        with httpx.Client(verify=False, timeout=timeout) as client:
+        with httpx.Client(verify=True, timeout=timeout) as client:
             response = client.get(endpoint, params=params, headers=self._get_headers())
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
