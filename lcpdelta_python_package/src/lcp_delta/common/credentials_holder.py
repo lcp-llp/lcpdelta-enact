@@ -32,7 +32,7 @@ class CredentialsHolder:
         Gets the bearer token for authentication, based on the username and public API key associated with the instance.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/auth/token"
-        with httpx.Client(verify=False) as client:
+        with httpx.Client(verify=True) as client:
             response = client.post(endpoint, headers=self._auth_headers, json=self._credentials_payload)
 
         self.bearer_token = response.text
@@ -46,7 +46,7 @@ class CredentialsHolder:
             `UsageInfo`: An object holding the monthly quota, remaining allowance, and date that monthly usage was last last refreshed.
         """
         endpoint = f"{constants.MAIN_BASE_URL}/auth/usage_v2"
-        with httpx.Client(verify=False) as client:
+        with httpx.Client(verify=True) as client:
             response = client.post(endpoint, headers=self._auth_headers, json=self._credentials_payload)
 
         response_data = json.loads(response.content)
