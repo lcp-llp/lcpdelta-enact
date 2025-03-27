@@ -15,6 +15,7 @@ from lcp_delta.enact.services import day_ahead_service
 from lcp_delta.enact.services import epex_service
 from lcp_delta.enact.services import hof_service
 from lcp_delta.enact.services import leaderboard_service
+from lcp_delta.enact.services import index_service
 from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
@@ -965,6 +966,7 @@ class APIHelper(APIHelperBase):
         aggregate=None,
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
+        fuels=None,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1006,6 +1008,7 @@ class APIHelper(APIHelperBase):
             aggregate,
             show_co_located_fuels,
             account_for_availability_in_normalisation,
+            fuels,
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1024,6 +1027,7 @@ class APIHelper(APIHelperBase):
         aggregate=None,
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
+        fuels=None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1039,9 +1043,71 @@ class APIHelper(APIHelperBase):
             aggregate,
             show_co_located_fuels,
             account_for_availability_in_normalisation,
+            fuels,
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
+
+    def get_default_german_indices(self) -> pd.DataFrame:
+        """ Get the defining information of the default german indices, including the GUID that allows querying of that indices data via `get_german_index_data` """
+
+        response = self._get_request(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        return index_service.process_default_index_info_response(response)
+
+    async def get_default_german_indices_async(self) -> pd.DataFrame:
+        """An asynchronous version of `get_default_german_indices`."""
+
+        response = await self._get_request_async(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        return index_service.process_default_index_info_response(response)
+
+    def get_german_index_data(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        index_id: str,
+        normalisation="PoundPerKwPerYear",
+        granularity="Week",
+    ) -> pd.DataFrame:
+        """Gets german index data for a given date range and index ID.
+
+        Args:
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
+
+            index_id `str`: The index ID denoting which index to get data for. Index ID's of the default german indices can be found via the #### method.
+
+            normalisation `str` (optional): The normalisation to apply. "Euro", "EuroPerMw", "EuroPerMwh" or "EuroPerKwPerYear" (default).
+
+            granularity `str` (optional): The granularity of the data. "Day", "Week" (default), "Month" or "Year". """
+        request_body = index_service.generate_request(
+            date_from,
+            date_to,
+            index_id,
+            normalisation,
+            granularity,
+        )
+        response = self._post_request(ep.EUROPE_INDEX_DATA, request_body)
+        return index_service.process_index_data_response(response)
+
+    async def get_german_index_data_async(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        index_id: str,
+        normalisation="PoundPerKwPerYear",
+        granularity="Week",
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_german_index_data`."""
+        request_body = index_service.generate_request(
+            date_from,
+            date_to,
+            index_id,
+            normalisation,
+            granularity,
+        )
+        response = await self._post_request_async(ep.EUROPE_INDEX_DATA, request_body)
+        return index_service.process_index_data_response(response)
 
     def get_ancillary_contract_data(
         self,

@@ -1,5 +1,6 @@
 import pytest
 import time
+import pandas as pd
 from datetime import date, datetime, timezone as tz
 from tests.integration import enact_api_helper
 
@@ -10,19 +11,19 @@ def teardown_function():
 
 def get_series_data():
     return enact_api_helper.get_series_data(
-        "DayAheadPrices", date(2024, 8, 1), date(2024, 8, 10), country_id="Gb", time_zone_id="UTC"
+        "DayAheadPrices", date(2025, 1, 1), date(2025, 2, 1), country_id="Gb", time_zone_id="UTC", parse_datetimes=True
     )
 
 
 async def get_series_data_async():
     return await enact_api_helper.get_series_data_async(
-        "DayAheadPrices", date(2024, 8, 1), date(2024, 8, 10), country_id="Gb", time_zone_id="UTC"
+        "DayAheadPrices", date(2025, 1, 1), date(2025, 2, 1), country_id="Gb", time_zone_id="UTC", parse_datetimes=True
     )
 
 
 def validate_series_response(res):
     assert res.index.name == "GMT Time"
-    assert res.index[0] == "2024-08-07T23:00:00Z"
+    assert res.index[0] == pd.Timestamp("2025-01-01T00:00:00Z")
     assert res.columns[0] == "Gb&DayAheadPrices"
     assert isinstance(res.iloc[0, 0], float)
 

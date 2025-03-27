@@ -27,6 +27,9 @@ BOA = f"{MAIN_BASE_URL}/EnactAPI/BOA/Data"
 LEADERBOARD_V1 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
 LEADERBOARD_V2 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
 
+EUROPE_INDEX_DATA = f"{SERIES_BASE_URL}/api/EuropeIndexData"
+EUROPE_INDEX_DEFAULT_INDICES = f"{SERIES_BASE_URL}/api/EuropeIndexDefaultIndexInformation"
+
 ANCILLARY = f"{MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
 
 NEWS_TABLE = f"{MAIN_BASE_URL}/EnactAPI/Newstable/Data"
