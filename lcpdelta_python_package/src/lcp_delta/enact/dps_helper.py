@@ -86,7 +86,7 @@ class DPSHelper:
             series_id, day_start, now, country_id, option_id, parse_datetimes=parse_datetimes
         )
         initial_series_data[self.last_updated_header] = now
-        self.data_by_subscription_id[self.__get_subscription_id(series_id, country_id, option_id)] = (
+        self.data_by_subscription_id[self._get_subscription_id(series_id, country_id, option_id)] = (
             handle_data_method,
             initial_series_data,
             parse_datetimes,
@@ -223,7 +223,7 @@ class DPSHelper:
             if not is_list_of_strings_or_empty(option_id):
                 raise ValueError("Option ID input must be a list of strings")
             request_details["OptionId"] = option_id
-        subscription_id = self.__get_subscription_id(series_id, country_id, option_id)
+        subscription_id = self._get_subscription_id(series_id, country_id, option_id)
         if subscription_id in self.data_by_subscription_id:
             return
         (handle_data_old, initial_data_from_series_api, parse_datetimes_old) = self.data_by_subscription_id.get(
@@ -311,7 +311,7 @@ class DPSHelper:
         """
         self.subscribe_to_multiple_series_updates(handle_data_method, plant_series_requests, parse_datetimes, is_for_plant_series=True)
 
-    def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
+    def _get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
         if option_id:
             subscription_id += tuple(option_id)
