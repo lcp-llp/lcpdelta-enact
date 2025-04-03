@@ -288,7 +288,7 @@ class DPSHelper:
         else:
             self._add_multi_series_subscription([join_payload], handle_data_method, parse_datetimes)
 
-    def subscribe_to_multiple_series_updates_for_plant(
+    def subscribe_to_multiple_plant_series_updates(
         self,
         handle_data_method: Callable[[str], None],
         plant_series_requests: list[dict],
