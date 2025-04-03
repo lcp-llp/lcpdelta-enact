@@ -309,7 +309,7 @@ class DPSHelper:
 
         Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
-        self.subscribe_to_multiple_series_updates(handle_data_method, plant_series_requests, parse_datetimes, True)
+        self.subscribe_to_multiple_series_updates(handle_data_method, plant_series_requests, parse_datetimes, is_for_plant_series=True)
 
     def __get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
