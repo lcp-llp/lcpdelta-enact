@@ -23,8 +23,8 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                "https://enact-signalrhub-staging.azurewebsites.net/dataHub",
-                options={"access_token_factory": access_token_factory}
+                "https://enact-signalrhub.azurewebsites.net/dataHub",
+                 options={"access_token_factory": access_token_factory}
             )
             .with_automatic_reconnect(
                 {"type": "raw", "keep_alive_interval": 10, "reconnect_interval": 5, "max_attempts": 5}
