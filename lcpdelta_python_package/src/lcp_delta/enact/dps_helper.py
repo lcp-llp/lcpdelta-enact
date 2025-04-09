@@ -1,6 +1,5 @@
 import time as pytime
 import pandas as pd
-import ssl
 from datetime import datetime as dt
 from functools import partial
 from typing import Callable
