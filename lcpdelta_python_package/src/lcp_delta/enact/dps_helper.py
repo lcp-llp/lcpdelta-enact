@@ -153,7 +153,11 @@ class DPSHelper:
             df_return = pd.DataFrame()
             for push in pushes:
                 push_current = push["current"]
+
+                if not push_current.get("datePeriod"):
+                    continue
                 push_date_time = f'{push_current["datePeriod"]["datePeriodCombinedGmt"]}'
+
                 if push_date_time[-1:] != "Z":
                     push_date_time += "Z"
 
@@ -265,12 +269,12 @@ class DPSHelper:
             series_id = series_entry["seriesId"]
             if not isinstance(series_id, str):
                     raise ValueError("Please ensure that all series ids are string types.")
+            
+            series_payload = {"seriesId": series_id}
 
-            if not "countryId" in series_entry:
-                raise ValueError("Please ensure a countryId is given.")
-
-            countryId = series_entry["countryId"]
-            series_payload = {"seriesId": series_id, "countryId": countryId}
+            if "countryId" in series_entry:
+                countryId = series_entry["countryId"]
+                series_payload["countryId"] = countryId
 
             if "optionIds" in series_entry:
                 option_ids = series_entry["optionIds"]
