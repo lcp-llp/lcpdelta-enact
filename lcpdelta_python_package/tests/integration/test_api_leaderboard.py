@@ -65,7 +65,7 @@ v2_columns = [ # Plant - Co-located fuel, Profit - CM are optional extras, also 
     'Profit - Frequency',
     'Profit - Reserve',
     'Profit - CM',
-    'Profit - Non-Delivery Charge',
+    'Profit - BM Non-Delivery Charge',
     'BM Profit Breakdown - Bids',
     'BM Profit Breakdown - Offers',
     'BM Profit Breakdown - System',
