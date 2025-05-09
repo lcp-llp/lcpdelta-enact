@@ -4,7 +4,6 @@ from datetime import datetime as dt
 from functools import partial
 from typing import Callable
 from signalrcore.hub_connection_builder import HubConnectionBuilder
-
 from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
 from lcp_delta.enact.api_helper import APIHelper
 from lcp_delta.common.http.exceptions import EnactApiError
@@ -12,6 +11,9 @@ from lcp_delta.common.http.exceptions import EnactApiError
 class DPSHelper:
     def __init__(self, username: str, public_api_key: str):
         self.api_helper = APIHelper(username, public_api_key)
+        self._multi_series_subscriptions: list[tuple[list, Callable, bool]] = []
+        self._single_series_subscriptions: list[tuple[list[dict[str, str]], str]] = []
+        self._suppress_restart = False
         self.__initialise()
         self.last_updated_header = "DateTimeLastUpdated"
 
@@ -23,16 +25,18 @@ class DPSHelper:
             HubConnectionBuilder()
             .with_url(
                 "https://enact-signalrhub.azurewebsites.net/dataHub",
-                 options={"access_token_factory": access_token_factory}
+                 options={"access_token_factory": access_token_factory},
             )
             .with_automatic_reconnect(
-                {"type": "raw", "keep_alive_interval": 10, "reconnect_interval": 5, "max_attempts": 5}
+                {"type": "raw", "keep_alive_interval": 10, "reconnect_interval": 5, "max_attempts": 50}
             )
             .build()
         )
 
-        self.hub_connection.on_open(lambda: print("connection opened and handshake received ready to send messages"))
-        self.hub_connection.on_close(lambda: print("connection closed"))
+        self.hub_connection.on_open(self._on_open)
+        self.hub_connection.on_close(self._on_close)
+        self.hub_connection.on_error(lambda e: print("SignalR error:", e))
+        self.hub_connection.on_reconnect(lambda: print("reconnected!"))
 
         success = self.hub_connection.start()
         pytime.sleep(5)
@@ -41,23 +45,59 @@ class DPSHelper:
             raise ValueError("connection failed")
 
     def _fetch_bearer_token(self):
+        self.enact_credentials.get_bearer_token()
         return self.enact_credentials.bearer_token
 
     def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
+        self._single_series_subscriptions.append((request_object, subscription_id))
         self.hub_connection.send(
             "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
         )
 
-    def _add_multi_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
-        self.hub_connection.send(
-            "JoinMultiSystemSeries",
-            request_object,
-            lambda m: self._callback_received_multi_series(m.result, handle_data_method, parse_datetimes),
-        )
+    def _on_open(self):
+        print("connection opened and handshake received ready to send messages")
+        # On first connection single and multi series subscriptions are empty so nothing is done, but on reconecting this will open up the old pushes
+        for request_object, subscription_id in self._single_series_subscriptions:
+            try:
+                self.hub_connection.send(
+                    "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
+                )
+            except Exception as e:
+                print(f"Resubscribe failed: {e}")
 
-    def _add_multi_plant_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
+        for request_object, handler, parse_datetimes in self._multi_series_subscriptions:
+            try:
+                self.hub_connection.send(
+                    "JoinMultiSeries",
+                    request_object,
+                    lambda m: self._callback_received_multi_series(m.result, handler, parse_datetimes),
+                )
+            except Exception as e:
+                print(f"Resubscribe failed: {e}")
+
+    def _on_close(self):
+        print("Connection closed")
+        if self._suppress_restart:
+            return
+
+        if not self.hub_connection.transport.is_running():
+            print(f"Attempting to restart hub connection")
+            self._restart_connection()
+
+    def _restart_connection(self):
+        try:
+            self.hub_connection.stop()
+        except Exception as e:
+            print(f"Error during stop: {e}")
+
+        pytime.sleep(2)
+        self.__initialise()
+
+    def _add_multi_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
+        self._multi_series_subscriptions.append((request_object, handle_data_method, parse_datetimes))
+
         self.hub_connection.send(
-            "JoinMultiPlantSeries",
+            "JoinMultiSeries",
             request_object,
             lambda m: self._callback_received_multi_series(m.result, handle_data_method, parse_datetimes),
         )
@@ -178,6 +218,7 @@ class DPSHelper:
             return data_push_holder
 
     def terminate_hub_connection(self):
+        self._suppress_restart = True
         self.hub_connection.stop()
 
     def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[str], None]) -> None:
@@ -247,7 +288,6 @@ class DPSHelper:
         handle_data_method: Callable[[str], None],
         series_requests: list[dict],
         parse_datetimes: bool = False,
-        is_for_plant_series: bool = False,
     ) -> None:
         """
         Subscribe to multiple series at once with the specified series IDs, option IDs (if applicable) and country ID.
@@ -278,7 +318,7 @@ class DPSHelper:
 
             if "optionIds" in series_entry:
                 option_ids = series_entry["optionIds"]
-                if not is_for_plant_series and not is_2d_list_of_strings(option_ids):
+                if not is_2d_list_of_strings(option_ids):
                     raise ValueError(
                         f"Series options incorrectly formatted for series {series_id}. Please use a 2-Dimensional list of string values, or `None` for series without options."
                     )
@@ -286,10 +326,7 @@ class DPSHelper:
 
             join_payload.append(series_payload)
 
-        if is_for_plant_series:
-            self._add_multi_plant_series_subscription([join_payload], handle_data_method, parse_datetimes)
-        else:
-            self._add_multi_series_subscription([join_payload], handle_data_method, parse_datetimes)
+        self._add_multi_series_subscription([join_payload], handle_data_method, parse_datetimes)
 
     def subscribe_to_multiple_plant_series_updates(
         self,
