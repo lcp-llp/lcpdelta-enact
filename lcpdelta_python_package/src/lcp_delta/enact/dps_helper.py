@@ -11,8 +11,8 @@ from lcp_delta.common.http.exceptions import EnactApiError
 class DPSHelper:
     def __init__(self, username: str, public_api_key: str):
         self.api_helper = APIHelper(username, public_api_key)
-        self._multi_series_subscriptions: list[tuple[list, Callable, bool]] = []
-        self._single_series_subscriptions: list[tuple[list[dict[str, str]], str]] = []
+        self._multi_series_subscriptions: list[tuple[str, Callable, bool]] = []
+        self._single_series_subscriptions: list[tuple[str, str]] = []
         self._suppress_restart = False
         self.__initialise()
         self.last_updated_header = "DateTimeLastUpdated"
@@ -24,22 +24,19 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                "https://enact-signalrhub.azurewebsites.net/dataHub",
+                "https://enact-signalrhub-staging.azurewebsites.net/dataHub",
                  options={"access_token_factory": access_token_factory},
-            )
-            .with_automatic_reconnect(
-                {"type": "raw", "keep_alive_interval": 10, "reconnect_interval": 5, "max_attempts": 50}
             )
             .build()
         )
 
         self.hub_connection.on_open(self._on_open)
-        self.hub_connection.on_close(self._on_close)
+        self.hub_connection.on_close((self._on_close)) #on_close(lambda: print("Connection closed")) #(self._on_close)
         self.hub_connection.on_error(lambda e: print("SignalR error:", e))
         self.hub_connection.on_reconnect(lambda: print("reconnected!"))
 
         success = self.hub_connection.start()
-        pytime.sleep(5)
+        pytime.sleep(1)
 
         if not success:
             raise ValueError("connection failed")
@@ -49,28 +46,27 @@ class DPSHelper:
         return self.enact_credentials.bearer_token
 
     def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
-        self._single_series_subscriptions.append((request_object, subscription_id))
         self.hub_connection.send(
             "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
         )
 
     def _on_open(self):
         print("connection opened and handshake received ready to send messages")
-        # On first connection single and multi series subscriptions are empty so nothing is done, but on reconecting this will open up the old pushes
-        for request_object, subscription_id in self._single_series_subscriptions:
+        # On first connection single and multi series subscriptions are empty so nothing is done, but on reconecting this will open up the old pushes to not increase API usage again
+        for push_group_name, subscription_id in self._single_series_subscriptions:
             try:
                 self.hub_connection.send(
-                    "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
+                    "ReconnectToPush", [push_group_name], lambda m: self._callback_received(m.result, subscription_id, is_for_reconnect=True)
                 )
             except Exception as e:
                 print(f"Resubscribe failed: {e}")
 
-        for request_object, handler, parse_datetimes in self._multi_series_subscriptions:
+        for push_group_name, handler, parse_datetimes in self._multi_series_subscriptions:
             try:
                 self.hub_connection.send(
-                    "JoinMultiSeries",
-                    request_object,
-                    lambda m: self._callback_received_multi_series(m.result, handler, parse_datetimes),
+                    "ReconnectToPush",
+                    [push_group_name],
+                    lambda m: self._callback_received_multi_series(m.result, handler, parse_datetimes, is_for_reconnect=True),
                 )
             except Exception as e:
                 print(f"Resubscribe failed: {e}")
@@ -90,12 +86,10 @@ class DPSHelper:
         except Exception as e:
             print(f"Error during stop: {e}")
 
-        pytime.sleep(2)
+        pytime.sleep(1)
         self.__initialise()
 
     def _add_multi_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
-        self._multi_series_subscriptions.append((request_object, handle_data_method, parse_datetimes))
-
         self.hub_connection.send(
             "JoinMultiSeries",
             request_object,
@@ -131,15 +125,20 @@ class DPSHelper:
             parse_datetimes,
         )
 
-    def _callback_received(self, m, subscription_id: str):
+    def _callback_received(self, m, subscription_id: str, is_for_reconnect = False):
+        push_name = m["data"]["pushName"]
+        if not is_for_reconnect:
+            self._single_series_subscriptions.append((push_name, subscription_id))
         self.hub_connection.on(m["data"]["pushName"], lambda x: self._process_push_data(x, subscription_id))
 
-    def _callback_received_multi_series(self, m, handle_data_method, parse_datetimes):
+    def _callback_received_multi_series(self, m, handle_data_method, parse_datetimes, is_for_reconnect = False):
         if 'messages' in m and len(m['messages']) > 0:
             error_return = m['messages'][0]
             raise EnactApiError(error_return["errorCode"], error_return["message"], m)
 
         push_name = m["data"]["pushName"]
+        if not is_for_reconnect:
+            self._multi_series_subscriptions.append((push_name, handle_data_method, parse_datetimes))
         self.hub_connection.on(push_name, lambda x: self._process_multi_series_push(x, handle_data_method, parse_datetimes))
 
     def _process_push_data(self, data_push, subscription_id):
@@ -162,6 +161,8 @@ class DPSHelper:
             pushes = data_push["data"]
             for push in pushes:
                 push_current = push["current"]
+                if not push_current.get("datePeriod"):
+                    continue
                 push_date_time = f'{push_current["datePeriod"]["datePeriodCombinedGmt"]}'
                 if push_date_time[-1:] != "Z":
                     push_date_time += "Z"
@@ -218,7 +219,7 @@ class DPSHelper:
             return data_push_holder
 
     def terminate_hub_connection(self):
-        self._suppress_restart = True
+        #self._suppress_restart = True
         self.hub_connection.stop()
 
     def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[str], None]) -> None:
@@ -327,29 +328,6 @@ class DPSHelper:
             join_payload.append(series_payload)
 
         self._add_multi_series_subscription([join_payload], handle_data_method, parse_datetimes)
-
-    def subscribe_to_multiple_plant_series_updates(
-        self,
-        handle_data_method: Callable[[str], None],
-        plant_series_requests: list[dict],
-        parse_datetimes: bool = False,
-    ) -> None:
-        """
-        Subscribe to multiple plant series for a single plant at once with the specified series IDs, plant ID and country ID.
-
-        Args:
-            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
-                The function should accept one argument, which will be the data received from the series updates.
-
-            plant_series_requests `list[dict]`: A list of dictionaries, with each element detailing a plant series request. Each element needs a countryId, seriesId, and a list optionIds, where the optionIds are either the id
-                                                of the plants you are requesting the series for, a fuel type to get all plants of a fuel type, or it is omitted entirely to get the series for all plants.
-
-            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
-
-
-        Note that plant IDs can be found by searching the plant on Enact, and series and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
-        """
-        self.subscribe_to_multiple_series_updates(handle_data_method, plant_series_requests, parse_datetimes, is_for_plant_series=True)
 
     def _get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
