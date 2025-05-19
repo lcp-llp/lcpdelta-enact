@@ -1,5 +1,6 @@
 import time as pytime
 import pandas as pd
+import threading
 from datetime import datetime as dt
 from functools import partial
 from typing import Callable
@@ -15,6 +16,7 @@ class DPSHelper:
         self._single_series_subscriptions: list[tuple[str, str]] = []
         self._suppress_restart = False
         self.__initialise()
+        self.start_connection_monitor()
         self.last_updated_header = "DateTimeLastUpdated"
 
     def __initialise(self):
@@ -24,7 +26,7 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                "https://enact-signalrhub-staging.azurewebsites.net/dataHub",
+                "https://enact-signalrhub.azurewebsites.net/dataHub",
                  options={"access_token_factory": access_token_factory},
             )
             .build()
@@ -89,6 +91,21 @@ class DPSHelper:
         pytime.sleep(1)
         self.__initialise()
 
+    def is_connection_alive(self):
+        return self.hub_connection and self.hub_connection.transport and self.hub_connection.transport.is_running()
+
+    def start_connection_monitor(self, check_interval_seconds=60):
+        def monitor_loop():
+            while True:
+                pytime.sleep(check_interval_seconds)
+                try:
+                    if not self.is_connection_alive():
+                        print("Connection not alive. Restarting...")
+                        self._restart_connection()
+                except Exception as e:
+                    print(f"Error during connection check: {e}")
+        threading.Thread(target=monitor_loop, daemon=True).start()
+
     def _add_multi_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
         self.hub_connection.send(
             "JoinMultiSeries",
@@ -148,7 +165,8 @@ class DPSHelper:
 
     def _process_multi_series_push(self, data_push, handle_data_method, parse_datetimes):
         updated_data = self._handle_new_mutli_series_data(data_push, parse_datetimes)
-        handle_data_method(updated_data)
+        if not updated_data.empty:
+            handle_data_method(updated_data)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -310,7 +328,7 @@ class DPSHelper:
             series_id = series_entry["seriesId"]
             if not isinstance(series_id, str):
                     raise ValueError("Please ensure that all series ids are string types.")
-            
+
             series_payload = {"seriesId": series_id}
 
             if "countryId" in series_entry:
