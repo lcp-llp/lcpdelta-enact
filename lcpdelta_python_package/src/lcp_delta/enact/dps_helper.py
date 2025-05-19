@@ -316,7 +316,6 @@ class DPSHelper:
                 The function should accept one argument, which will be the data received from the series updates.
 
             series_requests `list[dict]`: A list of dictionaries, with each element detailing a series request. Each element needs a countryId, seriesId, and if relevant, optionIds.
-                                          If subscribing to a series that requires options and it is ommited, you will subscribe to pushes for all options
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
 
