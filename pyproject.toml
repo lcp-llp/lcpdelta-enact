@@ -38,7 +38,8 @@ dev = [
     "jupyter",
     "nbval",
     "pandas",
-    "numpy"
+    "numpy",
+    "signalrcore",
 ]
 
 [project.urls]

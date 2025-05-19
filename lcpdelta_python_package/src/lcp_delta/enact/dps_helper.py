@@ -33,8 +33,9 @@ class DPSHelper:
         )
 
         self.hub_connection.on_open(self._on_open)
-        self.hub_connection.on_close((self._on_close)) #on_close(lambda: print("Connection closed")) #(self._on_close)
+        self.hub_connection.on_close((self._on_close))
         self.hub_connection.on_error(lambda e: print("SignalR error:", e))
+        self.hub_connection.on_reconnect(lambda: print("reconnected!"))
 
         success = self.hub_connection.start()
         pytime.sleep(1)
