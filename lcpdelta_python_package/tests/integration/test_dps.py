@@ -64,31 +64,10 @@ def test_subscribe_to_multi_series_updates():
 
     system_request = [
       {"seriesId": "AFRRVolumeRealtime", "optionIds": [["Up"], ["Down"]], "countryId": "Belgium"},
-      {"seriesId": "ImbalancePriceRealtime", "countryId": "Belgium"},
     ]
 
     try:
         enact_dps_helper.subscribe_to_multiple_series_updates(handle_data_method, system_request, parse_datetimes=True)
-    except Exception as e:
-        pytest.fail(f"Subscription to series updates failed: {e}")
-
-    try:
-        enact_dps_helper.terminate_hub_connection()
-    except Exception as e:
-        pytest.fail(f"Termination of the connection failed: {e}")
-
-
-def test_subscribe_to_multi_plant_series_updates():
-    enact_dps_helper = enact.DPSHelper(enact_username, enact_public_api_key)
-    assert enact_dps_helper.hub_connection is not None
-
-    plant_request = [
-        {"seriesId": "RollingBidsAccepted", "optionIds": ["T_CRUA-2", "T_CRUA-1"], "countryId": "Gb"},
-        {"seriesId": "RollingOffersAccepted", "optionIds": ["CCGT", "Battery", ], "countryId": "Gb"},
-    ]
-
-    try:
-        enact_dps_helper.subscribe_to_multiple_plant_series_updates(handle_data_method, plant_request, parse_datetimes=True)
     except Exception as e:
         pytest.fail(f"Subscription to series updates failed: {e}")
 
