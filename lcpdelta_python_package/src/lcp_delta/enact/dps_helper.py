@@ -237,7 +237,7 @@ class DPSHelper:
             return data_push_holder
 
     def terminate_hub_connection(self):
-        #self._suppress_restart = True
+        self._suppress_restart = True
         self.hub_connection.stop()
 
     def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[str], None]) -> None:
