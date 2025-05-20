@@ -165,8 +165,7 @@ class DPSHelper:
 
     def _process_multi_series_push(self, data_push, handle_data_method, parse_datetimes):
         updated_data = self._handle_new_mutli_series_data(data_push, parse_datetimes)
-        if not updated_data.empty:
-            handle_data_method(updated_data)
+        handle_data_method(updated_data)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -179,8 +178,6 @@ class DPSHelper:
             pushes = data_push["data"]
             for push in pushes:
                 push_current = push["current"]
-                if not push_current.get("datePeriod"):
-                    continue
                 push_date_time = f'{push_current["datePeriod"]["datePeriodCombinedGmt"]}'
                 if push_date_time[-1:] != "Z":
                     push_date_time += "Z"
@@ -212,9 +209,6 @@ class DPSHelper:
             df_return = pd.DataFrame()
             for push in pushes:
                 push_current = push["current"]
-
-                if not push_current.get("datePeriod"):
-                    continue
                 push_date_time = f'{push_current["datePeriod"]["datePeriodCombinedGmt"]}'
 
                 if push_date_time[-1:] != "Z":
