@@ -26,6 +26,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[dev]
 
+    - name: Show installed packages
+      run: pip list
+
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
 

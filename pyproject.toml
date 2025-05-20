@@ -21,7 +21,7 @@ dependencies = [
     "numpy",
     "pandas",
     "requests",
-    "signalrcore",
+    "signalrcore==0.9.5",
     "matplotlib",
     "httpx",
     "tenacity"
@@ -38,7 +38,8 @@ dev = [
     "jupyter",
     "nbval",
     "pandas",
-    "numpy"
+    "numpy",
+    "signalrcore==0.9.5",
 ]
 
 [project.urls]
