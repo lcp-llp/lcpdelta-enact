@@ -29,6 +29,8 @@ LEADERBOARD_V2 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
 
 EUROPE_INDEX_DATA = f"{SERIES_BASE_URL}/api/EuropeIndexData"
 EUROPE_INDEX_DEFAULT_INDICES = f"{SERIES_BASE_URL}/api/EuropeIndexDefaultIndexInformation"
+GB_INDEX_DATA = f"{SERIES_BASE_URL}/api/GbIndexData"
+GB_INDEX_INFORMATION = f"{SERIES_BASE_URL}/api/GbIndexInformation"
 
 ANCILLARY = f"{MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
 
