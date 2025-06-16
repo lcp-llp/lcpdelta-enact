@@ -37,7 +37,7 @@ def generate_gb_request(
     granularity="Week",
     show_profit = "false",
     gas_price_assumption = "DayAheadForward",
-    market_price_assumption = "EpexDayAheadPrice",
+    market_price_assumption = "WeightedAverageDayAheadPrice",
     account_for_availability_in_normalisation = "false",
     include_wholesale_split = "false",
     bm_split_out_option = None,
