@@ -1087,7 +1087,7 @@ class APIHelper(APIHelperBase):
         granularity ="Week",
         show_profit = "false",
         gas_price_assumption = "DayAheadForward",
-        market_price_assumption = "EpexDayAheadPrice",
+        market_price_assumption = "WeightedAverageDayAheadPrice",
         account_for_availability_in_normalisation = "false",
         include_wholesale_split = "false",
         bm_split_out_option = None,
@@ -1113,7 +1113,7 @@ class APIHelper(APIHelperBase):
 
             gas_price_assumption `str` (optional): The price the gas costs are calculated against. "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot", "CheapestPrice" or None.
 
-            market_price_assumption `str` (optional): The price the wholesale revenues are calculated against. "EpexDayAheadPrice" (default), "WeightedAverageDayAheadPrice", "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
+            market_price_assumption `str` (optional): The price the wholesale revenues are calculated against. "EpexDayAheadPrice", "WeightedAverageDayAheadPrice" (default), "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
 
             account_for_availability_in_normalisation `str` (optional): Set to "true" to account for availability in normalisation or "false" (default).
 
@@ -1157,7 +1157,7 @@ class APIHelper(APIHelperBase):
         granularity="Week",
         show_profit = "false",
         gas_price_assumption = "DayAheadForward",
-        market_price_assumption = "EpexDayAheadPrice",
+        market_price_assumption = "WeightedAverageDayAheadPrice",
         account_for_availability_in_normalisation = "false",
         include_wholesale_split = "false",
         bm_split_out_option = None,
