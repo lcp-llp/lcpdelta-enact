@@ -654,7 +654,7 @@ class APIHelper(APIHelperBase):
         """An asynchronous version of `get_pant_details_by_id`."""
         request_body = plant_service.generate_plant_request(plant_id)
         return await self._post_request_async(ep.PLANT_INFO, request_body)
-    
+
     def get_plant_details_by_fuel(self, fuel: str) -> dict:
         """Get details of all plants of a particular fuel.
 
@@ -1048,24 +1048,164 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
 
+
+    def get_gb_index_information(
+        self,
+        index_id: str,
+        ) -> pd.DataFrame:
+        """ Get the defining information of the index with the given ID.
+
+         Args:
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the information icon next to an index."""
+
+        request_body = index_service.generate_gb_info_request(
+            index_id,
+        )
+
+        response = self._post_request(ep.GB_INDEX_INFORMATION, request_body)
+        return index_service.process_index_info_response(response)
+
+    async def get_gb_index_information_async(
+        self,
+        index_id: str,
+        ) -> pd.DataFrame:
+        """An asynchronous version of `get_gb_index_information`."""
+        request_body = index_service.generate_gb_info_request(
+            index_id,
+        )
+
+        response = await self._post_request_async(ep.GB_INDEX_INFORMATION, request_body)
+        return index_service.process_index_info_response(response)
+
+
+    def get_gb_index_data(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        index_id: str,
+        normalisation ="PoundPerKwPerYear",
+        granularity ="Week",
+        show_profit = "false",
+        gas_price_assumption = "DayAheadForward",
+        market_price_assumption = "WeightedAverageDayAheadPrice",
+        account_for_availability_in_normalisation = "false",
+        include_wholesale_split = "false",
+        bm_split_out_option = None,
+        ancillary_revenue_type = "ByProduct",
+        group_dx = "false",
+        include_capacity_market = "true",
+        include_non_delivery_charges = "true",
+    ) -> pd.DataFrame:
+        """Gets GB index data for the given parameters.
+
+        Args:
+            date_from `datetime.datetime`: The start date.
+
+            date_to `datetime.datetime`: The end date. Set equal to the start date to return data for a given day.
+
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the information icon next to an index.
+
+            normalisation `str` (optional): The normalisation to apply. "Pound", "PoundPerMw", "PoundPerMwh", "PoundPerThroughput" or "PoundPerKwPerYear" (default).
+
+            granularity `str` (optional): The granularity of the data. "Day", "Week" (default), "Month" or "Year".
+
+            show_profit `str` (optional): Set to "true" to show profit or "false" (default) to show revenue.
+
+            gas_price_assumption `str` (optional): The price the gas costs are calculated against. "DayAheadForward" (default), "DayAheadSpot", "WithinDaySpot", "CheapestPrice" or None.
+
+            market_price_assumption `str` (optional): The price the wholesale revenues are calculated against. "EpexDayAheadPrice", "WeightedAverageDayAheadPrice" (default), "NordpoolDayAheadPrice", "IntradayPrice" or "BestPrice".
+
+            account_for_availability_in_normalisation `str` (optional): Set to "true" to account for availability in normalisation or "false" (default).
+
+            include_wholesale_split `str` (optional): Set to "true" to show wholesale import and export profit split or "false" (default).
+
+            bm_split_out_option `str` (optional): "BidOfferSplit" or "SystemEnergySplit" or None (default).
+
+            ancillary_revenue_type `str` (optional): "FrequencyAndReserve", "ByProduct" (default) or "ByDirection".
+
+            group_dx `str` (optional): Set to "true" to group all Dx services of the same direction together or "false" (default).
+
+            include_capacity_market `str` (optional): Set to "true" (default) to include capacity market profits or "false".
+
+            include_non_delivery_charges `str` (optional): Set to "true" (default) to include non-delivery charges or "false"."""
+        request_body = index_service.generate_gb_request(
+            date_from,
+            date_to,
+            index_id,
+            normalisation,
+            granularity,
+            show_profit,
+            gas_price_assumption,
+            market_price_assumption,
+            account_for_availability_in_normalisation,
+            include_wholesale_split,
+            bm_split_out_option,
+            ancillary_revenue_type,
+            group_dx,
+            include_capacity_market,
+            include_non_delivery_charges,
+        )
+        response = self._post_request(ep.GB_INDEX_DATA, request_body)
+        return index_service.process_index_data_response(response)
+
+    async def get_gb_index_data_async(
+        self,
+        date_from: datetime,
+        date_to: datetime,
+        index_id: str,
+        normalisation="PoundPerKwPerYear",
+        granularity="Week",
+        show_profit = "false",
+        gas_price_assumption = "DayAheadForward",
+        market_price_assumption = "WeightedAverageDayAheadPrice",
+        account_for_availability_in_normalisation = "false",
+        include_wholesale_split = "false",
+        bm_split_out_option = None,
+        ancillary_revenue_type = "ByProduct",
+        group_dx = "false",
+        include_capacity_market = "true",
+        include_non_delivery_charges = "true",
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_gb_index_data`."""
+        request_body = index_service.generate_gb_request(
+            date_from,
+            date_to,
+            index_id,
+            normalisation,
+            granularity,
+            show_profit,
+            gas_price_assumption,
+            market_price_assumption,
+            account_for_availability_in_normalisation,
+            include_wholesale_split,
+            bm_split_out_option,
+            ancillary_revenue_type,
+            group_dx,
+            include_capacity_market,
+            include_non_delivery_charges,
+        )
+        response = await self._post_request_async(ep.GB_INDEX_DATA, request_body)
+        return index_service.process_index_data_response(response)
+
+
     def get_default_german_indices(self) -> pd.DataFrame:
         """ Get the defining information of the default german indices, including the GUID that allows querying of that indices data via `get_german_index_data` """
 
         response = self._get_request(ep.EUROPE_INDEX_DEFAULT_INDICES)
-        return index_service.process_default_index_info_response(response)
+        return index_service.process_index_info_response(response)
 
     async def get_default_german_indices_async(self) -> pd.DataFrame:
         """An asynchronous version of `get_default_german_indices`."""
 
         response = await self._get_request_async(ep.EUROPE_INDEX_DEFAULT_INDICES)
-        return index_service.process_default_index_info_response(response)
+        return index_service.process_index_info_response(response)
 
     def get_german_index_data(
         self,
         date_from: datetime,
         date_to: datetime,
         index_id: str,
-        normalisation="PoundPerKwPerYear",
+        normalisation="EuroPerKwPerYear",
         granularity="Week",
     ) -> pd.DataFrame:
         """Gets german index data for a given date range and index ID.
