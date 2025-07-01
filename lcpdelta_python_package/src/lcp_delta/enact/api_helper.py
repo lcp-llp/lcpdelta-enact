@@ -967,6 +967,11 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price=None,
+        charging_cost_assumption=None
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1009,6 +1014,11 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1028,6 +1038,11 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price=None,
+        charging_cost_assumption=None
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1044,6 +1059,11 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1095,6 +1115,11 @@ class APIHelper(APIHelperBase):
         group_dx = "false",
         include_capacity_market = "true",
         include_non_delivery_charges = "true",
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price=None,
+        charging_cost_assumption=None
     ) -> pd.DataFrame:
         """Gets GB index data for the given parameters.
 
@@ -1144,6 +1169,11 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = self._post_request(ep.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
@@ -1183,6 +1213,7 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
+            # here
         )
         response = await self._post_request_async(ep.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)

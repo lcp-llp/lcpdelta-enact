@@ -45,6 +45,11 @@ def generate_gb_request(
     group_dx = "false",
     include_capacity_market = "true",
     include_non_delivery_charges = "true",
+    include_imbalance=False,
+    include_estimated_charging_cost=False,
+    include_fpnflagoff_wholesale=False,
+    charging_cost_price=None,
+    charging_cost_assumption=None
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -63,6 +68,7 @@ def generate_gb_request(
         "GroupDx": group_dx,
         "IncludeCmRevenues": include_capacity_market,
         "IncludeNonDeliveryCharges": include_non_delivery_charges,
+        # here
     }
 
 def process_index_info_response(response: dict) -> pd.DataFrame:
