@@ -68,7 +68,11 @@ def generate_gb_request(
         "GroupDx": group_dx,
         "IncludeCmRevenues": include_capacity_market,
         "IncludeNonDeliveryCharges": include_non_delivery_charges,
-        # here
+        "IncludeImbalance": include_imbalance,
+        "IncludeEstimatedChargingCost": include_estimated_charging_cost,
+        "ChargingCostPrice": charging_cost_price,
+        "ChargingCostAssumption": charging_cost_assumption,
+        "IncludeFpnFlagOffWholesale": include_fpnflagoff_wholesale
     }
 
 def process_index_info_response(response: dict) -> pd.DataFrame:
