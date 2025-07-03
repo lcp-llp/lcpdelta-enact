@@ -1217,6 +1217,11 @@ class APIHelper(APIHelperBase):
         group_dx = "false",
         include_capacity_market = "true",
         include_non_delivery_charges = "true",
+        include_imbalance= "false",
+        include_estimated_charging_cost= "false",
+        include_fpnflagoff_wholesale= "false",
+        charging_cost_price = None,
+        charging_cost_assumption = None
     ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_data`."""
         request_body = index_service.generate_gb_request(
@@ -1235,7 +1240,11 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
-            # here
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = await self._post_request_async(ep.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
