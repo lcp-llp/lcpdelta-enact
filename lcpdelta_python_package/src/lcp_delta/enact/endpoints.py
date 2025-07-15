@@ -23,6 +23,7 @@ HOF = f"{MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
 HOF_LATEST_FORECAST = f"{MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
 
 BOA = f"{MAIN_BASE_URL}/EnactAPI/BOA/Data"
+BOA_DAILY = f"{MAIN_BASE_URL}/EnactAPI/BOA/dailyData"
 
 LEADERBOARD_V1 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
 LEADERBOARD_V2 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"

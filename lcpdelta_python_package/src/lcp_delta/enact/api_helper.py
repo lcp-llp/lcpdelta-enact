@@ -843,7 +843,23 @@ class APIHelper(APIHelperBase):
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = self._post_request(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
+    
+    def get_bm_data_by_day(
+        self, date: datetime, include_accepted_times: bool = False
+    ) -> pd.DataFrame:
+        """Gets BM (Balancing Mechanism) data for a specific date and search criteria.
 
+        Args:
+            date `datetime.datetime`: The date to request BOD data for.
+
+            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
+        Returns:
+            Response: A pandas DataFrame containing the BM data.
+        """
+        request_body = bm_service.generate_by_day_request(date, include_accepted_times)
+        response = self._get_request(ep.BOA_DAILY, request_body, long_timeout=True)
+        return bm_service.process_by_search_response(response)
+        
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
