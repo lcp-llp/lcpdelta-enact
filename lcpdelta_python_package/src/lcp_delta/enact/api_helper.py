@@ -853,7 +853,7 @@ class APIHelper(APIHelperBase):
         return bm_service.process_by_period_response(response)
     
     def get_bm_data_by_day(
-        self, date: datetime, include_accepted_times: bool = False
+        self, date: str, include_accepted_times: bool = False
     ) -> pd.DataFrame:
         """Gets BM (Balancing Mechanism) data for a specific date and search criteria.
 
@@ -869,7 +869,7 @@ class APIHelper(APIHelperBase):
         return bm_service.process_by_search_response(response)
     
     async def get_bm_data_by_day_async(
-        self, date: datetime, period: int = None, include_accepted_times: bool = False
+        self, date: str, include_accepted_times: bool = False
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_day`."""
         request_body = bm_service.generate_by_day_request(date, include_accepted_times)
