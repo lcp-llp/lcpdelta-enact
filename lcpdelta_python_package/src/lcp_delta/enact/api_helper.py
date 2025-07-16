@@ -844,6 +844,14 @@ class APIHelper(APIHelperBase):
         response = self._post_request(ep.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
     
+    async def get_bm_data_by_period_async(
+        self, date: datetime, period: int = None, include_accepted_times: bool = False
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_bm_data_by_period`."""
+        request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
+        response = await self._post_request_async(ep.BOA, request_body, long_timeout=True)
+        return bm_service.process_by_period_response(response)
+    
     def get_bm_data_by_day(
         self, date: datetime, include_accepted_times: bool = False
     ) -> pd.DataFrame:
@@ -859,14 +867,14 @@ class APIHelper(APIHelperBase):
         request_body = bm_service.generate_by_day_request(date, include_accepted_times)
         response = self._get_request(ep.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
-        
-    async def get_bm_data_by_period_async(
+    
+    async def get_bm_data_by_day_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
-        """An asynchronous version of `get_bm_data_by_period`."""
-        request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = await self._post_request_async(ep.BOA, request_body, long_timeout=True)
-        return bm_service.process_by_period_response(response)
+        """An asynchronous version of `get_bm_data_by_day`."""
+        request_body = bm_service.generate_by_day_request(date, include_accepted_times)
+        response = await self._get_request_async(ep.BOA_DAILY, request_body, long_timeout=True)
+        return bm_service.process_by_search_response(response)
 
     def get_bm_data_by_search(
         self,
