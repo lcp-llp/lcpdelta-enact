@@ -45,7 +45,7 @@ def process_by_search_response(response: dict):
     return pd.DataFrame(response["data"][1:], columns=response["data"][0])
 
 def generate_by_day_request(date: datetime, include_accepted_times: bool):
-
+    date = convert_datetime_to_iso(date)
     request_body = {"date": date}
     if include_accepted_times is not False:
         request_body["includeAcceptedTimes"] = "True"
