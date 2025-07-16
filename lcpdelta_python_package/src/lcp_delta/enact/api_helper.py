@@ -970,8 +970,8 @@ class APIHelper(APIHelperBase):
         include_imbalance=False,
         include_estimated_charging_cost=False,
         include_fpnflagoff_wholesale=False,
-        charging_cost_price=None,
-        charging_cost_assumption=None
+        charging_cost_price="IntradayPrice",
+        charging_cost_assumption="PreviousEFABlock"
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1003,11 +1003,11 @@ class APIHelper(APIHelperBase):
 
             fuels (optional, array_str): List of fuel types to include. Leave empty to get all fuels back.
 
-            include_imbalance `str` (optional): Set to "false" (default) to exclude imbalance payments for non-BM and secondary BMUs or "true".
+            include_imbalance `str` (optional): Set to "False" (default) to exclude imbalance payments for non-BM and secondary BMUs.
 
-            include_estimated_charging_cost `str` (optional): Set to "false" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs or "true".
+            include_estimated_charging_cost `str` (optional): Set to "False" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs.
 
-            include_fpnflagoff_wholesale `str` (optional): Set to "false" (default) to exclude estimated wholesale revenue for BM (No FPN) assets or "true".
+            include_fpnflagoff_wholesale `str` (optional): Set to "False" (default) to exclude estimated wholesale revenue for BM (No FPN) assets.
 
             charging_cost_price `str` (optional): The price assumption using for the estimated charging/discharging costs of non-BM and secondary BMUs. Options are: 'WeightedAverageDayAheadPrice', 'EpexDayAheadPrice', 'NordpoolDayAheadPrice', 'IntradayPrice' (default) or 'SystemPrice'.
 
@@ -1053,8 +1053,8 @@ class APIHelper(APIHelperBase):
         include_imbalance=False,
         include_estimated_charging_cost=False,
         include_fpnflagoff_wholesale=False,
-        charging_cost_price=None,
-        charging_cost_assumption=None
+        charging_cost_price="IntradayPrice",
+        charging_cost_assumption="PreviousEFABlock"
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1130,8 +1130,8 @@ class APIHelper(APIHelperBase):
         include_imbalance= "false",
         include_estimated_charging_cost= "false",
         include_fpnflagoff_wholesale= "false",
-        charging_cost_price = None,
-        charging_cost_assumption = None
+        charging_cost_price = "IntradayPrice",
+        charging_cost_assumption = "PreviousEFABlock"
     ) -> pd.DataFrame:
         """Gets GB index data for the given parameters.
 
@@ -1166,11 +1166,11 @@ class APIHelper(APIHelperBase):
 
             include_non_delivery_charges `str` (optional): Set to "true" (default) to include non-delivery charges or "false".
 
-            include_imbalance `str` (optional): Set to "false" (default) to exclude imbalance payments for non-BM and secondary BMUs or "true".
+            include_imbalance `str` (optional): Set to "false" (default) to exclude imbalance payments for non-BM and secondary BMUs.
 
-            include_estimated_charging_cost `str` (optional): Set to "false" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs or "true".
+            include_estimated_charging_cost `str` (optional): Set to "false" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs.
 
-            include_fpnflagoff_wholesale `str` (optional): Set to "false" (default) to exclude estimated wholesale revenue for BM (No FPN) assets or "true".
+            include_fpnflagoff_wholesale `str` (optional): Set to "false" (default) to exclude estimated wholesale revenue for BM (No FPN) assets.
 
             charging_cost_price `str` (optional): The price assumption using for the estimated charging/discharging costs of non-BM and secondary BMUs. Options are: 'WeightedAverageDayAheadPrice', 'EpexDayAheadPrice', 'NordpoolDayAheadPrice', 'IntradayPrice' (default) or 'SystemPrice'.
 
