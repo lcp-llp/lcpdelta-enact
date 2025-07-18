@@ -10,6 +10,7 @@ from lcp_delta.common import APIHelperBase
 from lcp_delta.enact.helpers import get_month_name
 from lcp_delta.enact.enums import AncillaryContracts
 from lcp_delta.enact.services import ancillary_service
+from lcp_delta.enact.services import contract_evolution_service
 from lcp_delta.enact.services import bm_service
 from lcp_delta.enact.services import day_ahead_service
 from lcp_delta.enact.services import epex_service
@@ -20,7 +21,6 @@ from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
-
 
 class APIHelper(APIHelperBase):
     def _make_series_request(
@@ -1310,6 +1310,56 @@ class APIHelper(APIHelperBase):
         )
         response = await self._post_request_async(ep.EUROPE_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
+
+    def get_contract_evolution(
+        self,
+        instrument,
+        contract,
+        contract_period = None,
+        date_from: datetime = None,
+        date_to: datetime = None,
+    ) -> pd.DataFrame:
+        """Gets the evolution of a commodity contracts closing prices. This returns a dataframe of the closing bid, offer and mid prices.
+           The date column is the date on which this contract was traded to give these prices.
+
+        Args:
+            instrument `str`: The commodity instrument, "Nbp", "Eua", "UkaFutures", "UkPeak" or "UkBaseload".
+            contract `str`: The contract type, "Spot", "WithinDay", "DayAhead", "BalanceOfWeek", "Weekend", "WorkingDaysNextWeek", "Week", "BalanceOfMonth", "Month", "Quarter", "Season", "Annuals" or "CalenderYear".
+.           contract_period `str`: The contract period. Certain contracts can have multiple periods traded on a single day, for example the NBP monthly contract may trade the next 3 following months given the day of trade.
+                                   In this instance the specific contract period must be specified. Contracts of Month or lower granularity require this contract_period. See our docs to see the format required of the contract_period for the different contracts.
+
+            date_from `datetime.datetime` (optional): A start date to filter the returned data, if not given all data up to the date_to (also optional) will be returned.
+
+            date_to `datetime.datetime`: An end date to filter the returned data, if not given all data from the date_from (also optional) will be returned. """
+
+        request_body = contract_evolution_service.generate_request(
+            instrument,
+            contract,
+            contract_period,
+            date_from,
+            date_to,
+        )
+        response = self._post_request(ep.CONTRACT_EVOLUTION, request_body)
+        return contract_evolution_service.process_contract_evolution_response(response)
+
+    async def get_contract_evolution_async(
+        self,
+        instrument,
+        contract,
+        contract_period = None,
+        date_from: datetime = None,
+        date_to: datetime = None,
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_contract_evolution`."""
+        request_body = contract_evolution_service.generate_request(
+            instrument,
+            contract,
+            contract_period,
+            date_from,
+            date_to,
+        )
+        response = await self._post_request_async(ep.CONTRACT_EVOLUTION, request_body)
+        return contract_evolution_service.process_contract_evolution_response(response)
 
     def get_ancillary_contract_data(
         self,
