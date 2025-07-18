@@ -1142,7 +1142,7 @@ class APIHelper(APIHelperBase):
 
             index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the information icon next to an index.
 
-            normalisation `str` (optional): The normalisation to apply. "Pound", "PoundPerMw", "PoundPerMwh", "PoundPerThroughput" or "PoundPerKwPerYear" (default).
+            normalisation `str` (optional): The normalisation to apply. "Pound", "PoundPerMw", "PoundPerMwh", "PoundPerThroughput", "PoundPerMwPerYear" or "PoundPerKwPerYear" (default).
 
             granularity `str` (optional): The granularity of the data. "Day", "Week" (default), "Month" or "Year".
 
