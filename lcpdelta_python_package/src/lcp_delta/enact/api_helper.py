@@ -967,6 +967,11 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price="IntradayPrice",
+        charging_cost_assumption="PreviousEFABlock"
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -994,7 +999,19 @@ class APIHelper(APIHelperBase):
 
             show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False.
 
-            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False."""
+            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False.
+
+            fuels (optional, array_str): List of fuel types to include. Leave empty to get all fuels back.
+
+            include_imbalance `str` (optional): Set to "False" (default) to exclude imbalance payments for non-BM and secondary BMUs.
+
+            include_estimated_charging_cost `str` (optional): Set to "False" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs.
+
+            include_fpnflagoff_wholesale `str` (optional): Set to "False" (default) to exclude estimated wholesale revenue for BM (No FPN) assets.
+
+            charging_cost_price `str` (optional): The price assumption using for the estimated charging/discharging costs of non-BM and secondary BMUs. Options are: 'WeightedAverageDayAheadPrice', 'EpexDayAheadPrice', 'NordpoolDayAheadPrice', 'IntradayPrice' (default) or 'SystemPrice'.
+
+            charging_cost_assumption `str` (optional): The charging cost assumption used for the estimated charging/discharging costs for non-BM and secondary BMUs. Options are: 'PreviousEFABlock' (default), 'OptimalPricePrev12Hours' and 'CurrentSp'."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -1009,6 +1026,11 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = self._post_request(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1028,6 +1050,11 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price="IntradayPrice",
+        charging_cost_assumption="PreviousEFABlock"
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1044,6 +1071,11 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1095,6 +1127,11 @@ class APIHelper(APIHelperBase):
         group_dx = "false",
         include_capacity_market = "true",
         include_non_delivery_charges = "true",
+        include_imbalance= "false",
+        include_estimated_charging_cost= "false",
+        include_fpnflagoff_wholesale= "false",
+        charging_cost_price = "IntradayPrice",
+        charging_cost_assumption = "PreviousEFABlock"
     ) -> pd.DataFrame:
         """Gets GB index data for the given parameters.
 
@@ -1127,7 +1164,17 @@ class APIHelper(APIHelperBase):
 
             include_capacity_market `str` (optional): Set to "true" (default) to include capacity market profits or "false".
 
-            include_non_delivery_charges `str` (optional): Set to "true" (default) to include non-delivery charges or "false"."""
+            include_non_delivery_charges `str` (optional): Set to "true" (default) to include non-delivery charges or "false".
+
+            include_imbalance `str` (optional): Set to "false" (default) to exclude imbalance payments for non-BM and secondary BMUs.
+
+            include_estimated_charging_cost `str` (optional): Set to "false" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs.
+
+            include_fpnflagoff_wholesale `str` (optional): Set to "false" (default) to exclude estimated wholesale revenue for BM (No FPN) assets.
+
+            charging_cost_price `str` (optional): The price assumption using for the estimated charging/discharging costs of non-BM and secondary BMUs. Options are: 'WeightedAverageDayAheadPrice', 'EpexDayAheadPrice', 'NordpoolDayAheadPrice', 'IntradayPrice' (default) or 'SystemPrice'.
+
+            charging_cost_assumption `str` (optional): The charging cost assumption used for the estimated charging/discharging costs for non-BM and secondary BMUs. Options are: 'PreviousEFABlock' (default), 'OptimalPricePrev12Hours' and 'CurrentSp'."""
         request_body = index_service.generate_gb_request(
             date_from,
             date_to,
@@ -1144,6 +1191,11 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = self._post_request(ep.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
@@ -1165,6 +1217,11 @@ class APIHelper(APIHelperBase):
         group_dx = "false",
         include_capacity_market = "true",
         include_non_delivery_charges = "true",
+        include_imbalance= "false",
+        include_estimated_charging_cost= "false",
+        include_fpnflagoff_wholesale= "false",
+        charging_cost_price = None,
+        charging_cost_assumption = None
     ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_data`."""
         request_body = index_service.generate_gb_request(
@@ -1183,6 +1240,11 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
         response = await self._post_request_async(ep.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
