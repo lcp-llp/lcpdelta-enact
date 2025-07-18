@@ -22,7 +22,7 @@ def generate_request(
         "SelectedGranularity": granularity,
     }
 
-def generate_gb_info_request(
+def generate_index_info_request(
     index_id: str,
 ) -> dict:
     return {
