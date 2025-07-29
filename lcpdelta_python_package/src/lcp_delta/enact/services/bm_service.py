@@ -53,8 +53,8 @@ def generate_by_day_request(date: str, include_accepted_times: bool):
 
 def generate_date_range_request(start_date:str, end_date:str, include_accepted_times: bool, cursor:str = None):
     request_body = {
-        "startTime": start_date,
-        "endTime": end_date,
+        "start": start_date,
+        "end": end_date,
         "includeAcceptedTimes": include_accepted_times,
     }
     if cursor:
