@@ -858,7 +858,7 @@ class APIHelper(APIHelperBase):
         """Gets BM (Balancing Mechanism) data for a specific date and search criteria.
 
         Args:
-            date `datetime.datetime`: The date to request BOD data for.
+            date `str`: The date to request BOD data for in yyyy-mm-dd format.
 
             include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
         Returns:
@@ -877,10 +877,21 @@ class APIHelper(APIHelperBase):
         return bm_service.process_by_search_response(response)
 
     def get_bm_data_by_day_range(
-        self, start_date: str, end_date: str, include_accepted_times: bool = False, cursor = None
+        self, start_date: str, end_date: str, include_accepted_times: bool = False
     ) -> pd.DataFrame:
-        """Gets BM (Balancing Mechanism) data for a date range"""
+        """Gets BM (Balancing Mechanism) data for a specific date range and search criteria.
+
+            Args:
+            start_date `str`: The start date to request BOD data for in yyyy-mm-dd format.
+
+            end_date 'str': end date of range to request BOD data for in yyyy-mm-dd format.
+
+            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
+        Returns:
+            Response: A pandas DataFrame containing the BM data.
+        """
         all_data = []
+        cursor = None
         headers = None
         while True:
             request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, cursor)
@@ -896,7 +907,28 @@ class APIHelper(APIHelperBase):
             if not next_cursor:
                 break
             cursor = next_cursor
-        
+        return pd.DataFrame(all_data, columns=headers)
+
+    async def get_bm_data_by_day_range_async(
+        self, start_date: str, end_date: str, include_accepted_times: bool = False, cursor = None
+    ) -> pd.DataFrame:
+        """Asynchronous version of 'get_bm_data_by_day_range'."""
+        all_data = []
+        headers = None
+        while True:
+            request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, cursor)
+            response = await self._get_request_async(ep.BOA_DAY_RANGE, request_body, long_timeout=True)
+            data_response = response["data"]
+
+            if headers is None:
+                headers = data_response["data"][0]
+            
+            data = data_response["data"][1:]
+            all_data.extend(data)
+            next_cursor = response.get("nextCursor")
+            if not next_cursor:
+                break
+            cursor = next_cursor
         return pd.DataFrame(all_data, columns=headers)
     
     def get_bm_data_by_search(
