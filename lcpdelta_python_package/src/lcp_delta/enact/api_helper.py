@@ -876,6 +876,29 @@ class APIHelper(APIHelperBase):
         response = await self._get_request_async(ep.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
+    def get_bm_data_by_day_range(
+        self, start_date: str, end_date: str, include_accepted_times: bool = False, cursor = None
+    ) -> pd.DataFrame:
+        """Gets BM (Balancing Mechanism) data for a date range"""
+        all_data = []
+        headers = None
+        while True:
+            request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, cursor)
+            response = self._get_request(ep.BOA_DAY_RANGE, request_body, long_timeout=True)
+            data_response = response["data"]
+
+            if headers is None:
+                headers = data_response["data"][0]
+            
+            data = data_response["data"][1:]
+            all_data.extend(data)
+            next_cursor = response.get("nextCursor")
+            if not next_cursor:
+                break
+            cursor = next_cursor
+        
+        return pd.DataFrame(all_data, columns=headers)
+    
     def get_bm_data_by_search(
         self,
         date: datetime,

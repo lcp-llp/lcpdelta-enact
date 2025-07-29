@@ -51,6 +51,17 @@ def generate_by_day_request(date: str, include_accepted_times: bool):
 
     return request_body
 
+def generate_date_range_request(start_date:str, end_date:str, include_accepted_times: bool, cursor:str = None):
+    request_body = {
+        "startTime": start_date,
+        "endTime": end_date,
+        "includeAcceptedTimes": include_accepted_times,
+    }
+    if cursor:
+        request_body["cursor"] = cursor
+
+    return request_body
+
 def expand_bsad_metadata(df: pd.DataFrame):
     bsad_rows = df.index.str.contains("BSAD_")
     if bsad_rows.any():

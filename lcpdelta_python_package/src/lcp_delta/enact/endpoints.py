@@ -24,6 +24,7 @@ HOF_LATEST_FORECAST = f"{MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_fo
 
 BOA = f"{MAIN_BASE_URL}/EnactAPI/BOA/Data"
 BOA_DAILY = f"{MAIN_BASE_URL}/EnactAPI/BOA/dailyData"
+BOA_DAY_RANGE = f"{MAIN_BASE_URL}/EnactAPI/BOA/rangedData"
 
 LEADERBOARD_V1 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
 LEADERBOARD_V2 = f"{MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
