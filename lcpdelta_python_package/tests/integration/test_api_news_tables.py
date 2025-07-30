@@ -17,6 +17,7 @@ async def test_get_news_table_async():
 
 
 def test_get_news_table_sync():
+    time.sleep(2)
     res = enact_api_helper.get_news_table("Bsad")
 
     expected_columns = ["Settlement date", "Settlement period", "ID", "Cost", "Volume", "Price", "SO flag", "Reason"]

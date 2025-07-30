@@ -1088,9 +1088,9 @@ class APIHelper(APIHelperBase):
         """ Get the defining information of the index with the given ID.
 
          Args:
-            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the information icon next to an index."""
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the ID icon next to an index."""
 
-        request_body = index_service.generate_gb_info_request(
+        request_body = index_service.generate_index_info_request(
             index_id,
         )
 
@@ -1102,13 +1102,12 @@ class APIHelper(APIHelperBase):
         index_id: str,
         ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_information`."""
-        request_body = index_service.generate_gb_info_request(
+        request_body = index_service.generate_index_info_request(
             index_id,
         )
 
         response = await self._post_request_async(ep.GB_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
-
 
     def get_gb_index_data(
         self,
@@ -1260,6 +1259,30 @@ class APIHelper(APIHelperBase):
         """An asynchronous version of `get_default_german_indices`."""
 
         response = await self._get_request_async(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        return index_service.process_index_info_response(response)
+
+    def get_europe_index_information(
+        self,
+        index_id: str,
+        ) -> pd.DataFrame:
+        """ Get the defining information of the index with the given ID.
+         Args:
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the European Index page on Enact, by clicking the ID icon next to an index."""
+        request_body = index_service.generate_index_info_request(
+            index_id,
+        )
+        response = self._post_request(ep.EUROPE_INDEX_INFORMATION, request_body)
+        return index_service.process_index_info_response(response)
+
+    async def get_europe_index_information_async(
+        self,
+        index_id: str,
+        ) -> pd.DataFrame:
+        """An asynchronous version of `get_europe_index_information`."""
+        request_body = index_service.generate_index_info_request(
+            index_id,
+        )
+        response = await self._post_request_async(ep.EUROPE_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
 
     def get_german_index_data(
