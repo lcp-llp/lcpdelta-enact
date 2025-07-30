@@ -1,10 +1,11 @@
-import lcp_delta.common.constants as constants
 from lcp_delta.enact.loader import get_base_endpoints
 
 base_endpoints = get_base_endpoints()
 
 MAIN_BASE_URL = base_endpoints.MAIN_BASE_URL
 SERIES_BASE_URL = base_endpoints.SERIES_BASE_URL
+PUSH_SERVICE_BASE_URL = base_endpoints.PUSH_SERVICE_BASE_URL
+EPEX_BASE_URL = base_endpoints.EPEX_BASE_URL
 
 SERIES_DATA = f"{MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
 SERIES_INFO = f"{MAIN_BASE_URL}/EnactAPI/Series/Info"
@@ -37,12 +38,14 @@ ANCILLARY = f"{MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
 
 NEWS_TABLE = f"{MAIN_BASE_URL}/EnactAPI/Newstable/Data"
 
-EPEX_TRADES = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Trades"
-EPEX_TRADES_BY_CONTRACT_ID = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
-EPEX_ORDER_BOOK = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
-EPEX_ORDER_BOOK_BY_CONTRACT_ID = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
-EPEX_CONTRACTS = f"{constants.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
+EPEX_TRADES = f"{EPEX_BASE_URL}/EnactAPI/Data/Trades"
+EPEX_TRADES_BY_CONTRACT_ID = f"{EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
+EPEX_ORDER_BOOK = f"{EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
+EPEX_ORDER_BOOK_BY_CONTRACT_ID = f"{EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
+EPEX_CONTRACTS = f"{EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
 NORDPOOL_CURVES = f"{SERIES_BASE_URL}/api/NordpoolBuySellCurves"
 
 DAY_AHEAD = f"{MAIN_BASE_URL}/EnactAPI/DayAhead/data"
+
+DPS = f"{PUSH_SERVICE_BASE_URL}/dataHub"
