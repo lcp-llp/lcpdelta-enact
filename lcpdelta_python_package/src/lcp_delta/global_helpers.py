@@ -7,6 +7,11 @@ def convert_datetime_to_iso(datetime_to_check: date | datetime) -> str:
         raise TypeError("Input must be a date or datetime.")
     return datetime_to_check.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+def convert_date_to_iso(date_to_check: date | datetime) -> str:
+    if not isinstance(date_to_check, date | datetime):
+        raise TypeError("Input must be a date or datetime.")
+    return date_to_check.strftime("%Y-%m-%d")
+
 
 def convert_datetimes_to_iso(date_from: datetime, date_to: datetime) -> tuple[str, str]:
     date_from_str = convert_datetime_to_iso(date_from)
