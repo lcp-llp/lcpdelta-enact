@@ -18,7 +18,7 @@ class APIHelperBase(ABC):
         """
         self.credentials_holder = CredentialsHolder(username, public_api_key)
         self.enact_credentials = self.credentials_holder  # legacy
-        self.timeout = httpx.Timeout(5.0, read=15.0)
+        self.timeout = httpx.Timeout(5.0, read=30.0)
 
     @DEFAULT_RETRY_POLICY
     async def _post_request_async(self, endpoint: str, request_body: dict, long_timeout: bool = False):
