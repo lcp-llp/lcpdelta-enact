@@ -42,7 +42,6 @@ class EnactApiEndpoints:
                 pass
 
     def _fetch_actual_backend_url(self, lookup_url: str) -> str:
-        return "https://enact-mainapi-two.lcp.uk.com"  # <-- placeholder for now
         with httpx.Client() as client:
             response = client.get(lookup_url, timeout=15, headers=self._get_headers())
             if response.status_code == 401 and "WWW-Authenticate" in response.headers:
@@ -53,7 +52,6 @@ class EnactApiEndpoints:
             return response.text.strip()
 
     async def _fetch_actual_backend_url_async(self, lookup_url: str) -> str:
-        return "https://enact-mainapi-two.lcp.uk.com"  # <-- placeholder for now
         async with httpx.AsyncClient() as client:
             response = await client.get(lookup_url, timeout=15, headers=self._get_headers())
             if response.status_code == 401 and "WWW-Authenticate" in response.headers:
@@ -74,85 +72,73 @@ class EnactApiEndpoints:
         self.credentials_holder.get_bearer_token()
 
     @property
-    def _main(self): return self._base_endpoints.MAIN_BASE_URL
+    def SERIES_DATA(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
+    @property
+    def SERIES_INFO(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Info"
+    @property
+    def SERIES_BY_FUEL(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
+    @property
+    def SERIES_BY_ZONE(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Zone"
+    @property
+    def SERIES_BY_OWNER(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Owner"
+    @property
+    def SERIES_MULTI_OPTION(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/multiOption"
+    @property
+    def MULTI_SERIES_DATA(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesData"
+    @property
+    def MULTI_PLANT_SERIES_DATA(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/multipleSeriesPlantData"
 
     @property
-    def _epex(self): return self._base_endpoints.EPEX_BASE_URL
+    def PLANT_INFO(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfo"
+    @property
+    def PLANT_INFO_BY_FUEL(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantInfoByFuelType"
+    @property
+    def PLANT_IDS(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
 
     @property
-    def _series(self): return self._base_endpoints.SERIES_BASE_URL
+    def HOF(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
+    @property
+    def HOF_LATEST_FORECAST(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/get_latest_forecast"
 
     @property
-    def _push(self): return self._base_endpoints.PUSH_SERVICE_BASE_URL
+    def BOA(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/BOA/Data"
+    @property
+    def ANCILLARY(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
+    @property
+    def NEWS_TABLE(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
+    @property
+    def DAY_AHEAD(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/DayAhead/data"
 
     @property
-    def SERIES_DATA(self): return f"{self._main}/EnactAPI/Series/Data_V2"
+    def LEADERBOARD_V1(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Leaderboard/v1/data"
     @property
-    def SERIES_INFO(self): return f"{self._main}/EnactAPI/Series/Info"
-    @property
-    def SERIES_BY_FUEL(self): return f"{self._main}/EnactAPI/Series/Fuel"
-    @property
-    def SERIES_BY_ZONE(self): return f"{self._main}/EnactAPI/Series/Zone"
-    @property
-    def SERIES_BY_OWNER(self): return f"{self._main}/EnactAPI/Series/Owner"
-    @property
-    def SERIES_MULTI_OPTION(self): return f"{self._main}/EnactAPI/Series/multiOption"
-    @property
-    def MULTI_SERIES_DATA(self): return f"{self._main}/EnactAPI/Series/multipleSeriesData"
-    @property
-    def MULTI_PLANT_SERIES_DATA(self): return f"{self._main}/EnactAPI/Series/multipleSeriesPlantData"
+    def LEADERBOARD_V2(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Leaderboard/v2/data"
 
     @property
-    def PLANT_INFO(self): return f"{self._main}/EnactAPI/Plant/Data/PlantInfo"
+    def EUROPE_INDEX_DATA(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/EuropeIndexData"
     @property
-    def PLANT_INFO_BY_FUEL(self): return f"{self._main}/EnactAPI/Plant/Data/PlantInfoByFuelType"
+    def EUROPE_INDEX_DEFAULT_INDICES(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/EuropeIndexDefaultIndexInformation"
     @property
-    def PLANT_IDS(self): return f"{self._main}/EnactAPI/Plant/Data/PlantList"
+    def EUROPE_INDEX_INFORMATION(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/EuropeIndexInformation"
+    @property
+    def GB_INDEX_DATA(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/GbIndexData"
+    @property
+    def GB_INDEX_INFORMATION(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/GbIndexInformation"
+    @property
+    def CONTRACT_EVOLUTION(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/ContractEvolution"
+    @property
+    def NORDPOOL_CURVES(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
 
     @property
-    def HOF(self): return f"{self._main}/EnactAPI/HistoryOfForecast/Data_V2"
+    def EPEX_TRADES(self): return f"{self._base_endpoints.EPEX_BASE_URL}/EnactAPI/Data/Trades"
     @property
-    def HOF_LATEST_FORECAST(self): return f"{self._main}/EnactAPI/HistoryOfForecast/get_latest_forecast"
+    def EPEX_TRADES_BY_CONTRACT_ID(self): return f"{self._base_endpoints.EPEX_BASE_URL}/EnactAPI/Data/TradesFromContractId"
+    @property
+    def EPEX_ORDER_BOOK(self): return f"{self._base_endpoints.EPEX_BASE_URL}/EnactAPI/Data/OrderBook"
+    @property
+    def EPEX_ORDER_BOOK_BY_CONTRACT_ID(self): return f"{self._base_endpoints.EPEX_BASE_URL}/EnactAPI/Data/OrderBookFromContractId"
+    @property
+    def EPEX_CONTRACTS(self): return f"{self._base_endpoints.EPEX_BASE_URL}/EnactAPI/Data/Contracts"
 
     @property
-    def BOA(self): return f"{self._main}/EnactAPI/BOA/Data"
-    @property
-    def ANCILLARY(self): return f"{self._main}/EnactAPI/Ancillary/Data"
-    @property
-    def NEWS_TABLE(self): return f"{self._main}/EnactAPI/Newstable/Data"
-    @property
-    def DAY_AHEAD(self): return f"{self._main}/EnactAPI/DayAhead/data"
-
-    @property
-    def LEADERBOARD_V1(self): return f"{self._main}/EnactAPI/Leaderboard/v1/data"
-    @property
-    def LEADERBOARD_V2(self): return f"{self._main}/EnactAPI/Leaderboard/v2/data"
-
-    @property
-    def EUROPE_INDEX_DATA(self): return f"{self._series}/api/EuropeIndexData"
-    @property
-    def EUROPE_INDEX_DEFAULT_INDICES(self): return f"{self._series}/api/EuropeIndexDefaultIndexInformation"
-    @property
-    def EUROPE_INDEX_INFORMATION(self): return f"{self._series}/api/EuropeIndexInformation"
-    @property
-    def GB_INDEX_DATA(self): return f"{self._series}/api/GbIndexData"
-    @property
-    def GB_INDEX_INFORMATION(self): return f"{self._series}/api/GbIndexInformation"
-    @property
-    def CONTRACT_EVOLUTION(self): return f"{self._series}/api/ContractEvolution"
-    @property
-    def NORDPOOL_CURVES(self): return f"{self._series}/api/NordpoolBuySellCurves"
-
-    @property
-    def EPEX_TRADES(self): return f"{self._epex}/EnactAPI/Data/Trades"
-    @property
-    def EPEX_TRADES_BY_CONTRACT_ID(self): return f"{self._epex}/EnactAPI/Data/TradesFromContractId"
-    @property
-    def EPEX_ORDER_BOOK(self): return f"{self._epex}/EnactAPI/Data/OrderBook"
-    @property
-    def EPEX_ORDER_BOOK_BY_CONTRACT_ID(self): return f"{self._epex}/EnactAPI/Data/OrderBookFromContractId"
-    @property
-    def EPEX_CONTRACTS(self): return f"{self._epex}/EnactAPI/Data/Contracts"
-
-    @property
-    def DPS(self): return f"{self._push}/dataHub"
+    def DPS(self): return f"{self._base_endpoints.PUSH_SERVICE_BASE_URL}/dataHub"

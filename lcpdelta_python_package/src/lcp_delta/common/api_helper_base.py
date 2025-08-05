@@ -162,8 +162,8 @@ class APIHelperBase(ABC):
 
     def _rebuild_endpoint(self, old_endpoint: str) -> str:
         current_endpoints = {
-            "MAIN": self.endpoints.MAIN_BASE_URL,
-            "EPEX": self.endpoints.EPEX_BASE_URL,
+            "MAIN": self.endpoints._base_endpoints.MAIN_BASE_URL,
+            "EPEX": self.endpoints._base_endpoints.EPEX_BASE_URL,
         }
 
         for key, current_base_url in current_endpoints.items():
