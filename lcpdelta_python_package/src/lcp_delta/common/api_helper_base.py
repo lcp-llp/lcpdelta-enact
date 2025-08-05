@@ -1,15 +1,15 @@
 import httpx
-
 from abc import ABC
 from json import JSONDecodeError
+from typing import Callable
 
 from lcp_delta.common.credentials_holder import CredentialsHolder
+from lcp_delta.common.api_endpoints import EnactApiEndpoints
 from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
 from lcp_delta.common.http.exceptions import EnactApiError
 
-
 class APIHelperBase(ABC):
-    def __init__(self, username: str, public_api_key: str):
+    def __init__(self, username: str, public_api_key: str, bypass_frontdoor: bool = False):
         """Enter your credentials and use the methods below to get data from Enact.
 
         Args:
@@ -18,19 +18,23 @@ class APIHelperBase(ABC):
         """
         self.credentials_holder = CredentialsHolder(username, public_api_key)
         self.enact_credentials = self.credentials_holder  # legacy
-        self.timeout = httpx.Timeout(5.0, read=30.0)
+        self.timeout = httpx.Timeout(5.0, read=60.0)
+        self._bypass_frontdoor = bypass_frontdoor
+        self.endpoints = EnactApiEndpoints(self.credentials_holder, self._bypass_frontdoor)
 
     @DEFAULT_RETRY_POLICY
     async def _post_request_async(self, endpoint: str, request_body: dict, long_timeout: bool = False):
-        """
-        Sends a post request with a given payload to a given endpoint asynchronously.
-        """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
-            response = await client.post(endpoint, json=request_body, headers=self._get_headers())
+        async def make_request(ep):
+            async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
+                return await client.post(ep, json=request_body, headers=self._get_headers())
 
-        # if bearer token expired, refresh and retry
+        response = await make_request(endpoint)
+
+        if response.status_code == 503 and self._bypass_frontdoor:
+            response = await self._retry_on_503_async(endpoint, make_request)
+
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = await self._retry_with_refreshed_token_async(endpoint, headers=self._get_headers(), request_body=request_body)
 
@@ -41,15 +45,17 @@ class APIHelperBase(ABC):
 
     @DEFAULT_RETRY_POLICY
     def _post_request(self, endpoint: str, request_body: dict, long_timeout: bool = False):
-        """
-        Sends a post request with a given payload to a given endpoint.
-        """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        with httpx.Client(verify=True, timeout=timeout) as client:
-            response = client.post(endpoint, json=request_body, headers=self._get_headers())
+        def make_request(ep):
+            with httpx.Client(verify=True, timeout=timeout) as client:
+                return client.post(ep, json=request_body, headers=self._get_headers())
 
-        # if bearer token expired, refresh and retry
+        response = make_request(endpoint)
+
+        if response.status_code == 503 and self._bypass_frontdoor:
+            response = self._retry_on_503(endpoint, make_request)
+
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = self._retry_with_refreshed_token(endpoint, headers=self._get_headers(), request_body=request_body)
 
@@ -60,13 +66,16 @@ class APIHelperBase(ABC):
 
     @DEFAULT_RETRY_POLICY
     async def _get_request_async(self, endpoint: str, params: dict = None, long_timeout: bool = False):
-        """
-        Sends a GET request with given parameters to a given endpoint asynchronously.
-        """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
-            response = await client.get(endpoint, params=params, headers=self._get_headers())
+        async def make_request(ep):
+            async with httpx.AsyncClient(verify=True, timeout=timeout) as client:
+                return await client.get(ep, params=params, headers=self._get_headers())
+
+        response = await make_request(endpoint)
+
+        if response.status_code == 503 and self._bypass_frontdoor:
+            response = await self._retry_on_503_async(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = await self._retry_with_refreshed_token_async(endpoint, params=params, headers=self._get_headers(), method="GET")
@@ -78,13 +87,16 @@ class APIHelperBase(ABC):
 
     @DEFAULT_RETRY_POLICY
     def _get_request(self, endpoint: str, params: dict = None, long_timeout: bool = False):
-        """
-        Sends a GET request with given parameters to a given endpoint.
-        """
         timeout = httpx.Timeout(5.0, read=60.0) if long_timeout else self.timeout
 
-        with httpx.Client(verify=True, timeout=timeout) as client:
-            response = client.get(endpoint, params=params, headers=self._get_headers())
+        def make_request(ep):
+            with httpx.Client(verify=True, timeout=timeout) as client:
+                return client.get(ep, params=params, headers=self._get_headers())
+
+        response = make_request(endpoint)
+
+        if response.status_code == 503 and self._bypass_frontdoor:
+            response = self._retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = self._retry_with_refreshed_token(endpoint, headers=self._get_headers(), params=params, method="GET")
@@ -147,3 +159,26 @@ class APIHelperBase(ABC):
             pass
 
         response.raise_for_status()
+
+    def _rebuild_endpoint(self, old_endpoint: str) -> str:
+        current_endpoints = {
+            "MAIN": self.endpoints.MAIN_BASE_URL,
+            "EPEX": self.endpoints.EPEX_BASE_URL,
+        }
+
+        for key, current_base_url in current_endpoints.items():
+            if old_endpoint.startswith(current_base_url):
+                new_base_url = getattr(self.endpoints, f"{key}_BASE_URL")
+                return old_endpoint.replace(current_base_url, new_base_url)
+
+        return old_endpoint
+
+    def _retry_on_503(self, endpoint: str, retry_func: Callable):
+        self.endpoints.refresh_fd_bypass()
+        new_endpoint = self._rebuild_endpoint(endpoint)
+        return retry_func(new_endpoint)
+
+    async def _retry_on_503_async(self, endpoint: str, retry_func: Callable):
+        await self.endpoints.refresh_fd_bypass_async()
+        new_endpoint = self._rebuild_endpoint(endpoint)
+        return await retry_func(new_endpoint)

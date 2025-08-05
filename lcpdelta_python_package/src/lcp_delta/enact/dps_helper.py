@@ -5,8 +5,8 @@ from datetime import datetime as dt
 from functools import partial
 from typing import Callable
 from signalrcore.hub_connection_builder import HubConnectionBuilder
+from lcp_delta.common.api_endpoints import EnactApiEndpoints
 from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
-import lcp_delta.enact.endpoints as ep
 from lcp_delta.enact.api_helper import APIHelper
 from lcp_delta.common.http.exceptions import EnactApiError
 
@@ -27,7 +27,7 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                ep.DPS,
+                self.api_helper.endpoints.DPS,
                  options={"access_token_factory": access_token_factory},
             )
             .build()
