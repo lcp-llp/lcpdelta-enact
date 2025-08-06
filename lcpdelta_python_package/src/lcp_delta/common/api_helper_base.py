@@ -168,7 +168,7 @@ class APIHelperBase(ABC):
 
         for key, current_base_url in current_endpoints.items():
             if old_endpoint.startswith(current_base_url):
-                new_base_url = getattr(self.endpoints, f"{key}_BASE_URL")
+                new_base_url = getattr(self.endpoints._base_endpoints, f"{key}_BASE_URL")
                 return old_endpoint.replace(current_base_url, new_base_url)
 
         return old_endpoint
