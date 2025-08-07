@@ -25,6 +25,8 @@ class EnactApiEndpoints:
                 actual_url = self._fetch_actual_backend_url(bypass_url)
                 if actual_url != "":
                     setattr(self._base_endpoints, f"{key}_BASE_URL", actual_url)
+                else:
+                    self._base_endpoints = get_base_endpoints()
             except Exception:
                 pass
 
