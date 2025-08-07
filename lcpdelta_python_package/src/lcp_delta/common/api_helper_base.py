@@ -33,7 +33,7 @@ class APIHelperBase(ABC):
         response = await make_request(endpoint)
 
         if response.status_code == 503 and self._bypass_frontdoor:
-            response = await self._retry_on_503_async(endpoint, make_request)
+            response = self._retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = await self._retry_with_refreshed_token_async(endpoint, headers=self._get_headers(), request_body=request_body)
@@ -75,7 +75,7 @@ class APIHelperBase(ABC):
         response = await make_request(endpoint)
 
         if response.status_code == 503 and self._bypass_frontdoor:
-            response = await self._retry_on_503_async(endpoint, make_request)
+            response = self._retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = await self._retry_with_refreshed_token_async(endpoint, params=params, headers=self._get_headers(), method="GET")
@@ -160,25 +160,7 @@ class APIHelperBase(ABC):
 
         response.raise_for_status()
 
-    def _rebuild_endpoint(self, old_endpoint: str) -> str:
-        current_endpoints = {
-            "MAIN": self.endpoints._base_endpoints.MAIN_BASE_URL,
-            "EPEX": self.endpoints._base_endpoints.EPEX_BASE_URL,
-        }
-
-        for key, current_base_url in current_endpoints.items():
-            if old_endpoint.startswith(current_base_url):
-                new_base_url = getattr(self.endpoints._base_endpoints, f"{key}_BASE_URL")
-                return old_endpoint.replace(current_base_url, new_base_url)
-
-        return old_endpoint
-
     def _retry_on_503(self, endpoint: str, retry_func: Callable):
         self.endpoints.refresh_fd_bypass()
-        new_endpoint = self._rebuild_endpoint(endpoint)
+        new_endpoint = self.endpoints.rebuild_endpoint(endpoint)
         return retry_func(new_endpoint)
-
-    async def _retry_on_503_async(self, endpoint: str, retry_func: Callable):
-        await self.endpoints.refresh_fd_bypass_async()
-        new_endpoint = self._rebuild_endpoint(endpoint)
-        return await retry_func(new_endpoint)

@@ -1,6 +1,7 @@
 from lcp_delta.enact.loader import get_base_endpoints
 import lcp_delta.common.constants as constants
 from lcp_delta.common.credentials_holder import CredentialsHolder
+from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY
 import httpx
 
 
@@ -13,13 +14,13 @@ class EnactApiEndpoints:
         if self._bypass_frontdoor:
             self.refresh_fd_bypass()
 
-    def refresh_fd_bypass(self) -> None:
-        lookup_map = {
-            "MAIN": constants.MAIN_FD_BYPASS_LOOKUP_URL,
-            "EPEX": constants.EPEX_FD_BYPASS_LOOKUP_URL
-        }
+    _FD_BYPASS_LOOKUP_URL_MAP = {
+        "MAIN": constants.MAIN_FD_BYPASS_LOOKUP_URL,
+        "EPEX": constants.EPEX_FD_BYPASS_LOOKUP_URL,
+    }
 
-        for key, bypass_url in lookup_map.items():
+    def refresh_fd_bypass(self) -> None:
+        for key, bypass_url in self._FD_BYPASS_LOOKUP_URL_MAP.items():
             try:
                 actual_url = self._fetch_actual_backend_url(bypass_url)
                 if actual_url != "":
@@ -27,36 +28,13 @@ class EnactApiEndpoints:
             except Exception:
                 pass
 
-    async def refresh_fd_bypass_async(self) -> None:
-        lookup_map = {
-            "MAIN": constants.MAIN_FD_BYPASS_LOOKUP_URL,
-            "EPEX": constants.EPEX_FD_BYPASS_LOOKUP_URL
-        }
-
-        for key, bypass_url in lookup_map.items():
-            try:
-                actual_url = await self._fetch_actual_backend_url_async(bypass_url)
-                if actual_url != "":
-                    setattr(self._base_endpoints, f"{key}_BASE_URL", actual_url)
-            except Exception:
-                pass
-
+    @DEFAULT_RETRY_POLICY
     def _fetch_actual_backend_url(self, lookup_url: str) -> str:
         with httpx.Client() as client:
-            response = client.get(lookup_url, timeout=15, headers=self._get_headers())
+            response = client.get(lookup_url, timeout=30, headers=self._get_headers())
             if response.status_code == 401 and "WWW-Authenticate" in response.headers:
                 self._refresh_headers()
-                response = client.get(lookup_url, timeout=15, headers=self._get_headers())
-            if response.status_code != 200:
-                return ""
-            return response.text.strip()
-
-    async def _fetch_actual_backend_url_async(self, lookup_url: str) -> str:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(lookup_url, timeout=15, headers=self._get_headers())
-            if response.status_code == 401 and "WWW-Authenticate" in response.headers:
-                self._refresh_headers()
-                response = await client.get(lookup_url, timeout=15, headers=self._get_headers())
+                response = client.get(lookup_url, timeout=30, headers=self._get_headers())
             if response.status_code != 200:
                 return ""
             return response.text.strip()
@@ -70,6 +48,19 @@ class EnactApiEndpoints:
 
     def _refresh_headers(self) -> None:
         self.credentials_holder.get_bearer_token()
+
+    def rebuild_endpoint(self, old_endpoint: str) -> str:
+        current_endpoints = {
+            "MAIN": self._base_endpoints.MAIN_BASE_URL,
+            "EPEX": self._base_endpoints.EPEX_BASE_URL,
+        }
+
+        for key, current_base_url in current_endpoints.items():
+            if old_endpoint.startswith(current_base_url):
+                new_base_url = getattr(self._base_endpoints, f"{key}_BASE_URL")
+                return old_endpoint.replace(current_base_url, new_base_url)
+
+        return old_endpoint
 
     @property
     def SERIES_DATA(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Data_V2"
