@@ -33,7 +33,7 @@ class APIHelperBase(ABC):
         response = await make_request(endpoint)
 
         if response.status_code == 503 and self._bypass_frontdoor:
-            response = self._retry_on_503(endpoint, make_request)
+            response = self._refresh_fd_bypass_and_retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = await self._retry_with_refreshed_token_async(endpoint, headers=self._get_headers(), request_body=request_body)
@@ -54,7 +54,7 @@ class APIHelperBase(ABC):
         response = make_request(endpoint)
 
         if response.status_code == 503 and self._bypass_frontdoor:
-            response = self._retry_on_503(endpoint, make_request)
+            response = self._refresh_fd_bypass_and_retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = self._retry_with_refreshed_token(endpoint, headers=self._get_headers(), request_body=request_body)
@@ -75,7 +75,7 @@ class APIHelperBase(ABC):
         response = await make_request(endpoint)
 
         if response.status_code == 503 and self._bypass_frontdoor:
-            response = self._retry_on_503(endpoint, make_request)
+            response = self._refresh_fd_bypass_and_retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = await self._retry_with_refreshed_token_async(endpoint, params=params, headers=self._get_headers(), method="GET")
@@ -96,7 +96,7 @@ class APIHelperBase(ABC):
         response = make_request(endpoint)
 
         if response.status_code == 503 and self._bypass_frontdoor:
-            response = self._retry_on_503(endpoint, make_request)
+            response = self._refresh_fd_bypass_and_retry_on_503(endpoint, make_request)
 
         if response.status_code == 401 and "WWW-Authenticate" in response.headers:
             response = self._retry_with_refreshed_token(endpoint, headers=self._get_headers(), params=params, method="GET")
@@ -160,7 +160,7 @@ class APIHelperBase(ABC):
 
         response.raise_for_status()
 
-    def _retry_on_503(self, endpoint: str, retry_func: Callable):
+    def _refresh_fd_bypass_and_retry_on_503(self, endpoint: str, retry_func: Callable):
         self.endpoints.refresh_fd_bypass()
         new_endpoint = self.endpoints.rebuild_endpoint(endpoint)
         return retry_func(new_endpoint)
