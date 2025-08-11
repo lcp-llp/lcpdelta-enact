@@ -1,3 +1,5 @@
+import sys
+import os
 import pytest
 import time
 from datetime import date
@@ -65,7 +67,6 @@ v2_columns = [ # Plant - Co-located fuel, Profit - CM are optional extras, also 
     'Profit - Frequency',
     'Profit - Reserve',
     'Profit - CM',
-    'Profit - BM Non-Delivery Charge',
     'BM Profit Breakdown - Bids',
     'BM Profit Breakdown - Offers',
     'BM Profit Breakdown - System',
@@ -80,8 +81,6 @@ v2_columns = [ # Plant - Co-located fuel, Profit - CM are optional extras, also 
     'BM Volume - Offer',
     'BM Volume - System',
     'BM Volume - Energy',
-    'BM Volume - Non-Delivered Bid',
-    'BM Volume - Non-Delivered Offer',
     'BM Bid Price - Min',
     'BM Bid Price - Max',
     'BM Bid Price - Average',
@@ -96,6 +95,7 @@ v2_columns = [ # Plant - Co-located fuel, Profit - CM are optional extras, also 
 
 @pytest.mark.asyncio
 async def test_get_leaderboard_data_legacy_async():
+    time.sleep(2)
     res = await enact_api_helper.get_leaderboard_data_legacy_async(
         date(2024, 8, 1),
         date(2024, 8, 3),
@@ -110,6 +110,7 @@ async def test_get_leaderboard_data_legacy_async():
 
 
 def test_get_leaderboard_data_legacy_sync():
+    time.sleep(2)
     res = enact_api_helper.get_leaderboard_data_legacy(
         date(2024, 8, 1),
         date(2024, 8, 3),
@@ -124,9 +125,10 @@ def test_get_leaderboard_data_legacy_sync():
 
 @pytest.mark.asyncio
 async def test_get_leaderboard_data_async():
+    time.sleep(2)
     res = await enact_api_helper.get_leaderboard_data_async(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
+        date(2025, 7, 25),
+        date(2025, 7, 27),
         "Plant",
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
@@ -142,9 +144,10 @@ async def test_get_leaderboard_data_async():
 
 
 def test_get_leaderboard_data_sync():
+    time.sleep(2)
     res = enact_api_helper.get_leaderboard_data(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
+        date(2025, 7, 25),
+        date(2025, 7, 27),
         "Plant",
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",

@@ -22,7 +22,7 @@ def generate_request(
         "SelectedGranularity": granularity,
     }
 
-def generate_gb_info_request(
+def generate_index_info_request(
     index_id: str,
 ) -> dict:
     return {
@@ -45,6 +45,11 @@ def generate_gb_request(
     group_dx = "false",
     include_capacity_market = "true",
     include_non_delivery_charges = "true",
+    include_imbalance=False,
+    include_estimated_charging_cost=False,
+    include_fpnflagoff_wholesale=False,
+    charging_cost_price=None,
+    charging_cost_assumption=None
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -63,6 +68,11 @@ def generate_gb_request(
         "GroupDx": group_dx,
         "IncludeCmRevenues": include_capacity_market,
         "IncludeNonDeliveryCharges": include_non_delivery_charges,
+        "IncludeImbalance": include_imbalance,
+        "IncludeEstimatedChargingCost": include_estimated_charging_cost,
+        "ChargingCostPrice": charging_cost_price,
+        "ChargingCostAssumption": charging_cost_assumption,
+        "IncludeFpnFlagOffWholesale": include_fpnflagoff_wholesale
     }
 
 def process_index_info_response(response: dict) -> pd.DataFrame:

@@ -1,15 +1,12 @@
 import pandas as pd
-
-import lcp_delta.enact.endpoints as ep
-
 from datetime import datetime
 from typing import Union
 
 from lcp_delta.global_helpers import convert_datetime_to_iso
 from lcp_delta.common import APIHelperBase
 from lcp_delta.enact.helpers import get_month_name
-from lcp_delta.enact.enums import AncillaryContracts
 from lcp_delta.enact.services import ancillary_service
+from lcp_delta.enact.services import contract_evolution_service
 from lcp_delta.enact.services import bm_service
 from lcp_delta.enact.services import day_ahead_service
 from lcp_delta.enact.services import epex_service
@@ -20,7 +17,6 @@ from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
-
 
 class APIHelper(APIHelperBase):
     def _make_series_request(
@@ -126,7 +122,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            ep.SERIES_DATA,
+            self.endpoints.SERIES_DATA,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -152,7 +148,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            ep.SERIES_DATA,
+            self.endpoints.SERIES_DATA,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -172,12 +168,12 @@ class APIHelper(APIHelperBase):
             or not the series has historical forecasts.
         """
         request_body = series_service.generate_series_info_request(series_id, country_id)
-        return self._post_request(ep.SERIES_INFO, request_body)
+        return self._post_request(self.endpoints.SERIES_INFO, request_body)
 
     async def get_series_info_async(self, series_id: str, country_id: str | None = None) -> dict:
         """An asynchronous version of `get_series_info`."""
         request_body = series_service.generate_series_info_request(series_id, country_id)
-        return await self._post_request_async(ep.SERIES_INFO, request_body)
+        return await self._post_request_async(self.endpoints.SERIES_INFO, request_body)
 
     def get_series_by_fuel(
         self,
@@ -224,7 +220,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_ids,  # fuel and other options
             half_hourly_average,
-            ep.SERIES_BY_FUEL,
+            self.endpoints.SERIES_BY_FUEL,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -250,7 +246,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_ids,  # fuel and other options
             half_hourly_average,
-            ep.SERIES_BY_FUEL,
+            self.endpoints.SERIES_BY_FUEL,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -301,7 +297,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_ids,  # zone and other options
             half_hourly_average,
-            ep.SERIES_BY_ZONE,
+            self.endpoints.SERIES_BY_ZONE,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -327,7 +323,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_ids,  # zone and other options
             half_hourly_average,
-            ep.SERIES_BY_ZONE,
+            self.endpoints.SERIES_BY_ZONE,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -378,7 +374,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_ids,  # owner and other options
             half_hourly_average,
-            ep.SERIES_BY_OWNER,
+            self.endpoints.SERIES_BY_OWNER,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -404,7 +400,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_ids,  # owner and other options
             half_hourly_average,
-            ep.SERIES_BY_OWNER,
+            self.endpoints.SERIES_BY_OWNER,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -455,7 +451,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            ep.SERIES_MULTI_OPTION,
+            self.endpoints.SERIES_MULTI_OPTION,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -481,7 +477,7 @@ class APIHelper(APIHelperBase):
             country_id,
             option_id,
             half_hourly_average,
-            ep.SERIES_MULTI_OPTION,
+            self.endpoints.SERIES_MULTI_OPTION,
             request_time_zone_id,
             time_zone_id,
             parse_datetimes,
@@ -535,7 +531,7 @@ class APIHelper(APIHelperBase):
             request_time_zone_id,
             time_zone_id,
         )
-        response = self._post_request(ep.MULTI_SERIES_DATA, request_body)
+        response = self._post_request(self.endpoints.MULTI_SERIES_DATA, request_body)
         return series_service.process_series_data_response(response, parse_datetimes)
 
     async def get_multi_series_data_async(
@@ -561,7 +557,7 @@ class APIHelper(APIHelperBase):
             request_time_zone_id,
             time_zone_id,
         )
-        response = await self._post_request_async(ep.MULTI_SERIES_DATA, request_body)
+        response = await self._post_request_async(self.endpoints.MULTI_SERIES_DATA, request_body)
         return series_service.process_series_data_response(response, parse_datetimes)
 
     def get_multi_plant_series_data(
@@ -612,7 +608,7 @@ class APIHelper(APIHelperBase):
             request_time_zone_id,
             time_zone_id,
         )
-        response = self._post_request(ep.MULTI_PLANT_SERIES_DATA, request_body)
+        response = self._post_request(self.endpoints.MULTI_PLANT_SERIES_DATA, request_body)
         return series_service.process_series_data_response(response, parse_datetimes)
 
     async def get_multi_plant_series_data_async(
@@ -638,7 +634,7 @@ class APIHelper(APIHelperBase):
             request_time_zone_id,
             time_zone_id,
         )
-        response = await self._post_request_async(ep.MULTI_PLANT_SERIES_DATA, request_body)
+        response = await self._post_request_async(self.endpoints.MULTI_PLANT_SERIES_DATA, request_body)
         return series_service.process_series_data_response(response, parse_datetimes)
 
     def get_plant_details_by_id(self, plant_id: str) -> dict:
@@ -648,12 +644,12 @@ class APIHelper(APIHelperBase):
             plant_id `str`: The Enact plant ID.
         """
         request_body = plant_service.generate_plant_request(plant_id)
-        return self._post_request(ep.PLANT_INFO, request_body)
+        return self._post_request(self.endpoints.PLANT_INFO, request_body)
 
     async def get_plant_details_by_id_async(self, plant_id: str) -> dict:
         """An asynchronous version of `get_pant_details_by_id`."""
         request_body = plant_service.generate_plant_request(plant_id)
-        return await self._post_request_async(ep.PLANT_INFO, request_body)
+        return await self._post_request_async(self.endpoints.PLANT_INFO, request_body)
 
     def get_plant_details_by_fuel(self, fuel: str) -> dict:
         """Get details of all plants of a particular fuel.
@@ -662,13 +658,13 @@ class APIHelper(APIHelperBase):
             fuel `str`: The fuel.
         """
         request_body = plant_service.generate_fuel_request(fuel)
-        response =  self._post_request(ep.PLANT_INFO_BY_FUEL, request_body)
+        response =  self._post_request(self.endpoints.PLANT_INFO_BY_FUEL, request_body)
         return plant_service.process_country_fuel_response(response)
 
     async def get_plant_details_by_fuel_async(self, fuel: str) -> dict:
         """An asynchronous version of `get_pant_details_by_id`."""
         request_body = plant_service.generate_fuel_request(fuel)
-        response = await self._post_request_async(ep.PLANT_INFO_BY_FUEL, request_body)
+        response = await self._post_request_async(self.endpoints.PLANT_INFO_BY_FUEL, request_body)
         return plant_service.process_country_fuel_response(response)
 
     def get_plants_by_fuel_and_country(self, fuel_id: str, country_id: str) -> list[str]:
@@ -682,13 +678,13 @@ class APIHelper(APIHelperBase):
             Response: The response object containing the plant data.
         """
         request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
-        response = self._post_request(ep.PLANT_IDS, request_body)
+        response = self._post_request(self.endpoints.PLANT_IDS, request_body)
         return plant_service.process_country_fuel_response(response)
 
     async def get_plants_by_fuel_and_country_async(self, fuel_id: str, country_id: str) -> list[str]:
         """An asynchronous version of `get_plants_by_fuel_and_country`."""
         request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
-        response = await self._post_request_async(ep.PLANT_IDS, request_body)
+        response = await self._post_request_async(self.endpoints.PLANT_IDS, request_body)
         return plant_service.process_country_fuel_response(response)
 
     def get_history_of_forecast_for_given_date(
@@ -713,7 +709,7 @@ class APIHelper(APIHelperBase):
             All other rows correspond to the data-points at each value of the first array.
         """
         request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
-        response = self._post_request(ep.HOF, request_body)
+        response = self._post_request(self.endpoints.HOF, request_body)
         return hof_service.process_single_date_response(response)
 
     async def get_history_of_forecast_for_given_date_async(
@@ -721,7 +717,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """An asynchronous version of `get_history_of_forecast_for_given_date`."""
         request_body = hof_service.generate_single_date_request(series_id, date, country_id, option_id)
-        response = await self._post_request_async(ep.HOF, request_body)
+        response = await self._post_request_async(self.endpoints.HOF, request_body)
         return hof_service.process_single_date_response(response)
 
     def get_history_of_forecast_for_date_range(
@@ -753,7 +749,7 @@ class APIHelper(APIHelperBase):
             All other rows correspond to the data-points at each value of the first array.
         """
         response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = self._post_request(ep.HOF, response_body)
+        response = self._post_request(self.endpoints.HOF, response_body)
         return hof_service.process_date_range_response(response)
 
     async def get_history_of_forecast_for_date_range_async(
@@ -766,7 +762,7 @@ class APIHelper(APIHelperBase):
     ) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_history_of_forecast_for_date_range_async`."""
         response_body = hof_service.generate_date_range_request(series_id, date_from, date_to, country_id, option_id)
-        response = await self._post_request_async(ep.HOF, response_body)
+        response = await self._post_request_async(self.endpoints.HOF, response_body)
         return hof_service.process_date_range_response(response)
 
     def get_latest_forecast_generated_at_given_time(
@@ -803,7 +799,7 @@ class APIHelper(APIHelperBase):
         request_body = hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
-        response = self._post_request(ep.HOF_LATEST_FORECAST, request_body)
+        response = self._post_request(self.endpoints.HOF_LATEST_FORECAST, request_body)
         return hof_service.process_latest_forecast_response(response)
 
     async def get_latest_forecast_generated_at_given_time_async(
@@ -819,7 +815,7 @@ class APIHelper(APIHelperBase):
         request_body = hof_service.generate_latest_forecast_request(
             series_id, date_from, date_to, country_id, forecast_as_of, option_id
         )
-        response = await self._post_request_async(ep.HOF_LATEST_FORECAST, request_body)
+        response = await self._post_request_async(self.endpoints.HOF_LATEST_FORECAST, request_body)
         return hof_service.process_latest_forecast_response(response)
 
     def get_bm_data_by_period(
@@ -841,7 +837,7 @@ class APIHelper(APIHelperBase):
             `TypeError`: If the period is not an integer or if no period is given and date is not of type datetime.
         """
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = self._post_request(ep.BOA, request_body, long_timeout=True)
+        response = self._post_request(self.endpoints.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
     
     async def get_bm_data_by_period_async(
@@ -849,7 +845,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_period`."""
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
-        response = await self._post_request_async(ep.BOA, request_body, long_timeout=True)
+        response = await self._post_request_async(self.endpoints.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
     
     def get_bm_data_by_day(
@@ -864,7 +860,7 @@ class APIHelper(APIHelperBase):
         same as get_bm_data_by_search except include_accepted_times and include_on_table default is true
         """
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
-        response = self._get_request(ep.BOA_DAILY, request_body, long_timeout=True)
+        response = self._get_request(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
     
     async def get_bm_data_by_day_async(
@@ -877,7 +873,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_day`."""
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
-        response = await self._get_request_async(ep.BOA_DAILY, request_body, long_timeout=True)
+        response = await self._get_request_async(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     def get_bm_data_by_day_range(
@@ -913,7 +909,7 @@ class APIHelper(APIHelperBase):
         more_pages = True
         while more_pages:
             request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, option, search_string, include_on_table, cursor)
-            response = self._get_request(ep.BOA_DAY_RANGE, request_body, long_timeout=True)
+            response = self._get_request(self.endpoints.BOA_DAY_RANGE, request_body, long_timeout=True)
             page_data = response.get("data", {})
             rows = page_data.get("data", [])
 
@@ -945,7 +941,7 @@ class APIHelper(APIHelperBase):
         more_pages = True
         while more_pages:
             request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, option, search_string, include_on_table, cursor)
-            response = await self._get_request_async(ep.BOA_DAY_RANGE, request_body, long_timeout=True)
+            response = await self._get_request_async(self.endpoints.BOA_DAY_RANGE, request_body, long_timeout=True)
             page_data = response.get("data", {})
             rows = page_data.get("data", [])
 
@@ -986,7 +982,7 @@ class APIHelper(APIHelperBase):
             Response: A pandas DataFrame containing the BM data.
         """
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
-        response = self._get_request(ep.BOA_DAILY, request_body, long_timeout=True)
+        response = self._get_request(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     async def get_bm_data_by_search_async(
@@ -999,7 +995,7 @@ class APIHelper(APIHelperBase):
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_search`."""
         request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
-        response = await self._get_request_async(ep.BOA_DAILY, request_body, long_timeout=True)
+        response = await self._get_request_async(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     def get_leaderboard_data_legacy(
@@ -1039,7 +1035,7 @@ class APIHelper(APIHelperBase):
             gas_price_assumption,
             include_capacity_market_revenues,
         )
-        response = self._post_request(ep.LEADERBOARD_V1, request_body)
+        response = self._post_request(self.endpoints.LEADERBOARD_V1, request_body)
         return leaderboard_service.process_response(response, type)
 
     async def get_leaderboard_data_legacy_async(
@@ -1062,7 +1058,7 @@ class APIHelper(APIHelperBase):
             gas_price_assumption,
             include_capacity_market_revenues,
         )
-        response = await self._post_request_async(ep.LEADERBOARD_V1, request_body)
+        response = await self._post_request_async(self.endpoints.LEADERBOARD_V1, request_body)
         return leaderboard_service.process_response(response, type)
 
     def get_leaderboard_data(
@@ -1080,6 +1076,11 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price="IntradayPrice",
+        charging_cost_assumption="PreviousEFABlock"
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1107,7 +1108,19 @@ class APIHelper(APIHelperBase):
 
             show_co_located_fuels `bool` (optional): When set to true, a column will show the fuel types of co-located plants. Defaults to False.
 
-            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False."""
+            account_for_availability_in_normalisation `bool` (optional): When set to true, the normalisation process will account for plant availability. Defaults to False.
+
+            fuels (optional, array_str): List of fuel types to include. Leave empty to get all fuels back.
+
+            include_imbalance `str` (optional): Set to "False" (default) to exclude imbalance payments for non-BM and secondary BMUs.
+
+            include_estimated_charging_cost `str` (optional): Set to "False" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs.
+
+            include_fpnflagoff_wholesale `str` (optional): Set to "False" (default) to exclude estimated wholesale revenue for BM (No FPN) assets.
+
+            charging_cost_price `str` (optional): The price assumption using for the estimated charging/discharging costs of non-BM and secondary BMUs. Options are: 'WeightedAverageDayAheadPrice', 'EpexDayAheadPrice', 'NordpoolDayAheadPrice', 'IntradayPrice' (default) or 'SystemPrice'.
+
+            charging_cost_assumption `str` (optional): The charging cost assumption used for the estimated charging/discharging costs for non-BM and secondary BMUs. Options are: 'PreviousEFABlock' (default), 'OptimalPricePrev12Hours' and 'CurrentSp'."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -1122,8 +1135,13 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
-        response = self._post_request(ep.LEADERBOARD_V2, request_body)
+        response = self._post_request(self.endpoints.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
 
     async def get_leaderboard_data_async(
@@ -1141,6 +1159,11 @@ class APIHelper(APIHelperBase):
         show_co_located_fuels=False,
         account_for_availability_in_normalisation=False,
         fuels=None,
+        include_imbalance=False,
+        include_estimated_charging_cost=False,
+        include_fpnflagoff_wholesale=False,
+        charging_cost_price="IntradayPrice",
+        charging_cost_assumption="PreviousEFABlock"
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1157,8 +1180,13 @@ class APIHelper(APIHelperBase):
             show_co_located_fuels,
             account_for_availability_in_normalisation,
             fuels,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
-        response = await self._post_request_async(ep.LEADERBOARD_V2, request_body)
+        response = await self._post_request_async(self.endpoints.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
 
 
@@ -1169,13 +1197,13 @@ class APIHelper(APIHelperBase):
         """ Get the defining information of the index with the given ID.
 
          Args:
-            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the information icon next to an index."""
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the GB Index page on Enact, by clicking the ID icon next to an index."""
 
-        request_body = index_service.generate_gb_info_request(
+        request_body = index_service.generate_index_info_request(
             index_id,
         )
 
-        response = self._post_request(ep.GB_INDEX_INFORMATION, request_body)
+        response = self._post_request(self.endpoints.GB_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
 
     async def get_gb_index_information_async(
@@ -1183,13 +1211,12 @@ class APIHelper(APIHelperBase):
         index_id: str,
         ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_information`."""
-        request_body = index_service.generate_gb_info_request(
+        request_body = index_service.generate_index_info_request(
             index_id,
         )
 
-        response = await self._post_request_async(ep.GB_INDEX_INFORMATION, request_body)
+        response = await self._post_request_async(self.endpoints.GB_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
-
 
     def get_gb_index_data(
         self,
@@ -1208,6 +1235,11 @@ class APIHelper(APIHelperBase):
         group_dx = "false",
         include_capacity_market = "true",
         include_non_delivery_charges = "true",
+        include_imbalance= "false",
+        include_estimated_charging_cost= "false",
+        include_fpnflagoff_wholesale= "false",
+        charging_cost_price = "IntradayPrice",
+        charging_cost_assumption = "PreviousEFABlock"
     ) -> pd.DataFrame:
         """Gets GB index data for the given parameters.
 
@@ -1240,7 +1272,17 @@ class APIHelper(APIHelperBase):
 
             include_capacity_market `str` (optional): Set to "true" (default) to include capacity market profits or "false".
 
-            include_non_delivery_charges `str` (optional): Set to "true" (default) to include non-delivery charges or "false"."""
+            include_non_delivery_charges `str` (optional): Set to "true" (default) to include non-delivery charges or "false".
+
+            include_imbalance `str` (optional): Set to "false" (default) to exclude imbalance payments for non-BM and secondary BMUs.
+
+            include_estimated_charging_cost `str` (optional): Set to "false" (default) to exclude estimated charging/discharging costs for non-BM and secondary BMUs.
+
+            include_fpnflagoff_wholesale `str` (optional): Set to "false" (default) to exclude estimated wholesale revenue for BM (No FPN) assets.
+
+            charging_cost_price `str` (optional): The price assumption using for the estimated charging/discharging costs of non-BM and secondary BMUs. Options are: 'WeightedAverageDayAheadPrice', 'EpexDayAheadPrice', 'NordpoolDayAheadPrice', 'IntradayPrice' (default) or 'SystemPrice'.
+
+            charging_cost_assumption `str` (optional): The charging cost assumption used for the estimated charging/discharging costs for non-BM and secondary BMUs. Options are: 'PreviousEFABlock' (default), 'OptimalPricePrev12Hours' and 'CurrentSp'."""
         request_body = index_service.generate_gb_request(
             date_from,
             date_to,
@@ -1257,8 +1299,13 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
-        response = self._post_request(ep.GB_INDEX_DATA, request_body)
+        response = self._post_request(self.endpoints.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
 
     async def get_gb_index_data_async(
@@ -1278,6 +1325,11 @@ class APIHelper(APIHelperBase):
         group_dx = "false",
         include_capacity_market = "true",
         include_non_delivery_charges = "true",
+        include_imbalance= "false",
+        include_estimated_charging_cost= "false",
+        include_fpnflagoff_wholesale= "false",
+        charging_cost_price = None,
+        charging_cost_assumption = None
     ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_data`."""
         request_body = index_service.generate_gb_request(
@@ -1296,21 +1348,50 @@ class APIHelper(APIHelperBase):
             group_dx,
             include_capacity_market,
             include_non_delivery_charges,
+            include_imbalance,
+            include_estimated_charging_cost,
+            include_fpnflagoff_wholesale,
+            charging_cost_price,
+            charging_cost_assumption
         )
-        response = await self._post_request_async(ep.GB_INDEX_DATA, request_body)
+        response = await self._post_request_async(self.endpoints.GB_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
 
 
     def get_default_german_indices(self) -> pd.DataFrame:
         """ Get the defining information of the default german indices, including the GUID that allows querying of that indices data via `get_german_index_data` """
 
-        response = self._get_request(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        response = self._get_request(self.endpoints.EUROPE_INDEX_DEFAULT_INDICES)
         return index_service.process_index_info_response(response)
 
     async def get_default_german_indices_async(self) -> pd.DataFrame:
         """An asynchronous version of `get_default_german_indices`."""
 
-        response = await self._get_request_async(ep.EUROPE_INDEX_DEFAULT_INDICES)
+        response = await self._get_request_async(self.endpoints.EUROPE_INDEX_DEFAULT_INDICES)
+        return index_service.process_index_info_response(response)
+
+    def get_europe_index_information(
+        self,
+        index_id: str,
+        ) -> pd.DataFrame:
+        """ Get the defining information of the index with the given ID.
+         Args:
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the European Index page on Enact, by clicking the ID icon next to an index."""
+        request_body = index_service.generate_index_info_request(
+            index_id,
+        )
+        response = self._post_request(self.endpoints.EUROPE_INDEX_INFORMATION, request_body)
+        return index_service.process_index_info_response(response)
+
+    async def get_europe_index_information_async(
+        self,
+        index_id: str,
+        ) -> pd.DataFrame:
+        """An asynchronous version of `get_europe_index_information`."""
+        request_body = index_service.generate_index_info_request(
+            index_id,
+        )
+        response = await self._post_request_async(self.endpoints.EUROPE_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
 
     def get_german_index_data(
@@ -1340,7 +1421,7 @@ class APIHelper(APIHelperBase):
             normalisation,
             granularity,
         )
-        response = self._post_request(ep.EUROPE_INDEX_DATA, request_body)
+        response = self._post_request(self.endpoints.EUROPE_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
 
     async def get_german_index_data_async(
@@ -1359,8 +1440,58 @@ class APIHelper(APIHelperBase):
             normalisation,
             granularity,
         )
-        response = await self._post_request_async(ep.EUROPE_INDEX_DATA, request_body)
+        response = await self._post_request_async(self.endpoints.EUROPE_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
+
+    def get_contract_evolution(
+        self,
+        instrument,
+        contract,
+        contract_period = None,
+        date_from: datetime = None,
+        date_to: datetime = None,
+    ) -> pd.DataFrame:
+        """Gets the evolution of a commodity contracts closing prices. This returns a dataframe of the closing bid, offer and mid prices.
+           The date column is the date on which this contract was traded to give these prices.
+
+        Args:
+            instrument `str`: The commodity instrument, "Nbp", "Eua", "UkaFutures", "UkPeak" or "UkBaseload".
+            contract `str`: The contract type, "Spot", "WithinDay", "DayAhead", "BalanceOfWeek", "Weekend", "WorkingDaysNextWeek", "Week", "BalanceOfMonth", "Month", "Quarter", "Season", "Annuals" or "CalenderYear".
+.           contract_period `str`: The contract period. Certain contracts can have multiple periods traded on a single day, for example the NBP monthly contract may trade the next 3 following months given the day of trade.
+                                   In this instance the specific contract period must be specified. Contracts of Month or lower granularity require this contract_period. See our docs to see the format required of the contract_period for the different contracts.
+
+            date_from `datetime.datetime` (optional): A start date to filter the returned data, if not given all data up to the date_to (also optional) will be returned.
+
+            date_to `datetime.datetime`: An end date to filter the returned data, if not given all data from the date_from (also optional) will be returned. """
+
+        request_body = contract_evolution_service.generate_request(
+            instrument,
+            contract,
+            contract_period,
+            date_from,
+            date_to,
+        )
+        response = self._post_request(self.endpoints.CONTRACT_EVOLUTION, request_body)
+        return contract_evolution_service.process_contract_evolution_response(response)
+
+    async def get_contract_evolution_async(
+        self,
+        instrument,
+        contract,
+        contract_period = None,
+        date_from: datetime = None,
+        date_to: datetime = None,
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_contract_evolution`."""
+        request_body = contract_evolution_service.generate_request(
+            instrument,
+            contract,
+            contract_period,
+            date_from,
+            date_to,
+        )
+        response = await self._post_request_async(self.endpoints.CONTRACT_EVOLUTION, request_body)
+        return contract_evolution_service.process_contract_evolution_response(response)
 
     def get_ancillary_contract_data(
         self,
@@ -1389,7 +1520,7 @@ class APIHelper(APIHelperBase):
         request_body = ancillary_service.generate_ancillary_request(
             contract_type, option_one, option_two, date_requested
         )
-        response = self._post_request(ep.ANCILLARY, request_body)
+        response = self._post_request(self.endpoints.ANCILLARY, request_body)
         return ancillary_service.process_ancillary_response(response, contract_type)
 
     async def get_ancillary_contract_data_async(
@@ -1404,7 +1535,7 @@ class APIHelper(APIHelperBase):
         request_body = ancillary_service.generate_ancillary_request(
             contract_type, option_one, option_two, date_requested
         )
-        response = await self._post_request_async(ep.ANCILLARY, request_body)
+        response = await self._post_request_async(self.endpoints.ANCILLARY, request_body)
         return ancillary_service.process_ancillary_response(response, contract_type)
 
     def get_DCL_contracts(self, date_requested: datetime) -> pd.DataFrame:
@@ -1607,13 +1738,13 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = news_table_service.generate_request(table_id)
-        response = self._post_request(ep.NEWS_TABLE, request_body)
+        response = self._post_request(self.endpoints.NEWS_TABLE, request_body)
         return news_table_service.process_response(response)
 
     async def get_news_table_async(self, table_id: str) -> pd.DataFrame:
         """An asynchronous version of `get_news_table`."""
         request_body = news_table_service.generate_request(table_id)
-        response = await self._post_request_async(ep.NEWS_TABLE, request_body)
+        response = await self._post_request_async(self.endpoints.NEWS_TABLE, request_body)
         return news_table_service.process_response(response)
 
     def get_epex_trades_by_contract_id(self, contract_id: str) -> pd.DataFrame:
@@ -1624,13 +1755,13 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = self._post_request(ep.EPEX_TRADES_BY_CONTRACT_ID, request_body)
+        response = self._post_request(self.endpoints.EPEX_TRADES_BY_CONTRACT_ID, request_body)
         return epex_service.process_trades_response(response)
 
     async def get_epex_trades_by_contract_id_async(self, contract_id: str) -> pd.DataFrame:
         """An asynchronous version of `get_epex_trades_by_contract_id`."""
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = await self._post_request_async(ep.EPEX_TRADES_BY_CONTRACT_ID, request_body)
+        response = await self._post_request_async(self.endpoints.EPEX_TRADES_BY_CONTRACT_ID, request_body)
         return epex_service.process_trades_response(response)
 
     def get_epex_trades(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
@@ -1648,13 +1779,13 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = self._post_request(ep.EPEX_TRADES, request_body)
+        response = self._post_request(self.endpoints.EPEX_TRADES, request_body)
         return epex_service.process_trades_response(response)
 
     async def get_epex_trades_async(self, type: str, date: datetime, period: int = None) -> pd.DataFrame:
         """An asynchronous version of `get_epex_trades`."""
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = await self._post_request_async(ep.EPEX_TRADES, request_body)
+        response = await self._post_request_async(self.endpoints.EPEX_TRADES, request_body)
         return epex_service.process_trades_response(response)
 
     def get_epex_order_book(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
@@ -1672,13 +1803,13 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = self._post_request(ep.EPEX_ORDER_BOOK, request_body)
+        response = self._post_request(self.endpoints.EPEX_ORDER_BOOK, request_body)
         return epex_service.process_order_book_response(response)
 
     async def get_epex_order_book_async(self, type: str, date: datetime, period: int = None) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_epex_order_book`."""
         request_body = epex_service.generate_time_and_type_request(type, date, period)
-        response = await self._post_request_async(ep.EPEX_ORDER_BOOK, request_body)
+        response = await self._post_request_async(self.endpoints.EPEX_ORDER_BOOK, request_body)
         return epex_service.process_order_book_response(response)
 
     def get_epex_order_book_by_contract_id(self, contract_id: int) -> dict[str, pd.DataFrame]:
@@ -1689,13 +1820,13 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = self._post_request(ep.EPEX_ORDER_BOOK_BY_CONTRACT_ID, request_body)
+        response = self._post_request(self.endpoints.EPEX_ORDER_BOOK_BY_CONTRACT_ID, request_body)
         return epex_service.process_order_book_response(response)
 
     async def get_epex_order_book_by_contract_id_async(self, contract_id: int) -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_epex_order_book_by_contract_id`."""
         request_body = epex_service.generate_contract_id_request(contract_id)
-        response = await self._post_request_async(ep.EPEX_ORDER_BOOK_BY_CONTRACT_ID, request_body)
+        response = await self._post_request_async(self.endpoints.EPEX_ORDER_BOOK_BY_CONTRACT_ID, request_body)
         return epex_service.process_order_book_response(response)
 
     def get_epex_contracts(self, date: datetime) -> pd.DataFrame:
@@ -1709,13 +1840,13 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = epex_service.generate_contract_request(date)
-        response = self._post_request(ep.EPEX_CONTRACTS, request_body, long_timeout=True)
+        response = self._post_request(self.endpoints.EPEX_CONTRACTS, request_body, long_timeout=True)
         return epex_service.process_contract_response(response)
 
     async def get_epex_contracts_async(self, date: datetime) -> pd.DataFrame:
         """An asynchronous version of `get_epex_contracts`."""
         request_body = epex_service.generate_contract_request(date)
-        response = await self._post_request_async(ep.EPEX_CONTRACTS, request_body)
+        response = await self._post_request_async(self.endpoints.EPEX_CONTRACTS, request_body)
         return epex_service.process_contract_response(response)
 
     def get_N2EX_buy_sell_curves(self, date: datetime) -> dict:
@@ -1726,12 +1857,12 @@ class APIHelper(APIHelperBase):
 
         """
         request_body = nordpool_service.generate_request(date)
-        return self._post_request(ep.NORDPOOL_CURVES, request_body)
+        return self._post_request(self.endpoints.NORDPOOL_CURVES, request_body)
 
     async def get_N2EX_buy_sell_curves_async(self, date: datetime) -> dict:
         """An asynchronous version of `get_N2EX_buy_sell_curves`."""
         request_body = nordpool_service.generate_request(date)
-        return await self._post_request_async(ep.NORDPOOL_CURVES, request_body)
+        return await self._post_request_async(self.endpoints.NORDPOOL_CURVES, request_body)
 
     def get_day_ahead_data(
         self,
@@ -1765,7 +1896,7 @@ class APIHelper(APIHelperBase):
         request_body = day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
-        response = self._post_request(ep.DAY_AHEAD, request_body)
+        response = self._post_request(self.endpoints.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)
 
     async def get_day_ahead_data_async(
@@ -1781,5 +1912,5 @@ class APIHelper(APIHelperBase):
         request_body = day_ahead_service.generate_request(
             fromDate, toDate, aggregate, numberOfSimilarDays, selectedEfaBlocks, seriesInput
         )
-        response = await self._post_request_async(ep.DAY_AHEAD, request_body)
+        response = await self._post_request_async(self.endpoints.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)

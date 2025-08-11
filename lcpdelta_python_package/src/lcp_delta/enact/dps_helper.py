@@ -26,7 +26,7 @@ class DPSHelper:
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                "https://enact-signalrhub.azurewebsites.net/dataHub",
+                self.api_helper.endpoints.DPS,
                  options={"access_token_factory": access_token_factory},
             )
             .build()

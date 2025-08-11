@@ -49,8 +49,8 @@ async def test_multiple_calls_async():
 
     time.sleep(1)
     res_lb = await enact_api_helper.get_leaderboard_data_async(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
+        date(2025, 7, 25),
+        date(2025, 7, 27),
         "Plant",
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
@@ -86,8 +86,8 @@ def test_multiple_calls():
 
     time.sleep(1)
     res_lb = enact_api_helper.get_leaderboard_data(
-        date(2024, 8, 1),
-        date(2024, 8, 3),
+        date(2025, 7, 25),
+        date(2025, 7, 27),
         "Plant",
         "PoundPerMwPerH",
         "WeightedAverageDayAheadPrice",
