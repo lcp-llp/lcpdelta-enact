@@ -839,7 +839,7 @@ class APIHelper(APIHelperBase):
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = self._post_request(self.endpoints.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
-
+    
     async def get_bm_data_by_period_async(
         self, date: datetime, period: int = None, include_accepted_times: bool = False
     ) -> pd.DataFrame:
@@ -847,13 +847,123 @@ class APIHelper(APIHelperBase):
         request_body = bm_service.generate_by_period_request(date, period, include_accepted_times)
         response = await self._post_request_async(self.endpoints.BOA, request_body, long_timeout=True)
         return bm_service.process_by_period_response(response)
+    
+    def get_bm_data_by_day(
+        self,
+        date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = True,
+        include_on_table: bool = True
+    ) -> pd.DataFrame:
+        """
+        same as get_bm_data_by_search except include_accepted_times and include_on_table default is true
+        """
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
+        response = self._get_request(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
+        return bm_service.process_by_search_response(response)
+    
+    async def get_bm_data_by_day_async(
+        self,
+        date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = True,
+        include_on_table: bool = True
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_bm_data_by_day`."""
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
+        response = await self._get_request_async(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
+        return bm_service.process_by_search_response(response)
 
+    def get_bm_data_by_day_range(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = True,
+        include_on_table: bool = True
+    ) -> pd.DataFrame:
+        """Gets BM (Balancing Mechanism) data for a specific date range and search criteria.
+
+            Args:
+            start_date `datetime.datetime`: The date to request BOD data for.
+
+            end_date `datetime.datetime`: The date to request BOD data for.
+
+            option `str`: The search option; can be set to "plant", "fuel", or "all".
+
+            search_string `str`: The search string to match against the BM data. If option is "plant", this allows you to filter BOA actions by BMU ID (e.g. "CARR" for all Carrington units).
+                                If option is "fuel", this allows you to filter BOA actions by fuel type (e.g. "Coal"). If Option is "all", this must not be passed as an argument.
+
+            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object. Defaults to True.
+
+            include_on_table 'bool': Option to return all data on table, defaults to True.
+        Returns:
+            Response: A pandas DataFrame containing the BM data.
+        """
+        all_data = []
+        cursor = None
+        headers = None
+        more_pages = True
+        while more_pages:
+            request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, option, search_string, include_on_table, cursor)
+            response = self._get_request(self.endpoints.BOA_DAY_RANGE, request_body, long_timeout=True)
+            page_data = response.get("data", {})
+            rows = page_data.get("data", [])
+
+            if not rows:
+                print(f"No data for date: {cursor}")
+            else: 
+                if headers is None:
+                    headers = rows[0]
+                all_data.extend(rows[1:])
+                
+            cursor = response.get("nextCursor")
+            if not cursor:
+                more_pages = False
+        return pd.DataFrame(all_data, columns=headers)
+
+    async def get_bm_data_by_day_range_async(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        option: str = "all",
+        search_string: str | None = None,
+        include_accepted_times: bool = True,
+        include_on_table: bool = True
+    ) -> pd.DataFrame:
+        """Asynchronous version of 'get_bm_data_by_day_range'."""
+        all_data = []
+        cursor = None
+        headers = None
+        more_pages = True
+        while more_pages:
+            request_body = bm_service.generate_date_range_request(start_date, end_date, include_accepted_times, option, search_string, include_on_table, cursor)
+            response = await self._get_request_async(self.endpoints.BOA_DAY_RANGE, request_body, long_timeout=True)
+            page_data = response.get("data", {})
+            rows = page_data.get("data", [])
+
+            if not rows:
+                print(f"No data for date: {cursor}")
+            else:
+                if headers is None:
+                    headers = rows[0]
+                all_data.extend(rows[1:])
+
+            cursor = response.get("nextCursor")
+            if not cursor:
+                more_pages = False
+        return pd.DataFrame(all_data, columns=headers)
+    
     def get_bm_data_by_search(
         self,
         date: datetime,
         option: str = "all",
         search_string: str | None = None,
         include_accepted_times: bool = False,
+        include_on_table: bool = False
     ) -> pd.DataFrame:
         """Gets BM (Balancing Mechanism) data for a specific date and search criteria.
 
@@ -865,12 +975,14 @@ class APIHelper(APIHelperBase):
             search_string `str`: The search string to match against the BM data. If option is "plant", this allows you to filter BOA actions by BMU ID (e.g. "CARR" for all Carrington units).
                                 If option is "fuel", this allows you to filter BOA actions by fuel type (e.g. "Coal"). If Option is "all", this must not be passed as an argument.
 
-            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object
+            include_accepted_times `bool`: Determine whether the returned object includes a column for accepted times in the response object. Defaults to false.
+
+            include_on_table 'bool': Option to return all data on table, defaults to false.
         Returns:
             Response: A pandas DataFrame containing the BM data.
         """
-        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
-        response = self._post_request(self.endpoints.BOA, request_body, long_timeout=True)
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
+        response = self._get_request(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     async def get_bm_data_by_search_async(
@@ -879,10 +991,11 @@ class APIHelper(APIHelperBase):
         option: str = "all",
         search_string: str | None = None,
         include_accepted_times: bool = False,
+        include_on_table: bool = False
     ) -> pd.DataFrame:
         """An asynchronous version of `get_bm_data_by_search`."""
-        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times)
-        response = await self._post_request_async(self.endpoints.BOA, request_body, long_timeout=True)
+        request_body = bm_service.generate_by_search_request(date, option, search_string, include_accepted_times, include_on_table)
+        response = await self._get_request_async(self.endpoints.BOA_DAILY, request_body, long_timeout=True)
         return bm_service.process_by_search_response(response)
 
     def get_leaderboard_data_legacy(

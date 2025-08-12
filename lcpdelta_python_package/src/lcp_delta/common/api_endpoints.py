@@ -96,6 +96,10 @@ class EnactApiEndpoints:
     @property
     def BOA(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/BOA/Data"
     @property
+    def BOA_DAILY(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/BOA/dailyData"
+    @property
+    def BOA_DAY_RANGE(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/BOA/rangedData"
+    @property
     def ANCILLARY(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Ancillary/Data"
     @property
     def NEWS_TABLE(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Newstable/Data"
