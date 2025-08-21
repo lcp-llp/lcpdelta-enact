@@ -20,7 +20,7 @@ def test_subscribe_to_series_updates():
         pytest.fail(f"Subscription to series updates failed: {e}")
 
     subscription_id = enact_dps_helper._get_subscription_id("RealtimeDemand", "Gb", None)
-    assert subscription_id in enact_dps_helper.data_by_subscription_id
+    assert subscription_id in enact_dps_helper.data_by_single_series_subscription_id
 
     try:
         enact_dps_helper.terminate_hub_connection()

@@ -367,8 +367,7 @@ class DPSHelper:
             return pd.DataFrame()
 
     def terminate_hub_connection(self):
-        self._suppress_restart = True
-        self.hub_connection.stop()
+        self.shutdown()
 
     def shutdown(self):
         self._suppress_restart = True
