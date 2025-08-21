@@ -51,7 +51,7 @@ class DPSHelper:
 
     def _initialise(self):
         self.enact_credentials = self.api_helper.credentials_holder
-        self.data_by_single_series_subscription_id: dict[str, tuple[Callable[[pd.DataFrame], None], pd.DataFrame, bool]] = {}
+        self.data_by_single_series_subscription_id: dict[object, tuple[Callable[[pd.DataFrame], None], pd.DataFrame, bool]] = {}
         access_token_factory = partial(self._fetch_bearer_token)
         self.hub_connection = (
             HubConnectionBuilder()
@@ -156,7 +156,7 @@ class DPSHelper:
             lambda m: self._callback_received_multi_series(m.result, handle_data_method, parse_datetimes),
         )
 
-    def subscribe_to_notifications(self, handle_notification_method: Callable[[str], None]):
+    def subscribe_to_notifications(self, handle_notification_method: Callable[[object], None]):
         self.hub_connection.send(
             "JoinParentCompanyNotificationPush",
             [],
@@ -288,7 +288,12 @@ class DPSHelper:
         (Pool threads are not running an event loop, so we create one for async handlers.)
         """
         if inspect.iscoroutinefunction(handler):
-            asyncio.run(handler(data))
+            try:
+                loop = asyncio.get_running_loop()
+                future = asyncio.run_coroutine_threadsafe(handler(data), loop)
+                future.result()
+            except RuntimeError:
+                asyncio.run(handler(data))
         else:
             handler(data)
 
@@ -379,18 +384,23 @@ class DPSHelper:
         if self._monitor_thread and self._monitor_thread.is_alive():
             self._monitor_thread.join(timeout=5)
 
-    def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[str], None]) -> None:
+    def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[object], None]) -> None:
         """
         `THIS FUNCTION IS IN BETA`
         Subscribe to EPEX trade updates and specify a callback function to handle the received data.
         """
+        if hasattr(self, "epex_trade_call_back") and self.epex_trade_call_back:
+            self.hub_connection.off(EPEX_SUBSCRIPTION_ID)
+        
         enact_request_object_epex = [{"Type": "EPEX", "Group": "Trades"}]
+
         self.epex_trade_call_back = handle_data_method
+        
         self._add_subscription(enact_request_object_epex, EPEX_SUBSCRIPTION_ID)
 
     def subscribe_to_series_updates(
         self,
-        handle_data_method: Callable[[str], None],
+        handle_data_method: Callable[[pd.DataFrame], None],
         series_id: str,
         option_id: list[str] = None,
         country_id="Gb",
@@ -427,7 +437,7 @@ class DPSHelper:
 
     def subscribe_to_multiple_series_updates(
         self,
-        handle_data_method: Callable[[str], None],
+        handle_data_method: Callable[[pd.DataFrame], None],
         series_requests: list[dict],
         parse_datetimes: bool = False,
     ) -> None:
