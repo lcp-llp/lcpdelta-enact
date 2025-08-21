@@ -175,8 +175,10 @@ class DPSHelper:
     ):
         system_local = dt.now().astimezone()
         gb_tz = zoneinfo.ZoneInfo("Europe/London")
-        start_gb = system_local.astimezone(gb_tz).replace(hour=0, minute=0, second=0, microsecond=0)
-        end_gb = start_gb + timedelta(days=1)
+        start_local_midnight = system_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_gb = start_local_midnight.astimezone(gb_tz)
+        end_local_midnight = start_local_midnight + timedelta(days=1)
+        end_gb = end_local_midnight.astimezone(gb_tz)
         
         initial_series_data = self.api_helper.get_series_data(
             series_id, start_gb, end_gb, country_id, option_id, parse_datetimes=parse_datetimes,  request_time_zone_id="GMT Standard Time"
