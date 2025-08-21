@@ -17,6 +17,7 @@ from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
+from lcp_delta.enact.services import jaobids_service
 
 class APIHelper(APIHelperBase):
     def _make_series_request(
@@ -1914,3 +1915,18 @@ class APIHelper(APIHelperBase):
         )
         response = await self._post_request_async(self.endpoints.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)
+    
+    def get_jao_bids(
+            self, corridor: str, horizon: str, dayCET: str, bidPeriodStart: str = None
+    ) -> pd.DataFrame:
+        request_body = jaobids_service.generate_jao_bids_request(corridor, horizon, dayCET, bidPeriodStart)
+        response = self._post_request(self.endpoints.JAO_BIDS, request_body)
+        return jaobids_service.process_response(response)
+    
+    async def get_jao_bids_async(
+            self, corridor: str, horizon: str, dayCET: str, bidPeriodStart: str = None
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_jao_bids`."""
+        request_body = jaobids_service.generate_jao_bids_request(corridor, horizon, dayCET, bidPeriodStart)
+        response = await self._post_request(self.endpoints.JAO_BIDS, request_body)
+        return jaobids_service.process_response(response)
