@@ -121,7 +121,7 @@ class DPSHelper:
             print(f"Error during stop: {e}")
 
         pytime.sleep(1)
-        self.__initialise()
+        self._initialise()
 
     def is_connection_alive(self):
         return self.hub_connection and self.hub_connection.transport and self.hub_connection.transport.is_running()
