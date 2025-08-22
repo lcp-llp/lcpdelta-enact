@@ -389,7 +389,7 @@ class DPSHelper:
         """
         `THIS FUNCTION IS IN BETA`
         Subscribe to EPEX trade updates and specify a callback function to handle the received data.
-        
+
         Args:
             handle_data_method `Callable`: A callback function that will be invoked with the received EPEX trade updates.
                 The function should accept one argument, which will be the data received from the EPEX trade updates.
