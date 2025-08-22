@@ -413,6 +413,20 @@ class DPSHelper:
     ) -> None:
         """
         Subscribe to series updates with the specified SeriesId and optional parameters.
+        
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked with the received series updates.
+                The function should accept one argument, which will be the data received from the series updates.
+                
+            series_id `str`: This is the Enact ID for the requested Series, as defined in the query generator on the "General" tab.
+            
+            option_id `list[str]` (optional): If the selected Series has options, then this is the Enact ID for the requested Option,
+                                       as defined in the query generator on the "General" tab.
+                                       If this is not sent, but is required, you will receive back an error.
+                                       
+            country_id `str` (optional): This is the Enact ID for the requested Country, as defined in the query generator on the "General" tab. Defaults to "Gb".
+            
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
         """
         request_details = {"SeriesId": series_id, "CountryId": country_id}
 
@@ -448,6 +462,16 @@ class DPSHelper:
     ) -> None:
         """
         Subscribe to multiple series at once with the specified series IDs, option IDs (if applicable) and country ID.
+        
+        Args:
+            handle_data_method `Callable`: A callback function that will be invoked when any of the series are updated.
+                The function should accept one argument, which will be the data received from the series updates.
+                
+            series_requests `list[dict]`: A list of dictionaries, with each element detailing a series request. Each element needs a countryId, seriesId, and if relevant, optionIds.
+            
+            parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
+            
+        Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """
         join_payload = []
         for series_entry in series_requests:
