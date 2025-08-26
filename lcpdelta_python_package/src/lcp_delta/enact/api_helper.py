@@ -1917,16 +1917,28 @@ class APIHelper(APIHelperBase):
         return day_ahead_service.process_response(response)
     
     def get_jao_bids(
-            self, corridor: str, horizon: str, dayCET: str, bidPeriodStart: str = None
+            self, corridor: str, horizon: str, dayCET: datetime, bidPeriodStart: datetime = None
     ) -> pd.DataFrame:
+        """Returns the bids submitted for JAO auctions for a specified interconnector, horizon and time period.
+        
+        Args:
+            corridor: The interconnector corridor code e.g. IF1-GB-FR.
+
+            horizon: The auction horizon e.g. Daily, Monthly, Yearly, etc.
+
+            dayCET: The day (CET) the bids are made for.
+
+            bidPeriodStart (optional): The start of the hour period (GMT) bids are made for.
+
+        """
         request_body = jaobids_service.generate_jao_bids_request(corridor, horizon, dayCET, bidPeriodStart)
         response = self._post_request(self.endpoints.JAO_BIDS, request_body)
         return jaobids_service.process_response(response)
     
     async def get_jao_bids_async(
-            self, corridor: str, horizon: str, dayCET: str, bidPeriodStart: str = None
+            self, corridor: str, horizon: str, dayCET: datetime, bidPeriodStart: datetime = None
     ) -> pd.DataFrame:
         """An asynchronous version of `get_jao_bids`."""
         request_body = jaobids_service.generate_jao_bids_request(corridor, horizon, dayCET, bidPeriodStart)
-        response = await self._post_request(self.endpoints.JAO_BIDS, request_body)
+        response = await self._post_request_async(self.endpoints.JAO_BIDS, request_body)
         return jaobids_service.process_response(response)
