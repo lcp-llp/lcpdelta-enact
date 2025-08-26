@@ -1,12 +1,10 @@
 import pandas as pd
 from datetime import datetime
-from lcpdelta_python_package.src.lcp_delta.global_helpers import convert_datetime_to_iso
-
-day_string = "%Y-%m-%d"
+from lcp_delta.global_helpers import convert_date_to_iso, convert_datetime_to_iso
 
 def generate_jao_bids_request(corridor: str, horizon: str, dayCET: datetime, bidPeriodStart: datetime = None):
 
-    dayCET_str = datetime.strftime(dayCET, day_string)
+    dayCET_str = convert_date_to_iso(dayCET)
     
     request_body = {"Corridor": corridor, "Horizon": horizon, "DayCET": dayCET_str}
     if bidPeriodStart != None:
