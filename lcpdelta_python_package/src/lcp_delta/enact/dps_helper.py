@@ -308,7 +308,7 @@ class DPSHelper:
             pushes = data_push["data"]
             for push in pushes:
                 push_current = push["current"]
-                push_date_time = f"{push_current["datePeriod"]["datePeriodCombinedGmt"]}"
+                push_date_time = f"{push_current['datePeriod']['datePeriodCombinedGmt']}"
                 if not push_date_time.endswith("Z"):
                     push_date_time += "Z"
 
@@ -345,7 +345,7 @@ class DPSHelper:
             df_return = pd.DataFrame()
             for push in pushes:
                 push_current = push["current"]
-                push_date_time = f"{push_current["datePeriod"]["datePeriodCombinedGmt"]}"
+                push_date_time = f"{push_current['datePeriod']['datePeriodCombinedGmt']}"
 
                 if not push_date_time.endswith("Z"):
                     push_date_time += "Z"
