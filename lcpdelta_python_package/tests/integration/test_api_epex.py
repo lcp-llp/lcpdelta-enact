@@ -52,14 +52,14 @@ def test_get_epex_order_book_by_contract_id_sync():
 
 @pytest.mark.asyncio
 async def test_get_epex_order_book_async():
-    res = await enact_api_helper.get_epex_order_book_async("HH", yesterday, 10)
+    res = await enact_api_helper.get_epex_order_book_async("HH", yesterday, 4)
 
     assert type(res["bidTable"]) == pd.DataFrame
     assert type(res["askTable"]) == pd.DataFrame
 
 
 def test_get_epex_order_book_sync():
-    res = enact_api_helper.get_epex_order_book("HH", yesterday, 10)
+    res = enact_api_helper.get_epex_order_book("HH", yesterday, 4)
 
     assert type(res["bidTable"]) == pd.DataFrame
     assert type(res["askTable"]) == pd.DataFrame

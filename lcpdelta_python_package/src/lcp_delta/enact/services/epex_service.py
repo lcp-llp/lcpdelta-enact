@@ -22,8 +22,8 @@ def process_trades_response(response: dict) -> pd.DataFrame:
 
 def process_order_book_response(response: dict) -> dict[str, pd.DataFrame]:
     output: dict[str, pd.DataFrame] = {}
-    for table_str, data in response["data"].items():
-        output[table_str] = convert_dict_to_df(data)
+    for table_str in response["data"].keys():
+        output[table_str] = convert_response_to_df(response, nested_key=table_str)
 
     return output
 
