@@ -1364,27 +1364,44 @@ class APIHelper(APIHelperBase):
         return index_service.process_index_data_response(response)
 
 
-    def get_default_german_indices(self) -> pd.DataFrame:
-        """ Get the defining information of the default german indices, including the GUID that allows querying of that indices data via `get_german_index_data` """
+    def get_default_indices(
+            self,
+            country: str) -> pd.DataFrame:
 
-        response = self._get_request(self.endpoints.EUROPE_INDEX_DEFAULT_INDICES)
+        """ Get the defining information of the default indices, for a chosen country. Return includes the GUID that allows querying of that indices data via `get_europe_index_data`
+            Args:
+            country `str`: The country of your specified index. Currently can be either "Germany" or "France". """
+        request_body = index_service.generate_default_index_info_request(
+            country,
+        )
+        response = self._post_request(self.endpoints.EUROPE_INDEX_DEFAULT_INDICES, request_body)
+
         return index_service.process_index_info_response(response)
 
-    async def get_default_german_indices_async(self) -> pd.DataFrame:
-        """An asynchronous version of `get_default_german_indices`."""
+    async def get_default_indices_async(
+            self,
+            country: str) -> pd.DataFrame:
+        """An asynchronous version of `get_default_indices`."""
 
-        response = await self._get_request_async(self.endpoints.EUROPE_INDEX_DEFAULT_INDICES)
+        request_body = index_service.generate_default_index_info_request(
+            country,
+        )
+
+        response = await self._post_request_async(self.endpoints.EUROPE_INDEX_DEFAULT_INDICES, request_body)
         return index_service.process_index_info_response(response)
 
     def get_europe_index_information(
         self,
         index_id: str,
+        country: str = "Germany",
         ) -> pd.DataFrame:
         """ Get the defining information of the index with the given ID.
          Args:
-            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the European Index page on Enact, by clicking the ID icon next to an index."""
+            index_id `str`: The index ID denoting which index to get data for. Index IDs can be found on the European Index page on Enact, by clicking the ID icon next to an index.
+            country `str`: The country of your specified index. Currently can be either "Germany" or "France".   """
         request_body = index_service.generate_index_info_request(
             index_id,
+            country,
         )
         response = self._post_request(self.endpoints.EUROPE_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
@@ -1392,19 +1409,22 @@ class APIHelper(APIHelperBase):
     async def get_europe_index_information_async(
         self,
         index_id: str,
+        country: str = "Germany",
         ) -> pd.DataFrame:
         """An asynchronous version of `get_europe_index_information`."""
         request_body = index_service.generate_index_info_request(
             index_id,
+            country,
         )
         response = await self._post_request_async(self.endpoints.EUROPE_INDEX_INFORMATION, request_body)
         return index_service.process_index_info_response(response)
 
-    def get_german_index_data(
+    def get_europe_index_data(
         self,
         date_from: datetime,
         date_to: datetime,
         index_id: str,
+        country: str = "Germany",
         normalisation="EuroPerKwPerYear",
         granularity="Week",
     ) -> pd.DataFrame:
@@ -1417,6 +1437,8 @@ class APIHelper(APIHelperBase):
 
             index_id `str`: The index ID denoting which index to get data for. Index ID's of the default german indices can be found via the #### method.
 
+            country `str`: The country of your specified index. Currently can be either "Germany" or "France".
+
             normalisation `str` (optional): The normalisation to apply. "Euro", "EuroPerMw", "EuroPerMwh" or "EuroPerKwPerYear" (default).
 
             granularity `str` (optional): The granularity of the data. "Day", "Week" (default), "Month" or "Year". """
@@ -1424,17 +1446,19 @@ class APIHelper(APIHelperBase):
             date_from,
             date_to,
             index_id,
+            country,
             normalisation,
             granularity,
         )
         response = self._post_request(self.endpoints.EUROPE_INDEX_DATA, request_body)
         return index_service.process_index_data_response(response)
 
-    async def get_german_index_data_async(
+    async def get_europe_index_data_async(
         self,
         date_from: datetime,
         date_to: datetime,
         index_id: str,
+        country: str = "Germany",
         normalisation="PoundPerKwPerYear",
         granularity="Week",
     ) -> pd.DataFrame:
@@ -1443,6 +1467,7 @@ class APIHelper(APIHelperBase):
             date_from,
             date_to,
             index_id,
+            country,
             normalisation,
             granularity,
         )
