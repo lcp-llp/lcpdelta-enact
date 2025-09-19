@@ -46,7 +46,8 @@ def generate_request_v2(
     include_fpnflagoff_wholesale=False,
     charging_cost_price=None,
     charging_cost_assumption=None,
-    non_delivery_split_out="Show"
+    non_delivery_split_out="Show",
+    reserve_penalty_split_out="Hide"
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -68,7 +69,8 @@ def generate_request_v2(
         "IncludeFpnFlagOffWholesale": include_fpnflagoff_wholesale,
         "ChargingCostPrice": charging_cost_price,
         "ChargingCostAssumption": charging_cost_assumption,
-        "NonDeliverySplitOut": non_delivery_split_out
+        "NonDeliverySplitOut": non_delivery_split_out,
+        "ReserveSplitOut": reserve_penalty_split_out
     }
 
 
