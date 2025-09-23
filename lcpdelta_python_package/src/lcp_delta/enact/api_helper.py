@@ -1366,7 +1366,7 @@ class APIHelper(APIHelperBase):
 
     def get_default_indices(
             self,
-            country: str) -> pd.DataFrame:
+            country: str = "Germany") -> pd.DataFrame:
 
         """ Get the defining information of the default indices, for a chosen country. Return includes the GUID that allows querying of that indices data via `get_europe_index_data`
             Args:
@@ -1380,7 +1380,7 @@ class APIHelper(APIHelperBase):
 
     async def get_default_indices_async(
             self,
-            country: str) -> pd.DataFrame:
+            country: str = "Germany") -> pd.DataFrame:
         """An asynchronous version of `get_default_indices`."""
 
         request_body = index_service.generate_default_index_info_request(
