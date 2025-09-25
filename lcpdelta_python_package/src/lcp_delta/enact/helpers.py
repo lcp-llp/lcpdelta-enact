@@ -24,7 +24,7 @@ def convert_response_to_df(
 
 
 def convert_dict_to_df(data: dict, parse_datetimes: bool = False, index_on: int = 0) -> pd.DataFrame:
-    if (data is None):
+    if data is None:
         return pd.DataFrame()
     clean_data = {key: value for key, value in data.items() if not (isinstance(value, list) and len(value) == 0)}
     df = pd.DataFrame(clean_data)
