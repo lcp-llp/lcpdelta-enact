@@ -10,6 +10,7 @@ def generate_request(
     date_from: datetime,
     date_to: datetime,
     index_id: str,
+    country: str,
     normalisation="EuroPerKwPerYear",
     granularity="Week",
 ) -> dict:
@@ -18,15 +19,25 @@ def generate_request(
         "From": date_from,
         "To": date_to,
         "IndexId": index_id,
+        "Country": country,
         "SelectedNormalisation": normalisation,
         "SelectedGranularity": granularity,
     }
 
 def generate_index_info_request(
     index_id: str,
+    country: str,
 ) -> dict:
     return {
         "IndexId": index_id,
+        "Country": country,
+    }
+
+def generate_default_index_info_request(
+    country: str,
+) -> dict:
+    return {
+        "Country": country,
     }
 
 def generate_gb_request(
