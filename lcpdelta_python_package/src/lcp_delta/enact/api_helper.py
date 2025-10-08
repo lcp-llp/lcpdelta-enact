@@ -1082,7 +1082,7 @@ class APIHelper(APIHelperBase):
         charging_cost_price="IntradayPrice",
         charging_cost_assumption="PreviousEFABlock",
         non_delivery_split_out = "Show",
-        reserve_penalty_split_out = "Hide",
+        reserve_penalty_split_out = "Ignore",
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1124,9 +1124,9 @@ class APIHelper(APIHelperBase):
 
             charging_cost_assumption `str` (optional): The charging cost assumption used for the estimated charging/discharging costs for non-BM and secondary BMUs. Options are: 'PreviousEFABlock' (default), 'OptimalPricePrev12Hours' and 'CurrentSp'.
 
-            non_delivery_split_out `str` (optional): Non-delivery column option. Options are: 'Hide', 'Show', 'Absorb'.
+            non_delivery_split_out `str` (optional): Non-delivery column option. Options are: 'Ignore', 'Show', 'Absorb'.
 
-            reserve_penalty_split_out `str` (optional): Reserve split out option. Options are: 'Hide", 'Show', 'Absorb'."""
+            reserve_penalty_split_out `str` (optional): Reserve split out option. Options are: 'Ignore", 'Show', 'Absorb'."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -1173,7 +1173,7 @@ class APIHelper(APIHelperBase):
         charging_cost_price="IntradayPrice",
         charging_cost_assumption="PreviousEFABlock",
         non_delivery_split_out="Show",
-        reserve_penalty_split_out="Hide",
+        reserve_penalty_split_out="Ignore",
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1252,7 +1252,7 @@ class APIHelper(APIHelperBase):
         include_fpnflagoff_wholesale= "false",
         charging_cost_price = "IntradayPrice",
         charging_cost_assumption = "PreviousEFABlock",
-        reserve_penalty_split_out = "Hide",
+        reserve_penalty_split_out = "Ignore",
     ) -> pd.DataFrame:
         """Gets GB index data for the given parameters.
 
@@ -1297,7 +1297,7 @@ class APIHelper(APIHelperBase):
 
             charging_cost_assumption `str` (optional): The charging cost assumption used for the estimated charging/discharging costs for non-BM and secondary BMUs. Options are: 'PreviousEFABlock' (default), 'OptimalPricePrev12Hours' and 'CurrentSp'.
 
-            reserve_penalty_split_out `str` (optional): Reserve split out option. Options are: 'Hide", 'Show', 'Absorb'"""
+            reserve_penalty_split_out `str` (optional): Reserve split out option. Options are: 'Ignore", 'Show', 'Absorb'"""
         request_body = index_service.generate_gb_request(
             date_from,
             date_to,
@@ -1346,7 +1346,7 @@ class APIHelper(APIHelperBase):
         include_fpnflagoff_wholesale= "false",
         charging_cost_price = None,
         charging_cost_assumption = None,
-        reserve_penalty_split_out = "Hide",
+        reserve_penalty_split_out = "Ignore",
     ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_data`."""
         request_body = index_service.generate_gb_request(

@@ -50,7 +50,7 @@ def generate_gb_request(
     include_fpnflagoff_wholesale=False,
     charging_cost_price=None,
     charging_cost_assumption=None,
-    reserve_penalty_split_out="Hide",
+    reserve_penalty_split_out="Ignore",
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
