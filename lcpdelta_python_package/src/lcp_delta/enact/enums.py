@@ -1,7 +1,10 @@
-from enum import StrEnum
+from enum import Enum
 
+class StrEnumMixin(str, Enum):
+    """Mixin to emulate StrEnum in Python < 3.11."""
+    pass
 
-class AncillaryContracts(StrEnum):
+class AncillaryContracts(StrEnumMixin):
     Ffr = "Ffr"
     StorDayAhead = "StorDayAhead"
     ManFr = "ManFr"
