@@ -70,7 +70,7 @@ def generate_request_v2(
         "ChargingCostPrice": charging_cost_price,
         "ChargingCostAssumption": charging_cost_assumption,
         "NonDeliverySplitOut": non_delivery_split_out,
-        "ReserveSplitOut": reserve_penalty_split_out
+        "ReservePenaltySplitOut": reserve_penalty_split_out
     }
 
 

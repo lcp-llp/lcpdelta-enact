@@ -74,7 +74,7 @@ def generate_gb_request(
         "ChargingCostPrice": charging_cost_price,
         "ChargingCostAssumption": charging_cost_assumption,
         "IncludeFpnFlagOffWholesale": include_fpnflagoff_wholesale,
-        "ReserveSplitOut": reserve_penalty_split_out
+        "ReservePenaltySplitOut": reserve_penalty_split_out
     }
 
 def process_index_info_response(response: dict) -> pd.DataFrame:
