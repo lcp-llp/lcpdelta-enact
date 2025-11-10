@@ -60,7 +60,8 @@ def generate_gb_request(
     include_estimated_charging_cost=False,
     include_fpnflagoff_wholesale=False,
     charging_cost_price=None,
-    charging_cost_assumption=None
+    charging_cost_assumption=None,
+    reserve_penalty_split_out="Ignore",
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {
@@ -83,7 +84,8 @@ def generate_gb_request(
         "IncludeEstimatedChargingCost": include_estimated_charging_cost,
         "ChargingCostPrice": charging_cost_price,
         "ChargingCostAssumption": charging_cost_assumption,
-        "IncludeFpnFlagOffWholesale": include_fpnflagoff_wholesale
+        "IncludeFpnFlagOffWholesale": include_fpnflagoff_wholesale,
+        "ReservePenaltySplitOut": reserve_penalty_split_out
     }
 
 def process_index_info_response(response: dict) -> pd.DataFrame:
