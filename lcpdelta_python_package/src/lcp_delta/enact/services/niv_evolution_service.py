@@ -6,16 +6,12 @@ import re
 def generate_by_period_request(period: int, date: datetime, options: list[str]):
 
     date_str = convert_date_to_iso(date)
-    request_body = {"date": date_str, "period": period, "options": options}
-
-    return request_body
+    return {"date": date_str, "period": period, "options": options}
 
 def generate_by_day_request(date: datetime, options: list[str]):
 
     date_str = convert_date_to_iso(date)
-    request_body = {"date": date_str, "options": options}
-
-    return request_body
+    return {"date": date_str, "options": options}
 
 def generate_date_range_request(start_date: datetime, end_date: datetime, options: list[str], cursor:str = None):
     start_date_str = convert_date_to_iso(start_date)
@@ -47,5 +43,4 @@ def process_response(response: dict) -> pd.DataFrame:
                 "Evolution Data": values
             })
 
-    df = pd.DataFrame(rows, columns=["Date", "Period", "Option", "Evolution Data"])
-    return df
+    return pd.DataFrame(rows, columns=["Date", "Period", "Option", "Evolution Data"])
