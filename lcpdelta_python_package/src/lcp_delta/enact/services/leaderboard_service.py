@@ -47,7 +47,7 @@ def generate_request_v2(
     charging_cost_price=None,
     charging_cost_assumption=None,
     non_delivery_split_out="Show",
-    reserve_penalty_split_out="Ignore"
+    reserve_penalty_split_out="Show"
 ) -> dict:
     date_from, date_to = convert_datetimes_to_iso(date_from, date_to)
     return {

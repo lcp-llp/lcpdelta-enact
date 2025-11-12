@@ -1082,7 +1082,7 @@ class APIHelper(APIHelperBase):
         charging_cost_price="IntradayPrice",
         charging_cost_assumption="PreviousEFABlock",
         non_delivery_split_out = "Show",
-        reserve_penalty_split_out = "Ignore",
+        reserve_penalty_split_out = "Show",
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1173,7 +1173,7 @@ class APIHelper(APIHelperBase):
         charging_cost_price="IntradayPrice",
         charging_cost_assumption="PreviousEFABlock",
         non_delivery_split_out="Show",
-        reserve_penalty_split_out="Ignore",
+        reserve_penalty_split_out="Show",
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1252,7 +1252,7 @@ class APIHelper(APIHelperBase):
         include_fpnflagoff_wholesale= "false",
         charging_cost_price = "IntradayPrice",
         charging_cost_assumption = "PreviousEFABlock",
-        reserve_penalty_split_out = "Ignore",
+        reserve_penalty_split_out = "Show",
     ) -> pd.DataFrame:
         """Gets GB index data for the given parameters.
 
@@ -1346,7 +1346,7 @@ class APIHelper(APIHelperBase):
         include_fpnflagoff_wholesale= "false",
         charging_cost_price = None,
         charging_cost_assumption = None,
-        reserve_penalty_split_out = "Ignore",
+        reserve_penalty_split_out = "Show",
     ) -> pd.DataFrame:
         """An asynchronous version of `get_gb_index_data`."""
         request_body = index_service.generate_gb_request(
