@@ -139,3 +139,6 @@ class EnactApiEndpoints:
 
     @property
     def DPS(self): return f"{self._base_endpoints.PUSH_SERVICE_BASE_URL}/dataHub"
+
+    @property
+    def JAO_BIDS(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/JAOBidsData"
