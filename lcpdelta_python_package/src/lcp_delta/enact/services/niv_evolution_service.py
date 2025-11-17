@@ -30,17 +30,12 @@ def process_response(response: dict) -> pd.DataFrame:
     data = response["data"]
     rows = []
 
-    for date_period, option_dict in data.items():
-        date_str, period_str = date_period.split(" - ")
-        date = datetime.strptime(date_str.strip(), "%d/%m/%Y %H:%M:%S").date()
-        period = int(period_str.strip())
-
+    for datetime, option_dict in data.items():
         for option, values in option_dict.items():
             rows.append({
-                "Date": date,
-                "Period": period,
+                "Time Stamp (GMT)": datetime,
                 "Option": option,
                 "Evolution Data": values
             })
 
-    return pd.DataFrame(rows, columns=["Date", "Period", "Option", "Evolution Data"])
+    return pd.DataFrame(rows, columns=["Time Stamp (GMT)", "Option", "Evolution Data"])
