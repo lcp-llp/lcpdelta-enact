@@ -1,15 +1,13 @@
-from datetime import datetime
-from lcp_delta.global_helpers import convert_date_to_iso
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from lcp_delta.global_helpers import convert_date_to_iso, get_period_from_datetime
 import pandas as pd
-import re
 
 def generate_by_period_request(period: int, date: datetime, options: list[str]):
-
     date_str = convert_date_to_iso(date)
     return {"date": date_str, "period": period, "options": options}
 
 def generate_by_day_request(date: datetime, options: list[str]):
-
     date_str = convert_date_to_iso(date)
     return {"date": date_str, "options": options}
 
@@ -30,12 +28,20 @@ def process_response(response: dict) -> pd.DataFrame:
     data = response["data"]
     rows = []
 
-    for datetime, option_dict in data.items():
+    for datetime_str, option_dict in data.items():
+        dt_gmt = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
+        dt_gb = dt_gmt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/London"))
+        period = get_period_from_datetime(dt_gb)
+        date = dt_gb.date()
+        values_start = dt_gb - timedelta(minutes=90)
         for option, values in option_dict.items():
-            rows.append({
-                "Time Stamp (GMT)": datetime,
-                "Option": option,
-                "Evolution Data": values
-            })
+            for index, value in enumerate(values):
+                rows.append({
+                    "Date": date,
+                    "Period": period,
+                    "Evolution Metric": option,
+                    "Time Stamp": values_start + timedelta(minutes=index),
+                    "Value": value
+                })
 
-    return pd.DataFrame(rows, columns=["Time Stamp (GMT)", "Option", "Evolution Data"])
+    return pd.DataFrame(rows, columns=["Date", "Period", "Evolution Metric", "Time Stamp", "Value"])
