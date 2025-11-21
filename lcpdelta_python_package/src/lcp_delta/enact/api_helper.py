@@ -2086,7 +2086,7 @@ class APIHelper(APIHelperBase):
         if all_data:
             df_all = pd.concat(all_data, ignore_index=True)
         else:
-            df_all = pd.DataFrame(columns=["Date", "Period", "Evolution Metric", "Time Stamp", "Value"])
+            df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
         return df_all
     
     async def get_niv_evolution_for_date_range_async(
@@ -2117,5 +2117,5 @@ class APIHelper(APIHelperBase):
         if all_data:
             df_all = pd.concat(all_data, ignore_index=True)
         else:
-            df_all = pd.DataFrame(columns=["Date", "Period", "Evolution Metric", "Time Stamp", "Value"])
+            df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
         return df_all

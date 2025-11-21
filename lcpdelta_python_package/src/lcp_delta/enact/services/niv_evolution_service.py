@@ -25,23 +25,4 @@ def generate_date_range_request(start_date: datetime, end_date: datetime, option
     return request_body
 
 def process_response(response: dict) -> pd.DataFrame:
-    data = response["data"]
-    rows = []
-
-    for datetime_str, option_dict in data.items():
-        dt_gmt = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-        dt_gb = dt_gmt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/London"))
-        period = get_period_from_datetime(dt_gb)
-        date = dt_gb.date()
-        values_start = dt_gb - timedelta(minutes=90)
-        for option, values in option_dict.items():
-            for index, value in enumerate(values):
-                rows.append({
-                    "Date": date,
-                    "Period": period,
-                    "Evolution Metric": option,
-                    "Time Stamp": values_start + timedelta(minutes=index),
-                    "Value": value
-                })
-
-    return pd.DataFrame(rows, columns=["Date", "Period", "Evolution Metric", "Time Stamp", "Value"])
+    return pd.DataFrame(response["data"][1:], columns=response["data"][0])
