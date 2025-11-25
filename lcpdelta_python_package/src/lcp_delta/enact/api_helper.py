@@ -17,6 +17,7 @@ from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
+from lcp_delta.enact.services import niv_evolution_service
 
 class APIHelper(APIHelperBase):
     def _make_series_request(
@@ -1957,3 +1958,203 @@ class APIHelper(APIHelperBase):
         )
         response = await self._post_request_async(self.endpoints.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)
+
+    def get_niv_evolution_for_period(
+        self, 
+        period: int,
+        date: datetime,
+        options: list[str],
+    ) -> pd.DataFrame:
+        """
+        Get Niv Evolution Metrics for a single date and period.
+
+        Args:
+
+            period 'int' : period to request
+
+            date 'datetime' : date to request
+
+            options 'List[str]' : List of options to get evolution metrics for. Accepted values:
+            [       
+                NivOutturn,
+                SystemPrice,
+                MostExpensiveBidAccepted,
+                MostExpensiveOfferAccepted,
+                MostExpensiveUnflaggedBidAccepted,
+                MostExpensiveUnflaggedOfferAccepted,
+                MostExpensiveFlaggedBidAccepted,
+                MostExpensiveFlaggedOfferAccepted,
+                MostExpensiveNonBsadBidAccepted,
+                MostExpensiveNonBsadOfferAccepted,
+                MostExpensiveNonBsadUnflaggedBidAccepted,
+                MostExpensiveNonBsadUnflaggedOfferAccepted,
+                MostExpensiveNonBsadFlaggedBidAccepted,
+                MostExpensiveNonBsadFlaggedOfferAccepted,
+                AcceptedOfferVolume,
+                AcceptedBidVolume,
+                AcceptedBidVolumeFlagged,
+                AcceptedOfferVolumeFlagged,
+                AcceptedNonBsadBidVolume,
+                AcceptedNonBsadOfferVolume,
+                AcceptedNonBsadBidVolumeFlagged,
+                AcceptedNonBsadOfferVolumeFlagged
+            ] 
+        """
+        request_body = niv_evolution_service.generate_by_period_request(period, date, options)
+        response = self._get_request(self.endpoints.NIV_EVOLUTION, request_body, long_timeout=True)
+        return niv_evolution_service.process_response(response)
+    
+    async def get_niv_evolution_for_period_async(
+        self, 
+        period: int,
+        date: datetime,
+        options: list[str],
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_niv_evolution_for_period`."""
+        request_body = niv_evolution_service.generate_by_period_request(period, date, options)
+        response = await self._get_request_async(self.endpoints.NIV_EVOLUTION, request_body, long_timeout=True)
+        return niv_evolution_service.process_response(response)
+    
+    def get_niv_evolution_for_day(
+        self, 
+        date: datetime,
+        options: list[str],
+    ) -> pd.DataFrame:
+        """
+        Get Niv Evolution Metrics for all periods in a day.
+
+        Args:
+            date 'datetime' : date to request
+
+            options 'List[str]' : List of options to get evolution metrics for. Accepted values:
+            [       
+                NivOutturn,
+                SystemPrice,
+                MostExpensiveBidAccepted,
+                MostExpensiveOfferAccepted,
+                MostExpensiveUnflaggedBidAccepted,
+                MostExpensiveUnflaggedOfferAccepted,
+                MostExpensiveFlaggedBidAccepted,
+                MostExpensiveFlaggedOfferAccepted,
+                MostExpensiveNonBsadBidAccepted,
+                MostExpensiveNonBsadOfferAccepted,
+                MostExpensiveNonBsadUnflaggedBidAccepted,
+                MostExpensiveNonBsadUnflaggedOfferAccepted,
+                MostExpensiveNonBsadFlaggedBidAccepted,
+                MostExpensiveNonBsadFlaggedOfferAccepted,
+                AcceptedOfferVolume,
+                AcceptedBidVolume,
+                AcceptedBidVolumeFlagged,
+                AcceptedOfferVolumeFlagged,
+                AcceptedNonBsadBidVolume,
+                AcceptedNonBsadOfferVolume,
+                AcceptedNonBsadBidVolumeFlagged,
+                AcceptedNonBsadOfferVolumeFlagged
+            ] 
+        """
+        request_body = niv_evolution_service.generate_by_day_request(date, options)
+        response = self._get_request(self.endpoints.NIV_EVOLUTION_DAILY, request_body, long_timeout=True)
+        return niv_evolution_service.process_response(response)
+    
+    async def get_niv_evolution_for_day_async(
+        self, 
+        date: datetime,
+        options: list[str],
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_niv_evolution_for_day`."""
+        request_body = niv_evolution_service.generate_by_day_request(date, options)
+        response = await self._get_request_async(self.endpoints.NIV_EVOLUTION_DAILY, request_body, long_timeout=True)
+        return niv_evolution_service.process_response(response)
+    
+    def get_niv_evolution_for_date_range(
+        self, 
+        start_date: datetime,
+        end_date: datetime,
+        options: list[str],
+    ) -> pd.DataFrame:
+        """
+        Get Niv Evolution Metrics for all periods, over a date range.
+
+        Args:
+            date 'datetime' : date to request
+
+            options 'List[str]' : List of options to get evolution metrics for. Accepted values:
+            [       
+                NivOutturn,
+                SystemPrice,
+                MostExpensiveBidAccepted,
+                MostExpensiveOfferAccepted,
+                MostExpensiveUnflaggedBidAccepted,
+                MostExpensiveUnflaggedOfferAccepted,
+                MostExpensiveFlaggedBidAccepted,
+                MostExpensiveFlaggedOfferAccepted,
+                MostExpensiveNonBsadBidAccepted,
+                MostExpensiveNonBsadOfferAccepted,
+                MostExpensiveNonBsadUnflaggedBidAccepted,
+                MostExpensiveNonBsadUnflaggedOfferAccepted,
+                MostExpensiveNonBsadFlaggedBidAccepted,
+                MostExpensiveNonBsadFlaggedOfferAccepted,
+                AcceptedOfferVolume,
+                AcceptedBidVolume,
+                AcceptedBidVolumeFlagged,
+                AcceptedOfferVolumeFlagged,
+                AcceptedNonBsadBidVolume,
+                AcceptedNonBsadOfferVolume,
+                AcceptedNonBsadBidVolumeFlagged,
+                AcceptedNonBsadOfferVolumeFlagged
+            ] 
+        """
+        all_data = []
+        cursor = None
+        more_pages = True
+        while more_pages:
+            request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
+            response = self._get_request(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
+            page_data = response.get("data", {})
+
+            if not page_data:
+                print(f"No data for date: {cursor}")
+            else: 
+                day_data = niv_evolution_service.process_response(page_data)
+                all_data.append(day_data)
+                
+            cursor = response.get("nextCursor")
+            if not cursor:
+                more_pages = False
+        
+        if all_data:
+            df_all = pd.concat(all_data, ignore_index=True)
+        else:
+            df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
+        return df_all
+    
+    async def get_niv_evolution_for_date_range_async(
+        self, 
+        start_date: datetime,
+        end_date: datetime,
+        options: list[str],
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_niv_evolution_for_date_range`."""
+        all_data = []
+        cursor = None
+        more_pages = True
+        while more_pages:
+            request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
+            response = await self._get_request_async(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
+            page_data = response.get("data", {})
+
+            if not page_data:
+                print(f"No data for date: {cursor}")
+            else: 
+                day_data = niv_evolution_service.process_response(page_data)
+                all_data.append(day_data)
+                
+            cursor = response.get("nextCursor")
+            if not cursor:
+                more_pages = False
+        
+        if all_data:
+            df_all = pd.concat(all_data, ignore_index=True)
+        else:
+            df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
+        return df_all
