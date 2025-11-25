@@ -143,6 +143,6 @@ class EnactApiEndpoints:
     @property
     def NIV_EVOLUTION(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/NivEvolution/periodData"
     @property
-    def NIV_EVOLUTION_DAILY(self): return f"{self._base_endpoints.MAIN_BASE_URL}/NivEvolution/dailyData"
+    def NIV_EVOLUTION_DAILY(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactApi/NivEvolution/dailyData"
     @property
     def NIV_EVOLUTION_DATE_RANGE(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/NivEvolution/rangedData"
