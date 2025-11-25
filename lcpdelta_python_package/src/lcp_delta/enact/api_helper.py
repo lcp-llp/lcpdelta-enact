@@ -1916,13 +1916,12 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(self.endpoints.DAY_AHEAD, request_body)
         return day_ahead_service.process_response(response)
 
-
     def get_niv_evolution_for_period(
         self, 
         period: int,
         date: datetime,
         options: list[str],
-    ) -> dict[datetime, dict[str, float]]:
+    ) -> pd.DataFrame:
         """
         Get Niv Evolution Metrics for a single date and period.
 
@@ -1957,7 +1956,6 @@ class APIHelper(APIHelperBase):
                 AcceptedNonBsadBidVolumeFlagged,
                 AcceptedNonBsadOfferVolumeFlagged
             ] 
-
         """
         request_body = niv_evolution_service.generate_by_period_request(period, date, options)
         response = self._get_request(self.endpoints.NIV_EVOLUTION, request_body, long_timeout=True)
@@ -1968,7 +1966,7 @@ class APIHelper(APIHelperBase):
         period: int,
         date: datetime,
         options: list[str],
-    ) -> dict[datetime, dict[str, float]]:
+    ) -> pd.DataFrame:
         """An asynchronous version of `get_niv_evolution_for_period`."""
         request_body = niv_evolution_service.generate_by_period_request(period, date, options)
         response = await self._get_request_async(self.endpoints.NIV_EVOLUTION, request_body, long_timeout=True)
@@ -1978,7 +1976,7 @@ class APIHelper(APIHelperBase):
         self, 
         date: datetime,
         options: list[str],
-    ) -> dict[datetime, dict[str, float]]:
+    ) -> pd.DataFrame:
         """
         Get Niv Evolution Metrics for all periods in a day.
 
@@ -2010,7 +2008,6 @@ class APIHelper(APIHelperBase):
                 AcceptedNonBsadBidVolumeFlagged,
                 AcceptedNonBsadOfferVolumeFlagged
             ] 
-
         """
         request_body = niv_evolution_service.generate_by_day_request(date, options)
         response = self._get_request(self.endpoints.NIV_EVOLUTION_DAILY, request_body, long_timeout=True)
@@ -2020,7 +2017,7 @@ class APIHelper(APIHelperBase):
         self, 
         date: datetime,
         options: list[str],
-    ) -> dict[datetime, dict[str, float]]:
+    ) -> pd.DataFrame:
         """An asynchronous version of `get_niv_evolution_for_day`."""
         request_body = niv_evolution_service.generate_by_day_request(date, options)
         response = await self._get_request_async(self.endpoints.NIV_EVOLUTION_DAILY, request_body, long_timeout=True)
@@ -2031,7 +2028,7 @@ class APIHelper(APIHelperBase):
         start_date: datetime,
         end_date: datetime,
         options: list[str],
-    ) -> dict[datetime, dict[str, float]]:
+    ) -> pd.DataFrame:
         """
         Get Niv Evolution Metrics for all periods, over a date range.
 
@@ -2063,7 +2060,6 @@ class APIHelper(APIHelperBase):
                 AcceptedNonBsadBidVolumeFlagged,
                 AcceptedNonBsadOfferVolumeFlagged
             ] 
-
         """
         all_data = []
         cursor = None
@@ -2094,7 +2090,7 @@ class APIHelper(APIHelperBase):
         start_date: datetime,
         end_date: datetime,
         options: list[str],
-    ) -> dict[datetime, dict[str, float]]:
+    ) -> pd.DataFrame:
         """An asynchronous version of `get_niv_evolution_for_date_range`."""
         all_data = []
         cursor = None
