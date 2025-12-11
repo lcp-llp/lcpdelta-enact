@@ -10,5 +10,7 @@ SERIES_BASE_URL_DEV = "https://enact-functionapp-siteapi-staging.azurewebsites.n
 PUSH_SERVICE_BASE_URL = "https://enact-signalrhub.azurewebsites.net"
 PUSH_SERVICE_BASE_URL_DEV = "https://enact-signalrhub-staging.azurewebsites.net"
 
+FREE_API_BASE_URL = "https://enact-carboncalculatorpremium-prd-ukd-func.azurewebsites.net"
+
 MAIN_FD_BYPASS_LOOKUP_URL = f"{MAIN_BASE_URL}/enactApi/url/getBaseUrl"
 EPEX_FD_BYPASS_LOOKUP_URL = f"{EPEX_BASE_URL}/epexApi/url/getBaseUrl"

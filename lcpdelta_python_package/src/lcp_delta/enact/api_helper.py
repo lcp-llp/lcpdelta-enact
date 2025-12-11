@@ -18,6 +18,7 @@ from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
 from lcp_delta.enact.services import niv_evolution_service
+from lcp_delta.enact.services import carbon_calculator_service
 
 class APIHelper(APIHelperBase):
     def _make_series_request(
@@ -2076,7 +2077,8 @@ class APIHelper(APIHelperBase):
         Get Niv Evolution Metrics for all periods, over a date range.
 
         Args:
-            date 'datetime' : date to request
+            start_date 'datetime' : start date to request
+            end_date 'datetime' : end date to request
 
             options 'List[str]' : List of options to get evolution metrics for. Accepted values:
             [       
@@ -2158,3 +2160,43 @@ class APIHelper(APIHelperBase):
         else:
             df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
         return df_all
+    
+    def get_carbon_emissions(
+            self,
+            df: pd.DataFrame,
+    )  -> Dict[str, pd.DataFrame]:
+        """
+        Retrieve complete carbon emission data from LCP Delta's carbon calculator.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Input DataFrame containing:
+            - `date_time_utc` (datetime or str): timestamp of period start.
+            - `dynamic_frequency_response_credited_volume_mw` (float)
+            - `total_credited_volume_mwh` (float)
+
+            The DataFrame may contain a maximum of one year of data at
+            a minimum of settlement-period granularity.
+
+        Returns
+        -------
+        dict[str, pandas.DataFrame]
+            A dictionary containing four separate DataFrames:
+            - "weekly"              -> Weekly summary
+            - "monthly"             -> Monthly summary
+            - "period_metrics"      -> Metrics for the selected period
+            - "full_range_metrics"  -> Metrics for the full time range
+        """
+        request_body = carbon_calculator_service.generate_request(df)
+        response = self._post_request(self.endpoints.CARBON_CALCULATOR, request_body)
+        return carbon_calculator_service.process_response(response)
+    
+    async def get_carbon_emissions_async(
+            self,
+            df: pd.DataFrame,
+    )  -> Dict[str, pd.DataFrame]:
+        """An asynchronous version of `get_carbon_emissions`."""
+        request_body = carbon_calculator_service.generate_request(df)
+        response = await self._post_request_async(self.endpoints.CARBON_CALCULATOR, request_body)
+        return carbon_calculator_service.process_response(response)
