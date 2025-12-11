@@ -2164,7 +2164,7 @@ class APIHelper(APIHelperBase):
     def get_carbon_emissions(
             self,
             df: pd.DataFrame,
-    )  -> Dict[str, pd.DataFrame]:
+    )  -> dict[str, pd.DataFrame]:
         """
         Retrieve complete carbon emission data from LCP Delta's carbon calculator.
 
@@ -2195,7 +2195,7 @@ class APIHelper(APIHelperBase):
     async def get_carbon_emissions_async(
             self,
             df: pd.DataFrame,
-    )  -> Dict[str, pd.DataFrame]:
+    )  -> dict[str, pd.DataFrame]:
         """An asynchronous version of `get_carbon_emissions`."""
         request_body = carbon_calculator_service.generate_request(df)
         response = await self._post_request_async(self.endpoints.CARBON_CALCULATOR, request_body)
