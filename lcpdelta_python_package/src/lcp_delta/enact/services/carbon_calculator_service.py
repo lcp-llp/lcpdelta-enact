@@ -4,7 +4,7 @@ from lcp_delta.global_helpers import convert_datetime_to_iso
 def generate_request(df):
     validate_dataframe(df)
 
-    request = {
+    return {
         "Data": [
             {
                 "DateTimeUtc": convert_datetime_to_iso(dt),
@@ -18,7 +18,6 @@ def generate_request(df):
             )
         ]
     }
-    return request
     
 def validate_dataframe(df):
     required_cols = [
