@@ -155,6 +155,8 @@ class APIHelperBase(ABC):
                 for error_message in error_messages:
                     if "errorCode" in error_message and error_message["errorCode"]:
                         raise EnactApiError(error_message["errorCode"], error_message["message"], response)
+            else:
+                raise EnactApiError(response.status_code, response_data, response)
         except (ValueError, JSONDecodeError):
             pass
 
