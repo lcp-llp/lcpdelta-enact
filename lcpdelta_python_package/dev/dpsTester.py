@@ -1,11 +1,12 @@
+import asyncio
 from lcp_delta.enact.dps_helper import DPSHelper
 from lcp_delta.enact.dps_helper_async import DPSHelperAsync
 from lcp_delta.enact.dps_helper_new import DPSHelperNew
 
-def test_async(username, api_key):
+async def test_async(username, api_key):
 
     dps_helper_async = DPSHelperAsync(username, api_key)
-    dps_helper_async.start
+    await dps_helper_async.start()
     def handle_updates(x):
         print(x)
 
@@ -53,4 +54,4 @@ if __name__ == "__main__":
 
     # test_original(username, api_key)
 
-    test_async(username, api_key)
+    asyncio.run(test_async(username, api_key))
