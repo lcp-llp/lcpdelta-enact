@@ -19,7 +19,7 @@ from lcp_delta.common.http.exceptions import EnactApiError
 
 EPEX_SUBSCRIPTION_ID = "EPEX_TRADES"
 
-class DPSHelperAsyncV3:
+class DPSHelper:
     def __init__(
         self,
         username: str,
@@ -579,15 +579,17 @@ class DPSHelperAsyncV3:
 
 
 if __name__ == "__main__":
+    from manual_tests import *
+
     username = "LcpInternalEnactAccessBaileyHalliday"
     api_key = "28AACrbX79aH"
 
-    dps_helper = DPSHelperAsyncV3(username, api_key, True)
-    
-    from manual_tests import * 
+    dps_helper = DPSHelper(username, api_key, True)
 
     multi_series_test(dps_helper, "multi_series_new.jsonl")
 
     # notification_test(dps_helper, "asyncV3.jsonl")
 
-   
+    # single_series_test(dps_helper, "single_series.jsonl")
+
+    # notification_test(dps_helper, "old.jsonl")
