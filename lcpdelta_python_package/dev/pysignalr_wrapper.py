@@ -11,19 +11,22 @@ class MySignalrClient:
         self._hub_ready = threading.Event()
         self.hub_connection = None
 
-    def _start_loop(self):
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
         self.hub_connection = SignalRClient(self.url, access_token_factory=self.access_token_factory)
-        self.hub_connection.on_error(lambda e: print("SignalR error:", e))
-        self._hub_ready.set()
-        self._loop.run_forever()
 
-    def start(self):
-        self._thread = threading.Thread(target=self._start_loop, daemon=True)
-        self._thread.start()
-        # wait until hub is ready
-        self._hub_ready.wait()
+
+    # def _start_loop(self):
+    #     self._loop = asyncio.new_event_loop()
+    #     asyncio.set_event_loop(self._loop)
+    #     self.hub_connection = SignalRClient(self.url, access_token_factory=self.access_token_factory)
+        
+    #     self._hub_ready.set()
+    #     self._loop.run_forever()
+
+    # def start(self):
+    #     self._thread = threading.Thread(target=self._start_loop, daemon=True)
+    #     self._thread.start()
+    #     # wait until hub is ready
+    #     self._hub_ready.wait()
 
     def stop(self):
         if self._loop and self.hub_connection:
@@ -57,6 +60,10 @@ class MySignalrClient:
     def on_open(self, callback):
         self._hub_ready.wait()
         self.hub_connection.on_open(callback)
+
+    def on_error(self, callback):
+        self._hub_ready.wait()
+        self.hub_connection.on_error(callback)
 
     def on_close(self, callback):
         self._hub_ready.wait()

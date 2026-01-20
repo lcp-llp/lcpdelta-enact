@@ -1,5 +1,4 @@
 import time as pytime
-from lcp_delta.enact.pysignalr_wrapper import MySignalrClient
 import pandas as pd
 import threading
 import queue
@@ -11,14 +10,14 @@ from datetime import timezone, time, timedelta
 from functools import partial
 from typing import Callable
 from concurrent.futures import ThreadPoolExecutor
+from signalrcore.hub_connection_builder import HubConnectionBuilder
 from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
 from lcp_delta.enact.api_helper import APIHelper
 from lcp_delta.common.http.exceptions import EnactApiError
-from functools import partial
 
 EPEX_SUBSCRIPTION_ID = "EPEX_TRADES"
 
-class DPSHelperAsync:
+class DPSHelper:
     def __init__(
         self,
         username: str,
@@ -48,59 +47,66 @@ class DPSHelperAsync:
             self._series_lock = threading.Lock()
 
         self._initialise()
-        # self.start_connection_monitor()
+        self.start_connection_monitor()
 
     def _initialise(self):
         self.enact_credentials = self.api_helper.credentials_holder
         self.data_by_single_series_subscription_id: dict[object, tuple[Callable[[pd.DataFrame], None], pd.DataFrame, bool]] = {}
         access_token_factory = partial(self._fetch_bearer_token)
-        self.signalr_client = MySignalrClient(self.api_helper.endpoints.DPS, access_token_factory)
 
-        
-    async def start(self):
-        
-        access_token_factory = partial(self._fetch_bearer_token)
-        self.signalr_client = MySignalrClient(self.api_helper.endpoints.DPS, access_token_factory)
+        local_url = "https://localhost:44330/dataHub"
+        staging_url = "https://enact-signalrhub-staging.azurewebsites.net/dataHub"
+        prod_url = self.api_helper.endpoints.DPS
+        self.hub_connection = (
+            HubConnectionBuilder()
+            .with_url(
+                local_url,
+                 options={"access_token_factory": access_token_factory,
+                          "verify_ssl": False },
+                 
+            )
+            .build()
+        )
 
-        # Await connection handshake
-        await self.signalr_client.start()
+        self.hub_connection.on_open(self._on_open)
+        self.hub_connection.on_close(self._on_close)
+        self.hub_connection.on_error(lambda e: print("SignalR error:", e))
+        self.hub_connection.on_reconnect(lambda: print("reconnected!"))
 
-        self.signalr_client.on_open(self._on_open)
-        self.signalr_client.on_close(self._on_close)
+        success = self.hub_connection.start()
+        pytime.sleep(1)
 
-        # Start the connection monitor in the background
-        # self.start_connection_monitor()
-
+        if not success:
+            raise ValueError("connection failed")
 
     def _fetch_bearer_token(self):
         self.enact_credentials.get_bearer_token()
         return self.enact_credentials.bearer_token
 
     def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
-        self.signalr_client.send(
-            "JoinEnactPush", request_object, lambda m: self._callback_received(m, subscription_id)
+        self.hub_connection.send(
+            "JoinEnactPush", request_object, lambda m: self._callback_received(m.result, subscription_id)
         )
 
     def _on_open(self):
         print("connection opened and handshake received ready to send messages")
-        self._connection_ready.set()
         # Reconnect to prior pushes without increasing API usage
         for push_group_name, subscription_id in self._single_series_subscriptions:
             try:
-                self.signalr_client.send(
+                self.hub_connection.send(
                     "ReconnectToPush",
                     [push_group_name],
-                    lambda m, sid=subscription_id: self._callback_received(m, sid, is_for_reconnect=True)
+                    lambda m, sid=subscription_id: self._callback_received(m.result, sid, is_for_reconnect=True)
                 )
             except Exception as e:
                 print(f"Resubscribe failed (single): {e}")
 
         for push_group_name, handler, parse_datetimes in self._multi_series_subscriptions:
             try:
-                self.signalr_client.send(
+                self.hub_connection.send(
                     "ReconnectToPush",
                     [push_group_name],
-                    lambda m, h=handler, pdts=parse_datetimes: self._callback_received_multi_series(m, h, pdts, is_for_reconnect=True),
+                    lambda m, h=handler, pdts=parse_datetimes: self._callback_received_multi_series(m.result, h, pdts, is_for_reconnect=True),
                 )
             except Exception as e:
                 print(f"Resubscribe failed (multi): {e}")
@@ -110,13 +116,13 @@ class DPSHelperAsync:
         if self._suppress_restart:
             return
 
-        if not self.signalr_client.is_running():
+        if not self.hub_connection.transport.is_running():
             print("Attempting to restart hub connection")
             self._restart_connection()
 
     def _restart_connection(self):
         try:
-            self.signalr_client.stop()
+            self.hub_connection.stop()
         except Exception as e:
             print(f"Error during stop: {e}")
 
@@ -124,46 +130,59 @@ class DPSHelperAsync:
         self._initialise()
 
     def is_connection_alive(self):
-        return self.signalr_client and self.signalr_client.is_running()
+        return self.hub_connection and self.hub_connection.transport and self.hub_connection.transport.is_running()
 
-    # def start_connection_monitor(self, check_interval_seconds=60):
-    #     if hasattr(self, "_monitor_thread") and self._monitor_thread.is_alive():
-    #         # Monitor is already running
-    #         return
+    def start_connection_monitor(self, check_interval_seconds=60):
+        if hasattr(self, "_monitor_thread") and self._monitor_thread.is_alive():
+            # Monitor is already running
+            return
 
-    #     self._stop_event = getattr(self, "_stop_event", threading.Event())
+        self._stop_event = getattr(self, "_stop_event", threading.Event())
 
-    #     def monitor_loop():
-    #         backoff = 1
-    #         while not self._stop_event.wait(check_interval_seconds * backoff):
-    #             try:
-    #                 if not self.is_connection_alive():
-    #                     print("Connection not alive. Restarting...")
-    #                     self._restart_connection()
-    #                     backoff = min(backoff * 2, 8)
-    #                 else:
-    #                     backoff = 1
-    #             except Exception as e:
-    #                 print(f"Error during connection check: {e}")
+        def monitor_loop():
+            backoff = 1
+            while not self._stop_event.wait(check_interval_seconds * backoff):
+                try:
+                    if not self.is_connection_alive():
+                        print("Connection not alive. Restarting...")
+                        self._restart_connection()
+                        backoff = min(backoff * 2, 8)
+                    else:
+                        backoff = 1
+                except Exception as e:
+                    print(f"Error during connection check: {e}")
 
-    #     self._monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
-    #     self._monitor_thread.start()
+        self._monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
+        self._monitor_thread.start()
 
     def _add_multi_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
-        self.signalr_client.send(
+        self.hub_connection.send(
             "JoinMultiSeries",
             request_object,
-            lambda m: self._callback_received_multi_series(m, handle_data_method, parse_datetimes),
+            lambda m: self._callback_received_multi_series(m.result, handle_data_method, parse_datetimes),
         )
 
-    def subscribe_to_notifications(self, handle_notification_method: Callable[[object], None]):
-        self.signalr_client.send(
+    def on_JoinParentCompanyNotificationPush(self, m, method):
+
+        print(m)
+
+        if "messages" in m and len(m["messages"]) > 0:
+            error_return = m["messages"][0]
+            raise EnactApiError(error_return["errorCode"], error_return["message"], m)    
+
+        self.hub_connection.on(
+            m["data"]["pushName"], lambda x: method(x)
+        )
+
+        # self.hub_connection.on(push_name, lambda x: self._process_multi_series_push(x, handle_data_method, parse_datetimes))
+
+
+    def subscribe_to_notifications(self, handle_notification_method: Callable[[object], None]):         
+        self.hub_connection.send(
             "JoinParentCompanyNotificationPush",
             [],
-            on_invocation=lambda m: self.signalr_client.on(
-                m["data"]["pushName"], lambda x: handle_notification_method(x)
-            ),
-        )
+            lambda m: self.on_JoinParentCompanyNotificationPush(m.result, handle_notification_method)
+            )
 
     def _initialise_series_subscription_data(
         self,
@@ -194,7 +213,7 @@ class DPSHelperAsync:
         push_name = m["data"]["pushName"]
         if not is_for_reconnect:
             self._single_series_subscriptions.append((push_name, subscription_id))
-        self.signalr_client.on(push_name, lambda x: self._process_push_data(x, subscription_id))
+        self.hub_connection.on(push_name, lambda x: self._process_push_data(x, subscription_id))
 
     def _callback_received_multi_series(self, m, handle_data_method, parse_datetimes, is_for_reconnect: bool = False):
         if "messages" in m and len(m["messages"]) > 0:
@@ -204,7 +223,7 @@ class DPSHelperAsync:
         push_name = m["data"]["pushName"]
         if not is_for_reconnect:
             self._multi_series_subscriptions.append((push_name, handle_data_method, parse_datetimes))
-        self.signalr_client.on(push_name, lambda x: self._process_multi_series_push(x, handle_data_method, parse_datetimes))
+        self.hub_connection.on(push_name, lambda x: self._process_multi_series_push(x, handle_data_method, parse_datetimes))
 
     def _process_push_data(self, data_push, subscription_id):
 
@@ -373,9 +392,9 @@ class DPSHelperAsync:
         self._suppress_restart = True
         self._stop_event.set()
 
-        if self.signalr_client:
+        if self.hub_connection:
             try:
-                self.signalr_client.stop()
+                self.hub_connection.stop()
             except Exception as ex:
                 print(f"Error stopping hub connection: {ex}")
 
@@ -395,7 +414,7 @@ class DPSHelperAsync:
                 The function should accept one argument, which will be the data received from the EPEX trade updates.
         """
         if hasattr(self, "epex_trade_call_back") and self.epex_trade_call_back:
-            self.signalr_client.off(EPEX_SUBSCRIPTION_ID)
+            self.hub_connection.off(EPEX_SUBSCRIPTION_ID)
 
         enact_request_object_epex = [{"Type": "EPEX", "Group": "Trades"}]
 
@@ -502,3 +521,15 @@ class DPSHelperAsync:
         if option_id:
             subscription_id += tuple(option_id)
         return subscription_id
+    
+if __name__ == "__main__":
+    username = "LcpInternalEnactAccessBaileyHalliday"
+    api_key = "28AACrbX79aH"
+
+    dps_helper = DPSHelper(username, api_key)
+    
+    from manual_tests import *
+
+    # single_series_test(dps_helper, "single_series.jsonl")
+
+    notification_test(dps_helper, "old.jsonl")
