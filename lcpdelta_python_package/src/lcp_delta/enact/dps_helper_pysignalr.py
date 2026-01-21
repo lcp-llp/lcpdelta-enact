@@ -1,5 +1,7 @@
 from collections.abc import Awaitable
+from contextlib import suppress
 import json
+import logging
 import time as pytime
 import pandas as pd
 import threading
@@ -34,10 +36,14 @@ class DPSHelper:
         max_workers:
             Maximum number of callback tasks that can run at once (only used when async_mode=True)
         """
+        # suppress logging pushes with no registered handlers
+        logging.getLogger("pysignalr").setLevel(logging.ERROR) 
+
         self.api_helper = APIHelper(username, public_api_key)
         self._multi_series_subscriptions: list[tuple[str, Callable, bool]] = []
         self._single_series_subscriptions: list[tuple[str, str]] = []
         self._suppress_restart = False
+        self._connection_open = False
         self.last_updated_header = "DateTimeLastUpdated"
 
         self.async_mode = async_mode
@@ -52,7 +58,6 @@ class DPSHelper:
         self._loop = None     
         self._loop_ready = threading.Event()
         self._client_initialised = threading.Event()
-        self._on_open_called = threading.Event()
         self._stop_event = threading.Event()
         self._push_handlers = {}
 
@@ -85,8 +90,8 @@ class DPSHelper:
 
         async def async_wrapper(*args, **kwargs):
             return await asyncio.to_thread(func, *args, **kwargs)
-
         return async_wrapper
+    
     
     # SignalR client initialization
     async def _initialise(self):
@@ -98,28 +103,58 @@ class DPSHelper:
         access_token_factory = partial(self._fetch_bearer_token)
         local_url = "https://localhost:44330/dataHub"
         staging_url = "https://enact-signalrhub-staging.azurewebsites.net/dataHub"
+        prod_url = self.api_helper.endpoints.DPS
 
         self.client = SignalRClient(
-            staging_url,
+            local_url,
             access_token_factory=access_token_factory,
             headers={"Authorization": f"Bearer {access_token_factory()}"},
         )
 
         self.client.on_open(self._on_open)
         self.client.on_close(self._on_close)
+        self.client.on_error(lambda e: print(f"SignalR error: {e}"))
 
         # Start SignalR client
-        self._signalr_task = asyncio.create_task(self.client.run())
-
+        self._signalr_task = asyncio.create_task(self._run_with_auto_reconnect())
         self._client_initialised.set()
 
     def _fetch_bearer_token(self):
         self.enact_credentials.get_bearer_token()
         return self.enact_credentials.bearer_token
+    
+    async def _run_with_auto_reconnect(self):
+        """Run SignalR client with automatic reconnection on failure"""
+        retry_count = 0
+        retry_delays = [1, 2, 3, 5, 5, 10, 10, 15, 30]
+        
+        while not self._suppress_restart:
+            try:
+                print(f"Starting SignalR Client...")
+                await self.client.run()
+                            
+                if self._suppress_restart:
+                    print("Shutdown requested, not reconnecting")
+                    break
+                            
+            except Exception as e:
+                print(f"SignalR client error: {e}")
+            
+            if self._suppress_restart:
+                print("Shutdown detected, exiting reconnect loop")
+                break
+            
+            delay_idx = min(retry_count, len(retry_delays) - 1)
+            delay = retry_delays[delay_idx]
+            
+            await asyncio.sleep(delay)
+            
+            retry_count += 1
+            print(f"Retry #{retry_count} starting now")
+
+
        
     async def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
-        print("[DEBUG] - _add_subscription called")
-
         # Create wrapper to capture subscription_id in callback
         async def on_JoinEnactPush(m):
             result = m.result
@@ -132,53 +167,37 @@ class DPSHelper:
             )
 
     async def _on_open(self):
-        print("connection opened and handshake received ready to send messages")
+        print("Connection opened and handshake received ready to send messages")
         # Reconnect to prior pushes without increasing API usage
-        # for push_group_name, subscription_id in self._single_series_subscriptions:
-        #     try:
-        #         await self.client.send(
-        #             "ReconnectToPush",
-        #             [push_group_name],
-        #             lambda m, sid=subscription_id: self._callback_received(m, sid, is_for_reconnect=True)
-        #         )
+        # BH - Removed the callbacks as we have internal state of 
+        # registered callbacks for each subscription, calling them 
+        # again here would double-register
+        for push_group_name, _ in self._single_series_subscriptions:
+            try:
+                await self.client.send(
+                    "ReconnectToPush",
+                    [push_group_name],
+                )
+            except Exception as e:
+                print(f"Resubscribe failed (single): {e}")
 
-        #         self.client.on
+        for push_group_name, _, _ in self._multi_series_subscriptions:
+            try:
+                await self.client.send(
+                    "ReconnectToPush",
+                    [push_group_name],
+                )
+            except Exception as e:
+                print(f"Resubscribe failed (multi): {e}")
 
-        #     except Exception as e:
-        #         print(f"Resubscribe failed (single): {e}")
-
-        # for push_group_name, handler, parse_datetimes in self._multi_series_subscriptions:
-        #     try:
-        #         await self.client.send(
-        #             "ReconnectToPush",
-        #             [push_group_name],
-        #             lambda m, h=handler, pdts=parse_datetimes: self._callback_received_multi_series(m, h, pdts, is_for_reconnect=True),
-        #         )
-        #     except Exception as e:
-        #         print(f"Resubscribe failed (multi): {e}")
-
-        self._on_open_called.set() 
+        self._connection_open = True
 
     async def _on_close(self):
+        if(self._connection_open == False):
+            return       
+        
         print("Connection closed")
-        # if self._suppress_restart:
-        #     return
-
-        # if not self.client.transport.is_running():
-        #     print("Attempting to restart hub connection")
-        #     self._restart_connection()
-
-    def _restart_connection(self):
-        try:
-            self.client.stop()
-        except Exception as e:
-            print(f"Error during stop: {e}")
-
-        pytime.sleep(1)
-        self._initialise()
-
-    def is_connection_alive(self):
-        return self.client and self.client.transport and self.client.transport.is_running()
+        self._connection_open = False
 
     async def _add_multi_series_subscription(self, request_object: list, handle_data_method, parse_datetimes):
         # Create wrapper to capture handle_data_method, parse_datetimes in callback
@@ -200,7 +219,6 @@ class DPSHelper:
         )
 
     async def _add_notification_subscription(self, handle_notification_method):
-
         def on_join_parent_company_notification_push(m):
             push_name = m.result["data"]["pushName"]
             self.client.on(push_name, handle_notification_method)
@@ -237,7 +255,6 @@ class DPSHelper:
         )
 
     async def _callback_received(self, m, subscription_id: str, is_for_reconnect: bool = False):
-        print("[DEBUG] - _callback_received called")
         push_name = m["data"]["pushName"]
         if not is_for_reconnect:
             self._single_series_subscriptions.append((push_name, subscription_id))
@@ -249,8 +266,6 @@ class DPSHelper:
         self.client.on(push_name, push_handler)
 
     async def _callback_received_multi_series(self, m, handle_data_method, parse_datetimes, is_for_reconnect: bool = False):
-        print("[DEBUG] - _callback_received_multi_series called")
-
         if "messages" in m and len(m["messages"]) > 0:
             error_return = m["messages"][0]
             raise EnactApiError(error_return["errorCode"], error_return["message"], m)
@@ -265,7 +280,6 @@ class DPSHelper:
         self.client.on(push_name, push_handler)
 
     async def _process_push_data(self, data_push, subscription_id):
-        print("[DEBUG] - _process_push_data called")
         if subscription_id == EPEX_SUBSCRIPTION_ID:
             self._enqueue_or_call(subscription_id, self.epex_trade_call_back, data_push)
             return
@@ -286,12 +300,11 @@ class DPSHelper:
                     parse_datetimes,
                 )
 
-            await self._invoke_handler(user_callback, updated_data)
+            await user_callback(updated_data)
 
         await self._enqueue_or_call(series_id, work, all_data)
 
     async def _process_multi_series_push(self, data_push, handle_data_method, parse_datetimes):
-        print("[DEBUG] - _process_multi_series_push called")
         updated_data = self._handle_new_multi_series_data(data_push, parse_datetimes)
         series_id = data_push[0]["data"]["id"]
         await self._enqueue_or_call(series_id, handle_data_method, updated_data)
@@ -301,9 +314,8 @@ class DPSHelper:
         In blocking mode: call directly.
         In async mode: enqueue (series-ordered) and schedule via shared thread pool respecting max_workers.
         """
-        print("[DEBUG] - _enqueue_or_call called")
         if not self.async_mode:
-            await self._invoke_handler(handler, data)
+            await handler(data)
             return
 
         first = False
@@ -344,23 +356,6 @@ class DPSHelper:
                 self._executor.submit(self._drain_one, series_id)
             else:
                 self._series_running.discard(series_id)
-
-    async def _invoke_handler(self, handler: Callable, data):
-        """
-        Runs sync or async handlers appropriately.
-        (Pool threads are not running an event loop, so we create one for async handlers.)
-        """
-        print("[DEBUG] - _invoke_handler called")
-        await handler(data)
-        # if inspect.iscoroutinefunction(handler):
-        #     try:
-        #         loop = asyncio.get_running_loop()
-        #         future = asyncio.run_coroutine_threadsafe(handler(data), loop)
-        #         future.result()
-        #     except RuntimeError:
-        #         asyncio.run(handler(data))
-        # else:
-        #     handler(data)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -428,25 +423,66 @@ class DPSHelper:
             return df_return
         except Exception:
             return pd.DataFrame()
+        
+    
+    async def _cancel_signalr_task(self):
+        """Cancel the SignalR task gracefully"""
+        if hasattr(self, '_signalr_task') and not self._signalr_task.done():
+            self._signalr_task.cancel()
+            try:
+                await self._signalr_task
+            except asyncio.CancelledError:
+                pass # SignalR task cancelled successfully            
+            except Exception as e:
+                print(f"Error during task cancellation: {e}")
+
+    async def _shutdown_async(self):
+        """Async shutdown helper to cancel all tasks"""      
+        await self._cancel_signalr_task()
+        await asyncio.sleep(0.5)
+        
+        # Cancel all remaining tasks in this event loop except the current one
+        current_task = asyncio.current_task(self._loop)
+        tasks = [
+            t for t in asyncio.all_tasks(self._loop) 
+            if not t.done() and t is not current_task  
+        ]
+        
+        for task in tasks:
+            task.cancel()
+        
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     def terminate_hub_connection(self):
-        self.shutdown()
-
-    def shutdown(self):
         self._suppress_restart = True
         self._stop_event.set()
+        print("Shutting down DPSHelper...")
 
-        if self.client:
+        # Shutdown async components
+        if self._loop and self._loop.is_running():
+            future = self._run_in_loop(self._shutdown_async())
             try:
-                self.client.stop()
+                future.result(timeout=10)
             except Exception as ex:
-                print(f"Error stopping hub connection: {ex}")
+                print(f"Error during async shutdown: {ex}")
 
+        # Shutdown thread pool executor
         if self.async_mode:
             self._executor.shutdown(wait=True)
+            print("Thread pool executor shut down")
 
-        if self._monitor_thread and self._monitor_thread.is_alive():
-            self._monitor_thread.join(timeout=5)
+        # Stop the background event loop
+        if self._loop and self._loop.is_running():
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        
+        # Wait for background thread to finish
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                print("Warning: Background thread did not stop cleanly")
+        
+        print("DPSHelper shutdown complete")
 
     def subscribe_to_epex_trade_updates(self, handle_data_method: Callable[[object], None]) -> None:
         """
@@ -457,6 +493,7 @@ class DPSHelper:
             handle_data_method `Callable`: A callback function that will be invoked with the received EPEX trade updates.
                 The function should accept one argument, which will be the data received from the EPEX trade updates.
         """
+        self._client_initialised.wait()
         if hasattr(self, "epex_trade_call_back") and self.epex_trade_call_back:
             self.client.off(EPEX_SUBSCRIPTION_ID)
 
@@ -464,7 +501,9 @@ class DPSHelper:
 
         self.epex_trade_call_back = handle_data_method
 
-        self._add_subscription(enact_request_object_epex, EPEX_SUBSCRIPTION_ID)
+        self._run_in_loop(
+            self._add_subscription(enact_request_object_epex, EPEX_SUBSCRIPTION_ID)
+        )
 
     def subscribe_to_series_updates(
         self,
@@ -491,7 +530,6 @@ class DPSHelper:
 
             parse_datetimes `bool` (optional): Parse returned DataFrame index to DateTime (UTC). Defaults to False.
         """
-        print("[DEBUG] - subscribe_to_series_updates called")
         self._client_initialised.wait()
         handle_data_method = self._ensure_async(handle_data_method)
         request_details = {"SeriesId": series_id, "CountryId": country_id}
@@ -542,8 +580,7 @@ class DPSHelper:
 
         Note that series, option and country IDs for Enact can be found at https://enact.lcp.energy/externalinstructions.
         """      
-        print("[DEBUG] - subscribe_to_multiple_series_updates called")
-
+        self._client_initialised.wait()
         handle_data_method = self._ensure_async(handle_data_method)
         join_payload = []
         for series_entry in series_requests:
@@ -570,6 +607,7 @@ class DPSHelper:
         self._run_in_loop(
             self._add_multi_series_subscription([join_payload], handle_data_method, parse_datetimes)
         )
+
     def _get_subscription_id(self, series_id: str, country_id: str, option_id: list[str]) -> tuple:
         subscription_id = (series_id, country_id)
         if option_id:
@@ -577,19 +615,16 @@ class DPSHelper:
         return subscription_id
     
 
-
 if __name__ == "__main__":
     from manual_tests import *
 
     username = "LcpInternalEnactAccessBaileyHalliday"
     api_key = "28AACrbX79aH"
 
-    dps_helper = DPSHelper(username, api_key, True)
+    dps_helper = DPSHelper(username, api_key)
+    single_series_test(dps_helper, "single_series_new.jsonl")
+    # notification_test(dps_helper, "notifications_new.jsonl")
 
-    multi_series_test(dps_helper, "multi_series_new.jsonl")
 
-    # notification_test(dps_helper, "asyncV3.jsonl")
-
-    # single_series_test(dps_helper, "single_series.jsonl")
-
-    # notification_test(dps_helper, "old.jsonl")
+    # dps_helper_async = DPSHelper(username, api_key, True)
+    # multi_series_test(dps_helper_async, "multi_series_new.jsonl")
