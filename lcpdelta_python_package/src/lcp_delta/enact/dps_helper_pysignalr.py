@@ -5,7 +5,6 @@ import logging
 import time as pytime
 import pandas as pd
 import threading
-import queue
 import inspect
 import asyncio
 import zoneinfo
@@ -13,11 +12,11 @@ from datetime import datetime as dt
 from datetime import timezone, time, timedelta
 from functools import partial
 from typing import Any, Callable
-from concurrent.futures import ThreadPoolExecutor
 from pysignalr.client import SignalRClient
 from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
 from lcp_delta.enact.api_helper import APIHelper
 from lcp_delta.common.http.exceptions import EnactApiError
+import asyncio
 
 EPEX_SUBSCRIPTION_ID = "EPEX_TRADES"
 
@@ -42,24 +41,28 @@ class DPSHelper:
         self.api_helper = APIHelper(username, public_api_key)
         self._multi_series_subscriptions: list[tuple[str, Callable, bool]] = []
         self._single_series_subscriptions: list[tuple[str, str]] = []
-        self._suppress_restart = False
         self._connection_open = False
         self.last_updated_header = "DateTimeLastUpdated"
 
         self.async_mode = async_mode
         self.max_workers = max_workers
+        # if self.async_mode:
+        #     self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="dps-callback")
+        #     self._series_queues: dict[str, queue.Queue] = {}
+        #     self._series_running: set[str] = set()
+        #     self._series_lock = threading.Lock()
+
         if self.async_mode:
-            self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="dps-callback")
-            self._series_queues: dict[str, queue.Queue] = {}
-            self._series_running: set[str] = set()
+            self._series_queues: dict[str, asyncio.Queue] = {}
+            self._series_semaphore = asyncio.Semaphore(max_workers)
             self._series_lock = threading.Lock()
+            self._series_running: set[str] = set()
 
         # Background event loop for SignalR
         self._loop = None     
         self._loop_ready = threading.Event()
         self._client_initialised = threading.Event()
-        self._stop_event = threading.Event()
-        self._push_handlers = {}
+
 
         # Start event loop on background thread
         self._thread = threading.Thread(target=self._start_loop, daemon=True)
@@ -106,7 +109,7 @@ class DPSHelper:
         prod_url = self.api_helper.endpoints.DPS
 
         self.client = SignalRClient(
-            local_url,
+            staging_url,
             access_token_factory=access_token_factory,
             headers={"Authorization": f"Bearer {access_token_factory()}"},
         )
@@ -116,41 +119,41 @@ class DPSHelper:
         self.client.on_error(lambda e: print(f"SignalR error: {e}"))
 
         # Start SignalR client
-        self._signalr_task = asyncio.create_task(self._run_with_auto_reconnect())
+        self._signalr_task = asyncio.create_task(self.client.run())
         self._client_initialised.set()
 
     def _fetch_bearer_token(self):
         self.enact_credentials.get_bearer_token()
         return self.enact_credentials.bearer_token
     
-    async def _run_with_auto_reconnect(self):
-        """Run SignalR client with automatic reconnection on failure"""
-        retry_count = 0
-        retry_delays = [1, 2, 3, 5, 5, 10, 10, 15, 30]
+    # async def _run_with_auto_reconnect(self):
+    #     """Run SignalR client with automatic reconnection on failure"""
+    #     retry_count = 0
+    #     retry_delays = [1, 2, 3, 5, 5, 10, 10, 15, 30]
         
-        while not self._suppress_restart:
-            try:
-                print(f"Starting SignalR Client...")
-                await self.client.run()
+    #     while not self._suppress_restart:
+    #         try:
+    #             print(f"Starting SignalR Client...")
+    #             await self.client.run()
                             
-                if self._suppress_restart:
-                    print("Shutdown requested, not reconnecting")
-                    break
+    #             if self._suppress_restart:
+    #                 print("Shutdown requested, not reconnecting")
+    #                 break
                             
-            except Exception as e:
-                print(f"SignalR client error: {e}")
+    #         except Exception as e:
+    #             print(f"SignalR client error: {e}")
             
-            if self._suppress_restart:
-                print("Shutdown detected, exiting reconnect loop")
-                break
+    #         if self._suppress_restart:
+    #             print("Shutdown detected, exiting reconnect loop")
+    #             break
             
-            delay_idx = min(retry_count, len(retry_delays) - 1)
-            delay = retry_delays[delay_idx]
+    #         delay_idx = min(retry_count, len(retry_delays) - 1)
+    #         delay = retry_delays[delay_idx]
             
-            await asyncio.sleep(delay)
+    #         await asyncio.sleep(delay)
             
-            retry_count += 1
-            print(f"Retry #{retry_count} starting now")
+    #         retry_count += 1
+    #         print(f"Retry #{retry_count} starting now")
 
 
        
@@ -312,7 +315,7 @@ class DPSHelper:
     async def _enqueue_or_call(self, series_id: str, handler: Callable, data):
         """
         In blocking mode: call directly.
-        In async mode: enqueue (series-ordered) and schedule via shared thread pool respecting max_workers.
+        In async mode: enqueue (series-ordered) and schedule via shared event loop with max_workers limit.
         """
         if not self.async_mode:
             await handler(data)
@@ -322,40 +325,78 @@ class DPSHelper:
         with self._series_lock:
             q = self._series_queues.get(series_id)
             if q is None:
-                q = self._series_queues[series_id] = queue.Queue()
-            q.put((handler, data))
+                q = self._series_queues[series_id] = asyncio.Queue()
+            q.put_nowait((handler, data))
             if series_id not in self._series_running:
                 self._series_running.add(series_id)
-                first = True  # we need to start the drain
+                first = True
 
         if first:
-            self._executor.submit(self._drain_one, series_id)
+            asyncio.create_task(self._drain_one(series_id))
 
-    def _drain_one(self, series_id: str):
-        """Process exactly one item from the series queue, then reschedule if needed."""
-        with self._series_lock:
-            q = self._series_queues.get(series_id)
-            if q is None or q.empty():
-                self._series_running.discard(series_id)
-                return
+    async def _drain_one(self, series_id: str):
+        """Process all items from the series queue sequentially, respecting max_workers limit."""
+        async with self._series_semaphore:
+            while True:
+                with self._series_lock:
+                    q = self._series_queues.get(series_id)
+                    if q is None or q.empty():
+                        self._series_running.discard(series_id)
+                        return
+                    handler, data = q.get_nowait()
 
-            handler, data = q.get_nowait()
+                try:
+                    await handler(data)
+                except Exception as e:
+                    print(f"Error in callback for series {series_id}: {e}")
 
-        try:
-           # Run handler directly on this worker thread
-            asyncio.run(handler(data))
+    # async def _enqueue_or_call(self, series_id: str, handler: Callable, data):
+    #     """
+    #     In blocking mode: call directly.
+    #     In async mode: enqueue (series-ordered) and schedule via shared thread pool respecting max_workers.
+    #     """
+    #     if not self.async_mode:
+    #         await handler(data)
+    #         return
 
-        except Exception as e:
-            print(f"Error in callback for series {series_id}: {e}")
-        finally:
-            q.task_done()
+    #     first = False
+    #     with self._series_lock:
+    #         q = self._series_queues.get(series_id)
+    #         if q is None:
+    #             q = self._series_queues[series_id] = queue.Queue()
+    #         q.put((handler, data))
+    #         if series_id not in self._series_running:
+    #             self._series_running.add(series_id)
+    #             first = True  # we need to start the drain
 
-        # Reschedule the next item if there’s still work to do
-        with self._series_lock:
-            if not q.empty():
-                self._executor.submit(self._drain_one, series_id)
-            else:
-                self._series_running.discard(series_id)
+    #     if first:
+    #         self._executor.submit(self._drain_one, series_id)
+
+    # def _drain_one(self, series_id: str):
+    #     """Process exactly one item from the series queue, then reschedule if needed."""
+    #     with self._series_lock:
+    #         q = self._series_queues.get(series_id)
+    #         if q is None or q.empty():
+    #             self._series_running.discard(series_id)
+    #             return
+
+    #         handler, data = q.get_nowait()
+
+    #     try:
+    #        # Run handler directly on this worker thread
+    #         asyncio.run(handler(data))
+
+    #     except Exception as e:
+    #         print(f"Error in callback for series {series_id}: {e}")
+    #     finally:
+    #         q.task_done()
+
+    #     # Reschedule the next item if there’s still work to do
+    #     with self._series_lock:
+    #         if not q.empty():
+    #             self._executor.submit(self._drain_one, series_id)
+    #         else:
+    #             self._series_running.discard(series_id)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -437,7 +478,13 @@ class DPSHelper:
                 print(f"Error during task cancellation: {e}")
 
     async def _shutdown_async(self):
-        """Async shutdown helper to cancel all tasks"""      
+        """Async shutdown helper to cancel all tasks"""     
+
+        # Clear all drain state to prevent semaphore deadlocks
+        if self.async_mode:
+            with self._series_lock:
+                self._series_running.clear()
+
         await self._cancel_signalr_task()
         await asyncio.sleep(0.5)
         
@@ -451,12 +498,15 @@ class DPSHelper:
         for task in tasks:
             task.cancel()
         
-        if tasks:
+        if tasks: 
             await asyncio.gather(*tasks, return_exceptions=True)
-
+        
+        # Final cleanup
+        if self.async_mode:
+            with self._series_lock:
+                self._series_queues.clear()
+            
     def terminate_hub_connection(self):
-        self._suppress_restart = True
-        self._stop_event.set()
         print("Shutting down DPSHelper...")
 
         # Shutdown async components
@@ -467,10 +517,10 @@ class DPSHelper:
             except Exception as ex:
                 print(f"Error during async shutdown: {ex}")
 
-        # Shutdown thread pool executor
-        if self.async_mode:
-            self._executor.shutdown(wait=True)
-            print("Thread pool executor shut down")
+        # # Shutdown thread pool executor
+        # if self.async_mode:
+        #     self._executor.shutdown(wait=True)
+        #     print("Thread pool executor shut down")
 
         # Stop the background event loop
         if self._loop and self._loop.is_running():
@@ -621,10 +671,11 @@ if __name__ == "__main__":
     username = "LcpInternalEnactAccessBaileyHalliday"
     api_key = "28AACrbX79aH"
 
-    dps_helper = DPSHelper(username, api_key)
-    single_series_test(dps_helper, "single_series_new.jsonl")
+    # dps_helper = DPSHelper(username, api_key)
+    # epex_test(dps_helper, "epex_new.jsonl")
+    # single_series_test(dps_helper, "single_series_new.jsonl")
     # notification_test(dps_helper, "notifications_new.jsonl")
 
 
-    # dps_helper_async = DPSHelper(username, api_key, True)
-    # multi_series_test(dps_helper_async, "multi_series_new.jsonl")
+    dps_helper_async = DPSHelper(username, api_key, True, 5)
+    multi_series_test(dps_helper_async, "multi_series_new.jsonl")
