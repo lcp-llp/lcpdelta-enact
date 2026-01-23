@@ -2,7 +2,7 @@ import json
 from datetime import datetime as dt
 
 def single_series_test(dps_helper, file_path):
-
+    file_path = "test_output/" + file_path
     def handle_updates(arg):
         entry = {
             "timestamp": dt.utcnow().isoformat(),
@@ -23,7 +23,8 @@ def single_series_test(dps_helper, file_path):
     dps_helper.terminate_hub_connection()
 
 def multi_series_test(dps_helper, file_path):
-
+    import time
+    file_path = "multi_series_test_output/" + file_path
     def handle_updates(arg):
         entry = {
             "timestamp": dt.utcnow().isoformat(),
@@ -72,7 +73,7 @@ def multi_series_test(dps_helper, file_path):
     #    c) One subscription for all heights, all zones, all aggregation types
     {"seriesId": "ERA5WindByZone", "optionIds": [["%ALL%", "%ALL%", "%ALL%"]]},
     ]   
-
+    start_time = time.perf_counter()
     dps_helper.subscribe_to_multiple_series_updates(handle_updates, multi_series_request, parse_datetimes=True)
 
     # dps_helper_async.subscribe_to_series_updates(handle_updates,"ImbalancePriceRealtime", country_id="Belgium", parse_datetimes=True)
@@ -82,11 +83,14 @@ def multi_series_test(dps_helper, file_path):
     message = None
     while message != "exit()":
         message = input(">> ")
-
+    end_time = time.perf_counter()
     dps_helper.terminate_hub_connection()
 
-def notification_test(dps_helper, file_path):
+    execution_time = end_time - start_time
+    print(f"Execution time: {execution_time:.6f} seconds")
 
+def notification_test(dps_helper, file_path):
+    file_path = "test_output/" + file_path
     def handle_updates(arg):
        # print(arg)
         entry = {
@@ -105,5 +109,27 @@ def notification_test(dps_helper, file_path):
         message = input(">> ")
 
     #Terminate the connection at the end
+    dps_helper.terminate_hub_connection()
+
+def epex_test(dps_helper, file_path):
+    file_path = "test_output/" + file_path
+
+    def handle_updates(arg):
+        entry = {
+            "timestamp": dt.utcnow().isoformat(),
+            "data": arg
+        }
+
+        with open(file_path, "a", encoding="utf-8") as f:
+            json.dump(entry, f, default=str)
+            f.write("\n")
+
+    dps_helper.subscribe_to_epex_trade_updates(handle_updates)
+
+    # keep alive
+    message = None
+    while message != "exit()":
+        message = input(">> ")
+
     dps_helper.terminate_hub_connection()
 
