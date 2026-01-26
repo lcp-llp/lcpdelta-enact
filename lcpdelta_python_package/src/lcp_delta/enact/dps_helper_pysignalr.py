@@ -20,7 +20,7 @@ import asyncio
 
 EPEX_SUBSCRIPTION_ID = "EPEX_TRADES"
 
-class DPSHelper:
+class DPSHelperPysignalr:
     def __init__(
         self,
         username: str,
@@ -46,11 +46,6 @@ class DPSHelper:
 
         self.async_mode = async_mode
         self.max_workers = max_workers
-        # if self.async_mode:
-        #     self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="dps-callback")
-        #     self._series_queues: dict[str, queue.Queue] = {}
-        #     self._series_running: set[str] = set()
-        #     self._series_lock = threading.Lock()
 
         if self.async_mode:
             self._series_queues: dict[str, asyncio.Queue] = {}
@@ -109,7 +104,7 @@ class DPSHelper:
         prod_url = self.api_helper.endpoints.DPS
 
         self.client = SignalRClient(
-            staging_url,
+            prod_url,
             access_token_factory=access_token_factory,
             headers={"Authorization": f"Bearer {access_token_factory()}"},
         )
@@ -172,9 +167,6 @@ class DPSHelper:
     async def _on_open(self):
         print("Connection opened and handshake received ready to send messages")
         # Reconnect to prior pushes without increasing API usage
-        # BH - Removed the callbacks as we have internal state of 
-        # registered callbacks for each subscription, calling them 
-        # again here would double-register
         for push_group_name, _ in self._single_series_subscriptions:
             try:
                 await self.client.send(
@@ -222,7 +214,7 @@ class DPSHelper:
         )
 
     async def _add_notification_subscription(self, handle_notification_method):
-        def on_join_parent_company_notification_push(m):
+        async def on_join_parent_company_notification_push(m):         
             push_name = m.result["data"]["pushName"]
             self.client.on(push_name, handle_notification_method)
 
@@ -284,7 +276,7 @@ class DPSHelper:
 
     async def _process_push_data(self, data_push, subscription_id):
         if subscription_id == EPEX_SUBSCRIPTION_ID:
-            self._enqueue_or_call(subscription_id, self.epex_trade_call_back, data_push)
+            await self._enqueue_or_call(subscription_id, self.epex_trade_call_back, data_push)
             return
 
         (user_callback, all_data, parse_datetimes) = self.data_by_single_series_subscription_id[subscription_id]
@@ -349,54 +341,6 @@ class DPSHelper:
                     await handler(data)
                 except Exception as e:
                     print(f"Error in callback for series {series_id}: {e}")
-
-    # async def _enqueue_or_call(self, series_id: str, handler: Callable, data):
-    #     """
-    #     In blocking mode: call directly.
-    #     In async mode: enqueue (series-ordered) and schedule via shared thread pool respecting max_workers.
-    #     """
-    #     if not self.async_mode:
-    #         await handler(data)
-    #         return
-
-    #     first = False
-    #     with self._series_lock:
-    #         q = self._series_queues.get(series_id)
-    #         if q is None:
-    #             q = self._series_queues[series_id] = queue.Queue()
-    #         q.put((handler, data))
-    #         if series_id not in self._series_running:
-    #             self._series_running.add(series_id)
-    #             first = True  # we need to start the drain
-
-    #     if first:
-    #         self._executor.submit(self._drain_one, series_id)
-
-    # def _drain_one(self, series_id: str):
-    #     """Process exactly one item from the series queue, then reschedule if needed."""
-    #     with self._series_lock:
-    #         q = self._series_queues.get(series_id)
-    #         if q is None or q.empty():
-    #             self._series_running.discard(series_id)
-    #             return
-
-    #         handler, data = q.get_nowait()
-
-    #     try:
-    #        # Run handler directly on this worker thread
-    #         asyncio.run(handler(data))
-
-    #     except Exception as e:
-    #         print(f"Error in callback for series {series_id}: {e}")
-    #     finally:
-    #         q.task_done()
-
-    #     # Reschedule the next item if there’s still work to do
-    #     with self._series_lock:
-    #         if not q.empty():
-    #             self._executor.submit(self._drain_one, series_id)
-    #         else:
-    #             self._series_running.discard(series_id)
 
     def _handle_new_series_data(
         self, all_data: pd.DataFrame, data_push_holder: list, parse_datetimes: bool
@@ -517,11 +461,6 @@ class DPSHelper:
             except Exception as ex:
                 print(f"Error during async shutdown: {ex}")
 
-        # # Shutdown thread pool executor
-        # if self.async_mode:
-        #     self._executor.shutdown(wait=True)
-        #     print("Thread pool executor shut down")
-
         # Stop the background event loop
         if self._loop and self._loop.is_running():
             self._loop.call_soon_threadsafe(self._loop.stop)
@@ -543,9 +482,8 @@ class DPSHelper:
             handle_data_method `Callable`: A callback function that will be invoked with the received EPEX trade updates.
                 The function should accept one argument, which will be the data received from the EPEX trade updates.
         """
+        handle_data_method = self._ensure_async(handle_data_method)
         self._client_initialised.wait()
-        if hasattr(self, "epex_trade_call_back") and self.epex_trade_call_back:
-            self.client.off(EPEX_SUBSCRIPTION_ID)
 
         enact_request_object_epex = [{"Type": "EPEX", "Group": "Trades"}]
 
@@ -677,5 +615,7 @@ if __name__ == "__main__":
     # notification_test(dps_helper, "notifications_new.jsonl")
 
 
-    dps_helper_async = DPSHelper(username, api_key, True, 5)
-    multi_series_test(dps_helper_async, "multi_series_new.jsonl")
+    dps_helper_pysignalr = DPSHelperPysignalr(username, api_key)
+    epex_test(dps_helper_pysignalr, "epex_pysignalr.jsonl")
+    
+    #notification_test(dps_helper_pysignalr, "pysignalr.jsonl")
