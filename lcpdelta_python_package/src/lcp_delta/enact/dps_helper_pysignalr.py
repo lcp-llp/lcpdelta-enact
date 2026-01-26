@@ -99,12 +99,10 @@ class DPSHelperPysignalr:
         ] = {}
 
         access_token_factory = partial(self._fetch_bearer_token)
-        local_url = "https://localhost:44330/dataHub"
-        staging_url = "https://enact-signalrhub-staging.azurewebsites.net/dataHub"
-        prod_url = self.api_helper.endpoints.DPS
+        url = self.api_helper.endpoints.DPS
 
         self.client = SignalRClient(
-            prod_url,
+            url,
             access_token_factory=access_token_factory,
             headers={"Authorization": f"Bearer {access_token_factory()}"},
         )
@@ -120,38 +118,7 @@ class DPSHelperPysignalr:
     def _fetch_bearer_token(self):
         self.enact_credentials.get_bearer_token()
         return self.enact_credentials.bearer_token
-    
-    # async def _run_with_auto_reconnect(self):
-    #     """Run SignalR client with automatic reconnection on failure"""
-    #     retry_count = 0
-    #     retry_delays = [1, 2, 3, 5, 5, 10, 10, 15, 30]
-        
-    #     while not self._suppress_restart:
-    #         try:
-    #             print(f"Starting SignalR Client...")
-    #             await self.client.run()
-                            
-    #             if self._suppress_restart:
-    #                 print("Shutdown requested, not reconnecting")
-    #                 break
-                            
-    #         except Exception as e:
-    #             print(f"SignalR client error: {e}")
-            
-    #         if self._suppress_restart:
-    #             print("Shutdown detected, exiting reconnect loop")
-    #             break
-            
-    #         delay_idx = min(retry_count, len(retry_delays) - 1)
-    #         delay = retry_delays[delay_idx]
-            
-    #         await asyncio.sleep(delay)
-            
-    #         retry_count += 1
-    #         print(f"Retry #{retry_count} starting now")
-
-
-       
+     
     async def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
         # Create wrapper to capture subscription_id in callback
         async def on_JoinEnactPush(m):
