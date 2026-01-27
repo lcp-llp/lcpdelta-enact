@@ -1,5 +1,5 @@
 import json
-from datetime import datetime as dt
+from datetime import datetime as dt, timezone
 
 def single_series_test(dps_helper, file_path):
     file_path = "test_output/" + file_path
@@ -89,8 +89,8 @@ def multi_series_test(dps_helper, file_path):
     execution_time = end_time - start_time
     print(f"Execution time: {execution_time:.6f} seconds")
 
-def notification_test(dps_helper, file_path):
-    file_path = "test_output/" + file_path
+def notification_test(dps_helper, file_name):
+    file_path = "C:\\Users\\Bailey.Halliday\\source\\repos\\lcpdelta-enact\\lcpdelta_python_package\\tests\\manual\\notification\\" + file_name
     def handle_updates(arg):
        # print(arg)
         entry = {
@@ -112,11 +112,11 @@ def notification_test(dps_helper, file_path):
     dps_helper.terminate_hub_connection()
 
 def epex_test(dps_helper, file_path):
-    file_path = "test_output/" + file_path
+    file_path = file_path
 
     def handle_updates(arg):
         entry = {
-            "timestamp": dt.utcnow().isoformat(),
+            "timestamp": dt.now(timezone.utc).isoformat(),
             "data": arg
         }
 

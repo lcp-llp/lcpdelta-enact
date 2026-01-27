@@ -53,11 +53,15 @@ class DPSHelper:
         self.enact_credentials = self.api_helper.credentials_holder
         self.data_by_single_series_subscription_id: dict[object, tuple[Callable[[pd.DataFrame], None], pd.DataFrame, bool]] = {}
         access_token_factory = partial(self._fetch_bearer_token)
+
+        local_url = "https://localhost:44330/dataHub"
+        staging_url = "https://enact-signalrhub-staging.azurewebsites.net/dataHub"
+        prod_url = self.api_helper.endpoints.DPS
         self.hub_connection = (
             HubConnectionBuilder()
             .with_url(
-                self.api_helper.endpoints.DPS,
-                 options={"access_token_factory": access_token_factory},
+                prod_url,
+                options={"access_token_factory": access_token_factory},                 
             )
             .build()
         )
@@ -502,3 +506,20 @@ class DPSHelper:
         if option_id:
             subscription_id += tuple(option_id)
         return subscription_id
+    
+if __name__ == "__main__":
+    from manual_tests import *
+
+    username = "LcpInternalEnactAccessBaileyHalliday"
+    api_key = "28AACrbX79aH"
+
+    #dps_helper = DPSHelper(username, api_key)
+    #epex_test(dps_helper, "epex_old.jsonl")
+    #single_series_test(dps_helper, "single_series_old.jsonl")
+    #notification_test(dps_helper, "notifications_old.jsonl")
+
+    
+    dps_helper = DPSHelper(username, api_key)
+    epex_test(dps_helper, "epex_signalrcore.jsonl")
+
+

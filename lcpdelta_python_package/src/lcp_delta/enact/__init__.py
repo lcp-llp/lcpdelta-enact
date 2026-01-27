@@ -13,4 +13,5 @@ for mod in submodules_to_reload:
 from ..common.credentials_holder import CredentialsHolder
 from .api_helper import APIHelper
 from .dps_helper import DPSHelper
+from .dps_helper_pysignalr import DPSHelperPysignalr
 from .chart_helper import ChartHelper
