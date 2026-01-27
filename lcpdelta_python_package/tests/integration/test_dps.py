@@ -14,6 +14,7 @@ def teardown_function():
 
 def test_subscribe_to_series_updates():
     enact_dps_helper = enact.DPSHelper(enact_username, enact_public_api_key)
+    enact_dps_helper._client_initialised.wait()
     assert enact_dps_helper.hub_connection is not None
 
     try:
@@ -32,6 +33,7 @@ def test_subscribe_to_series_updates():
 
 def test_subscribe_to_epex_trade_updates():
     enact_dps_helper = enact.DPSHelper(enact_username, enact_public_api_key)
+    enact_dps_helper._client_initialised.wait()
     assert enact_dps_helper.hub_connection is not None
 
     try:
@@ -47,6 +49,7 @@ def test_subscribe_to_epex_trade_updates():
 
 def test_subscribe_to_notifications():
     enact_dps_helper = enact.DPSHelper(enact_username, enact_public_api_key)
+    enact_dps_helper._client_initialised.wait()
     assert enact_dps_helper.hub_connection is not None
 
     try:
@@ -62,6 +65,7 @@ def test_subscribe_to_notifications():
 
 def test_subscribe_to_multi_series_updates():
     enact_dps_helper = enact.DPSHelper(enact_username, enact_public_api_key)
+    enact_dps_helper._client_initialised.wait()
     assert enact_dps_helper.hub_connection is not None
 
     system_request = [
@@ -88,6 +92,7 @@ async def test_subscribe_to_multi_series_updates_async_call_back():
         done_event.set()
 
     enact_dps_helper = enact.DPSHelper(enact_username, enact_public_api_key, async_mode=True, max_workers= 3)
+    enact_dps_helper._client_initialised.wait()
     assert enact_dps_helper.hub_connection is not None
 
     system_request = [

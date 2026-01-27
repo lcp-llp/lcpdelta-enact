@@ -39,7 +39,6 @@ dev = [
     "nbval",
     "pandas",
     "numpy",
-    "signalrcore==0.9.5",
 ]
 
 [project.urls]
