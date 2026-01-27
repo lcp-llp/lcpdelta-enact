@@ -566,20 +566,3 @@ class DPSHelper:
             subscription_id += tuple(option_id)
         return subscription_id
     
-
-if __name__ == "__main__":
-
-    username = "LcpInternalEnactAccessBaileyHalliday"
-    api_key = "28AACrbX79aH"
-
-    def handle_updates(arg):
-        print(arg)
-    dps_helper = DPSHelper(username, api_key)
-    dps_helper.subscribe_to_series_updates(handle_updates,"ImbalancePriceRealtime", country_id="Belgium", parse_datetimes=True)
-
-    # keep alive
-    message = None
-    while message != "exit()":
-        message = input(">> ")
-
-    dps_helper.terminate_hub_connection()
