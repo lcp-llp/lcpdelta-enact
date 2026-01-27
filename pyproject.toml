@@ -21,7 +21,6 @@ dependencies = [
     "numpy",
     "pandas",
     "requests",
-    "signalrcore==0.9.5",
     "pysignalr",
     "matplotlib",
     "httpx",
