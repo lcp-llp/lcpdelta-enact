@@ -1,6 +1,0 @@
-{
-    "python.analysis.extraPaths": [
-        "./lcpdelta_python_package/src/lcp_delta/enact",
-        "./lcpdelta_python_package/dev"
-    ]
-}
