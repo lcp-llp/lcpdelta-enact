@@ -98,18 +98,18 @@ class DPSHelper:
         access_token_factory = partial(self._fetch_bearer_token)
         url = self.api_helper.endpoints.DPS
 
-        self.client = SignalRClient(
+        self.hub_connection = SignalRClient(
             url,
             access_token_factory=access_token_factory,
             headers={"Authorization": f"Bearer {access_token_factory()}"},
         )
 
-        self.client.on_open(self._on_open)
-        self.client.on_close(self._on_close)
-        self.client.on_error(lambda e: print(f"SignalR error: {e}"))
+        self.hub_connection.on_open(self._on_open)
+        self.hub_connection.on_close(self._on_close)
+        self.hub_connection.on_error(lambda e: print(f"SignalR error: {e}"))
 
         # Start SignalR client
-        self._signalr_task = asyncio.create_task(self.client.run())
+        self._signalr_task = asyncio.create_task(self.hub_connection.run())
         self._client_initialised.set()
 
     def _fetch_bearer_token(self):
@@ -122,7 +122,7 @@ class DPSHelper:
             result = m.result
             await self._callback_received(result, subscription_id)
 
-        await self.client.send(
+        await self.hub_connection.send(
             "JoinEnactPush", 
             request_object,
             on_JoinEnactPush
@@ -133,7 +133,7 @@ class DPSHelper:
         # Reconnect to prior pushes without increasing API usage
         for push_group_name, _ in self._single_series_subscriptions:
             try:
-                await self.client.send(
+                await self.hub_connection.send(
                     "ReconnectToPush",
                     [push_group_name],
                 )
@@ -142,7 +142,7 @@ class DPSHelper:
 
         for push_group_name, _, _ in self._multi_series_subscriptions:
             try:
-                await self.client.send(
+                await self.hub_connection.send(
                     "ReconnectToPush",
                     [push_group_name],
                 )
@@ -164,7 +164,7 @@ class DPSHelper:
             result = m.result
             await self._callback_received_multi_series(result, handle_data_method, parse_datetimes)
 
-        await self.client.send(
+        await self.hub_connection.send(
             "JoinMultiSeries",
             request_object,
             on_JoinMultiSeries,
@@ -180,9 +180,9 @@ class DPSHelper:
     async def _add_notification_subscription(self, handle_notification_method):
         async def on_join_parent_company_notification_push(m):         
             push_name = m.result["data"]["pushName"]
-            self.client.on(push_name, handle_notification_method)
+            self.hub_connection.on(push_name, handle_notification_method)
 
-        await self.client.send(
+        await self.hub_connection.send(
             "JoinParentCompanyNotificationPush",
             [],
             on_join_parent_company_notification_push,
@@ -222,7 +222,7 @@ class DPSHelper:
         async def push_handler(x):
             await self._process_push_data(x, subscription_id)
         
-        self.client.on(push_name, push_handler)
+        self.hub_connection.on(push_name, push_handler)
 
     async def _callback_received_multi_series(self, m, handle_data_method, parse_datetimes, is_for_reconnect: bool = False):
         if "messages" in m and len(m["messages"]) > 0:
@@ -236,7 +236,7 @@ class DPSHelper:
         async def push_handler(x):
             await self._process_multi_series_push(x, handle_data_method, parse_datetimes)
 
-        self.client.on(push_name, push_handler)
+        self.hub_connection.on(push_name, push_handler)
 
     async def _process_push_data(self, data_push, subscription_id):
         if subscription_id == EPEX_SUBSCRIPTION_ID:
