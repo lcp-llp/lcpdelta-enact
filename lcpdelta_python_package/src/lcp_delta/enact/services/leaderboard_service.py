@@ -72,7 +72,7 @@ def generate_request_v2(
         "ChargingCostAssumption": charging_cost_assumption,
         "NonDeliverySplitOut": non_delivery_split_out,
         "ReservePenaltySplitOut": reserve_penalty_split_out,
-        "IncludeColoation": include_colocation,
+        "IncludeColocation": include_colocation,
     }
 
 
