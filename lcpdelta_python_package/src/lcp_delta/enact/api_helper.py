@@ -1085,6 +1085,7 @@ class APIHelper(APIHelperBase):
         charging_cost_assumption="PreviousEFABlock",
         non_delivery_split_out = "Show",
         reserve_penalty_split_out = "Show",
+        include_colocation=True,
     ) -> pd.DataFrame:
         """Gets leaderboard data for a given date range.
 
@@ -1128,7 +1129,9 @@ class APIHelper(APIHelperBase):
 
             non_delivery_split_out `str` (optional): Non-delivery column option. Options are: 'Ignore', 'Show', 'Absorb'.
 
-            reserve_penalty_split_out `str` (optional): Reserve split out option. Options are: 'Ignore", 'Show', 'Absorb'."""
+            reserve_penalty_split_out `str` (optional): Reserve split out option. Options are: 'Ignore", 'Show', 'Absorb'.
+
+            include_colocation `str` (optional): When set to false, co-located assets will be excluded."""
         request_body = leaderboard_service.generate_request_v2(
             date_from,
             date_to,
@@ -1149,7 +1152,8 @@ class APIHelper(APIHelperBase):
             charging_cost_price,
             charging_cost_assumption,
             non_delivery_split_out,
-            reserve_penalty_split_out
+            reserve_penalty_split_out,
+            include_colocation
         )
         response = self._post_request(self.endpoints.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
@@ -1176,6 +1180,7 @@ class APIHelper(APIHelperBase):
         charging_cost_assumption="PreviousEFABlock",
         non_delivery_split_out="Show",
         reserve_penalty_split_out="Show",
+        include_colocation=True,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_leaderboard_data`."""
         request_body = leaderboard_service.generate_request_v2(
@@ -1198,7 +1203,8 @@ class APIHelper(APIHelperBase):
             charging_cost_price,
             charging_cost_assumption,
             non_delivery_split_out,
-            reserve_penalty_split_out
+            reserve_penalty_split_out,
+            include_colocation
         )
         response = await self._post_request_async(self.endpoints.LEADERBOARD_V2, request_body)
         return leaderboard_service.process_response(response, type)
