@@ -692,15 +692,13 @@ class MultiSeriesDPSHelper:
         return True
 
     async def _reconnect_group(self, group_name: str, subscription: _MultiSeriesSubscription) -> None:
-        """Reconnect an existing group without adding usage, rejoining only if needed."""
+        """Reconnect an existing group without waiting for a completion response."""
         try:
-            response = await self._send_with_response("ReconnectToPush", [group_name], timeout=30)
-            self._extract_push_name_or_raise(response)
-        except EnactApiError as exc:
-            self.logger.info("ReconnectToPush failed for %s, rejoining: %s", group_name, exc)
-            await self._rejoin_group(group_name, subscription)
+            if self.hub_connection is None:
+                raise RuntimeError("SignalR client is not initialised")
+            await self.hub_connection.send("ReconnectToPush", [group_name])
         except Exception:
-            self.logger.exception("ReconnectToPush errored for %s, rejoining", group_name)
+            self.logger.exception("ReconnectToPush send failed for %s, rejoining", group_name)
             await self._rejoin_group(group_name, subscription)
 
     async def _rejoin_group(self, group_name: str, subscription: _MultiSeriesSubscription) -> str:
