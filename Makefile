@@ -1,4 +1,4 @@
-.PHONY: test
+.PHONY: install precommit test test-unit test-integration
 
 install:
 	pip install -U pip
@@ -8,4 +8,13 @@ install:
 
 precommit:
 	pre-commit run --all-files
+
+test:
+	pytest
+
+test-unit:
+	pytest lcpdelta_python_package/tests/unit
+
+test-integration:
+	pytest lcpdelta_python_package/tests/integration
 

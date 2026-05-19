@@ -28,6 +28,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-asyncio",
+]
 dev = [
     "pre-commit",
     "ruff",
@@ -54,6 +59,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["FBT003", "RET504"]
+
+[tool.pytest.ini_options]
+testpaths = ["lcpdelta_python_package/tests/unit"]
 
 [tool.setuptools.packages.find]
 where = ["lcpdelta_python_package/src"]

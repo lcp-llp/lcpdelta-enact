@@ -52,5 +52,7 @@ And populate the entries with your credentials.
 If you do not have credentials for one of these services (i.e. you have Enact credentials but not FLEXtrack), you can leave these empty and cease to run those integration tests. If you are making changes which affect a service you do not have credentials for, then testing should be done by somebody who has these credentials.
 
 **Once you have set up your .env file:**
-1. Run `pip install -e .[dev]` from your repository's root directory to ensure you have dev dependencies installed
-2. Run `pytest` to execute all tests, or run `pytest tests/integration/{file_name}.py` to execute a particular suite of tests
+1. Run `pip install -e .[dev]` from your repository's root directory to ensure you have dev dependencies installed.
+   For test-only installs, `pip install -e .[test]` is sufficient.
+2. Run `pytest` or `make test-unit` to execute the unit tests.
+3. Run `pytest lcpdelta_python_package/tests/integration` or `make test-integration` to execute integration tests.

@@ -261,8 +261,18 @@ def test_identical_subscriptions_reuse_existing_group_without_joining_again():
             [{"seriesId": "RealtimeDemand", "countryId": "Gb", "optionIds": [["none"]]}]
         )
 
-        first_group_name = await helper._subscribe_join_payload(join_payload, callback, True, timeout=1)
-        second_group_name = await helper._subscribe_join_payload(join_payload, replacement_callback, True, timeout=1)
+        first_group_name = await helper._subscribe_join_payload(
+            join_payload,
+            callback,
+            parse_datetimes=True,
+            timeout=1,
+        )
+        second_group_name = await helper._subscribe_join_payload(
+            join_payload,
+            replacement_callback,
+            parse_datetimes=True,
+            timeout=1,
+        )
 
         return first_group_name, second_group_name
 
@@ -272,6 +282,59 @@ def test_identical_subscriptions_reuse_existing_group_without_joining_again():
     assert second_group_name == "multi-series-group"
     assert len(join_calls) == 1
     assert helper._subscriptions["multi-series-group"].callback is replacement_callback
+
+
+def test_equivalent_subscription_requests_reuse_group_when_order_changes():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    join_calls = []
+
+    class FakeHubConnection:
+        def on(self, _group_name, _callback):
+            return None
+
+    async def fake_send_with_response(method, arguments, *, timeout):
+        join_calls.append((method, arguments, timeout))
+        return {"data": {"pushName": "multi-series-group"}}
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        helper._send_with_response = fake_send_with_response
+        first_payload = helper._normalise_series_requests(
+            [
+                {"seriesId": "RealtimeDemand", "countryId": "Gb"},
+                {"seriesId": "RealtimeFrequency", "countryId": "Gb", "optionIds": [["B"], ["A"]]},
+            ]
+        )
+        reordered_payload = helper._normalise_series_requests(
+            [
+                {"seriesId": "RealtimeFrequency", "countryId": "Gb", "optionIds": [["A"], ["B"]]},
+                {"seriesId": "RealtimeDemand", "countryId": "Gb"},
+            ]
+        )
+
+        first_group_name = await helper._subscribe_join_payload(
+            first_payload,
+            callback,
+            parse_datetimes=True,
+            timeout=1,
+        )
+        second_group_name = await helper._subscribe_join_payload(
+            reordered_payload,
+            callback,
+            parse_datetimes=True,
+            timeout=1,
+        )
+
+        return first_group_name, second_group_name
+
+    first_group_name, second_group_name = asyncio.run(run())
+
+    assert first_group_name == "multi-series-group"
+    assert second_group_name == "multi-series-group"
+    assert len(join_calls) == 1
 
 
 def test_unsubscribe_unknown_group_is_safe_noop():
@@ -303,7 +366,7 @@ def test_unsubscribe_removes_subscription_and_leaves_group_when_connected():
         helper._send_with_response = fake_send_with_response
 
         join_payload = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
-        await helper._subscribe_join_payload(join_payload, callback, True, timeout=1)
+        await helper._subscribe_join_payload(join_payload, callback, parse_datetimes=True, timeout=1)
         helper._connected.set()
 
         return await helper._unsubscribe_group("multi-series-group", timeout=1)

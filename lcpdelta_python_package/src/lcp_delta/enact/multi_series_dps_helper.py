@@ -151,8 +151,6 @@ class MultiSeriesDPSHelper:
         if callback is not None and not callable(callback):
             raise TypeError("callback must be callable")
 
-        logging.getLogger("pysignalr").setLevel(logging.ERROR)
-
         self._username = username
         self._public_api_key = public_api_key
         self.api_helper: APIHelper | None = None
@@ -478,7 +476,10 @@ class MultiSeriesDPSHelper:
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
         self._loop_ready.set()
-        self._loop.run_forever()
+        try:
+            self._loop.run_forever()
+        finally:
+            self._loop.close()
 
     def _is_running_on_helper_loop(self) -> bool:
         """Return true when the caller is already executing on the helper loop."""
@@ -706,7 +707,7 @@ class MultiSeriesDPSHelper:
             except Exception:
                 self.logger.exception("Failed to refresh multi-series DPS lease for %s", group_name)
 
-    async def _send_with_response(self, method: str, arguments: list[Any], *, timeout: float) -> dict[str, Any]:
+    async def _send_with_response(self, method: str, arguments: list[Any], *, timeout: float) -> Any:
         """Send a SignalR hub method invocation and wait for its callback response."""
         if self.hub_connection is None:
             raise RuntimeError("SignalR client is not initialised")
@@ -964,7 +965,21 @@ class MultiSeriesDPSHelper:
     @staticmethod
     def _get_subscription_request_key(join_payload: list[dict[str, Any]]) -> str:
         """Return a stable key used to avoid duplicate JoinMultiSeries calls."""
-        return json.dumps(join_payload, sort_keys=True, separators=(",", ":"))
+        canonical_payload = []
+        for series_entry in join_payload:
+            canonical_entry: dict[str, Any] = {
+                "countryId": series_entry["countryId"],
+                "seriesId": series_entry["seriesId"],
+            }
+
+            option_ids = series_entry.get("optionIds")
+            if option_ids is not None:
+                canonical_entry["optionIds"] = sorted(list(option_group) for option_group in option_ids)
+
+            canonical_payload.append(canonical_entry)
+
+        canonical_payload.sort(key=lambda entry: json.dumps(entry, sort_keys=True, separators=(",", ":")))
+        return json.dumps(canonical_payload, sort_keys=True, separators=(",", ":"))
 
     def _remove_subscription_group_mappings(self, group_name: str) -> None:
         """Remove duplicate-subscription cache entries pointing at a replaced group."""
