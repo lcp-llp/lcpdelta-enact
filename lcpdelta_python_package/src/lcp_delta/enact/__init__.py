@@ -13,4 +13,5 @@ for mod in submodules_to_reload:
 from ..common.credentials_holder import CredentialsHolder
 from .api_helper import APIHelper
 from .dps_helper import DPSHelper
+from .multi_series_dps_helper import MultiSeriesDPSHelper, MultiSeriesPushMetadata, PlantPushMetadata
 from .chart_helper import ChartHelper
