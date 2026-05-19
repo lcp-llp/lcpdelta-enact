@@ -206,6 +206,7 @@ class MultiSeriesDPSHelper:
         self.hub_connection: SignalRClient | None = None
         self._connection_task: asyncio.Task | None = None
         self._lease_refresh_task: asyncio.Task | None = None
+        self._reconnect_tasks: set[asyncio.Task] = set()
         self._callback_slots: asyncio.Semaphore | None = None
         self._callback_queues: list[asyncio.Queue] = []
         self._callback_tasks: list[asyncio.Task] = []
@@ -623,11 +624,15 @@ class MultiSeriesDPSHelper:
         self._connected.set()
         for group_name, subscription in list(self._subscriptions.items()):
             self._register_group_handler(group_name)
-            await self._reconnect_group(group_name, subscription)
+            task = asyncio.create_task(self._restore_group_until_connected(group_name, subscription))
+            self._reconnect_tasks.add(task)
+            task.add_done_callback(self._reconnect_tasks.discard)
 
     async def _on_close(self) -> None:
         """Mark the connection closed so callers can observe disconnected state."""
         self._connected.clear()
+        for task in tuple(self._reconnect_tasks):
+            task.cancel()
 
     async def _join_multi_series(
         self,
@@ -692,14 +697,76 @@ class MultiSeriesDPSHelper:
         return True
 
     async def _reconnect_group(self, group_name: str, subscription: _MultiSeriesSubscription) -> None:
-        """Reconnect an existing group without waiting for a completion response."""
+        """Reconnect an existing group without adding usage, rejoining only if needed."""
         try:
-            if self.hub_connection is None:
-                raise RuntimeError("SignalR client is not initialised")
-            await self.hub_connection.send("ReconnectToPush", [group_name])
-        except Exception:
-            self.logger.exception("ReconnectToPush send failed for %s, rejoining", group_name)
+            response = await self._send_with_response("ReconnectToPush", [group_name], timeout=30)
+            self._raise_reconnect_error_if_present(response)
+        except EnactApiError as exc:
+            if not self._should_rejoin_after_reconnect_error(exc):
+                raise
+
+            self.logger.info("ReconnectToPush cannot restore %s, rejoining: %s", group_name, exc)
             await self._rejoin_group(group_name, subscription)
+
+    async def _restore_group_until_connected(
+        self,
+        group_name: str,
+        subscription: _MultiSeriesSubscription,
+    ) -> None:
+        """Keep trying to restore one group while the current connection is open."""
+        delay = self.reconnect_initial_delay_seconds
+
+        while not self._stop_requested.is_set() and self.is_connected and group_name in self._subscriptions:
+            try:
+                current_subscription = self._subscriptions.get(group_name, subscription)
+                await self._reconnect_group(group_name, current_subscription)
+                return
+            except asyncio.CancelledError:
+                raise
+            except EnactApiError as exc:
+                self.logger.warning("Failed to restore multi-series DPS group %s, retrying: %s", group_name, exc)
+                if not self.reconnect:
+                    return
+            except TimeoutError:
+                self.logger.warning("Timed out restoring multi-series DPS group %s, retrying", group_name)
+                if not self.reconnect:
+                    return
+            except Exception:
+                self.logger.exception("Failed to restore multi-series DPS group %s", group_name)
+                if not self.reconnect:
+                    return
+
+            await asyncio.sleep(delay)
+            delay = min(max(delay * 2, self.reconnect_initial_delay_seconds), self.reconnect_max_delay_seconds)
+
+    @staticmethod
+    def _should_rejoin_after_reconnect_error(exc: EnactApiError) -> bool:
+        """Return true only for errors that mean the previous push can no longer be restored."""
+        error_code = str(exc.error_code or "").lower()
+        message = str(exc.message or "").lower()
+        error_text = f"{error_code} {message}"
+        non_reconnectable_terms = (
+            "cannot reconnect",
+            "does not exist",
+            "expired",
+            "invalid group",
+            "invalid push",
+            "no longer",
+            "not found",
+            "unknown group",
+            "unknown push",
+        )
+        return any(term in error_text for term in non_reconnectable_terms)
+
+    @staticmethod
+    def _raise_reconnect_error_if_present(response: Any) -> None:
+        """Raise only for explicit reconnect errors; no reconnect payload still means success."""
+        messages = MultiSeriesDPSHelper._get_case_insensitive(response, "messages") or []
+        for message in messages:
+            error_code = MultiSeriesDPSHelper._get_case_insensitive(message, "errorCode")
+            error_message = MultiSeriesDPSHelper._get_case_insensitive(message, "message")
+            if error_code or error_message:
+                raise EnactApiError(error_code or "SignalRError", error_message or "SignalR request failed", response)
 
     async def _rejoin_group(self, group_name: str, subscription: _MultiSeriesSubscription) -> str:
         """Recreate a multi-series group after reconnect fails or the lease expires."""
@@ -748,12 +815,32 @@ class MultiSeriesDPSHelper:
         response_future = asyncio.get_running_loop().create_future()
 
         async def on_response(message) -> None:
+            error = getattr(message, "error", None)
+            if error:
+                if not response_future.done():
+                    response_future.set_exception(EnactApiError("SignalRError", error, message))
+                return
+
             result = getattr(message, "result", message)
             if not response_future.done():
                 response_future.set_result(result)
 
-        await self.hub_connection.send(method, arguments, on_response)
-        return await asyncio.wait_for(response_future, timeout=timeout)
+        try:
+            await self.hub_connection.send(method, arguments, on_response)
+            return await asyncio.wait_for(response_future, timeout=timeout)
+        except Exception:
+            self._remove_pending_invocation_handler(on_response)
+            raise
+
+    def _remove_pending_invocation_handler(self, callback: Callable[[Any], Any]) -> None:
+        """Best-effort cleanup for a SignalR invocation callback after a failed wait."""
+        invocation_handlers = getattr(self.hub_connection, "_invocation_handlers", None)
+        if not isinstance(invocation_handlers, dict):
+            return
+
+        for invocation_id, handler in list(invocation_handlers.items()):
+            if handler is callback:
+                invocation_handlers.pop(invocation_id, None)
 
     def _register_group_handler(self, group_name: str) -> None:
         """Register the dynamic SignalR event that receives pushes for a group."""
@@ -896,6 +983,12 @@ class MultiSeriesDPSHelper:
         if self._lease_refresh_task is not None and not self._lease_refresh_task.done():
             self._lease_refresh_task.cancel()
             await asyncio.gather(self._lease_refresh_task, return_exceptions=True)
+
+        for task in tuple(self._reconnect_tasks):
+            task.cancel()
+        if self._reconnect_tasks:
+            await asyncio.gather(*self._reconnect_tasks, return_exceptions=True)
+            self._reconnect_tasks.clear()
 
         if self._connection_task is not None and not self._connection_task.done():
             self._connection_task.cancel()

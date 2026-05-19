@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+from lcp_delta.common.http.exceptions import EnactApiError
 from lcp_delta.enact.multi_series_dps_helper import MultiSeriesDPSHelper, MultiSeriesPushMetadata
 
 
@@ -222,6 +223,160 @@ def test_connect_is_safe_to_call_when_connection_task_is_already_running():
     finally:
         if helper._callback_executor is not None:
             helper._callback_executor.shutdown(wait=True)
+
+
+def test_send_with_response_raises_signalr_completion_errors():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+
+    class Completion:
+        error = "temporary backend issue"
+        result = None
+
+    class FakeHubConnection:
+        async def send(self, _method, _arguments, on_invocation):
+            await on_invocation(Completion())
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        return await helper._send_with_response("ReconnectToPush", ["multi-series-group"], timeout=1)
+
+    try:
+        asyncio.run(run())
+    except EnactApiError as exc:
+        assert exc.error_code == "SignalRError"
+        assert exc.message == "temporary backend issue"
+    else:
+        raise AssertionError("Expected EnactApiError")
+
+
+def test_timed_out_send_removes_pending_invocation_handler():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+
+    class FakeHubConnection:
+        def __init__(self):
+            self._invocation_handlers = {}
+
+        async def send(self, _method, _arguments, on_invocation):
+            self._invocation_handlers["invocation-id"] = on_invocation
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        try:
+            await helper._send_with_response("ReconnectToPush", ["multi-series-group"], timeout=0.01)
+        except TimeoutError:
+            return helper.hub_connection._invocation_handlers
+        raise AssertionError("Expected TimeoutError")
+
+    assert asyncio.run(run()) == {}
+
+
+def test_transient_reconnect_failure_retries_reconnect_without_rejoining():
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        reconnect_initial_delay_seconds=0,
+        reconnect_max_delay_seconds=0,
+    )
+    calls = []
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def fake_send_with_response(method, arguments, *, timeout):
+        calls.append((method, arguments, timeout))
+        if len(calls) == 1:
+            raise EnactApiError("ServiceUnavailable", "temporary backend issue", {})
+        return {"data": {"pushName": "multi-series-group"}}
+
+    async def run():
+        subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+        helper._subscriptions["multi-series-group"] = type(
+            "Subscription",
+            (),
+            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
+        )()
+        helper._send_with_response = fake_send_with_response
+        helper._connected.set()
+
+        await helper._restore_group_until_connected("multi-series-group", helper._subscriptions["multi-series-group"])
+
+    asyncio.run(run())
+
+    assert calls == [
+        ("ReconnectToPush", ["multi-series-group"], 30),
+        ("ReconnectToPush", ["multi-series-group"], 30),
+    ]
+
+
+def test_reconnect_completion_without_payload_is_success():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    calls = []
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def fake_send_with_response(method, arguments, *, timeout):
+        calls.append((method, arguments, timeout))
+        return None
+
+    async def run():
+        subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+        helper._subscriptions["multi-series-group"] = type(
+            "Subscription",
+            (),
+            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
+        )()
+        helper._send_with_response = fake_send_with_response
+        helper._connected.set()
+
+        await helper._restore_group_until_connected("multi-series-group", helper._subscriptions["multi-series-group"])
+
+    asyncio.run(run())
+
+    assert calls == [("ReconnectToPush", ["multi-series-group"], 30)]
+
+
+def test_expired_reconnect_response_rejoins_group():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    calls = []
+
+    class FakeHubConnection:
+        def on(self, _group_name, _callback):
+            return None
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def fake_send_with_response(method, arguments, *, timeout):
+        calls.append((method, arguments, timeout))
+        if method == "ReconnectToPush":
+            raise EnactApiError("NotFound", "push expired", {})
+        return {"data": {"pushName": "new-multi-series-group"}}
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+        helper._subscriptions["multi-series-group"] = type(
+            "Subscription",
+            (),
+            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
+        )()
+        helper._subscription_group_by_request_key[helper._get_subscription_request_key(subscription)] = (
+            "multi-series-group"
+        )
+        helper._send_with_response = fake_send_with_response
+        helper._connected.set()
+
+        await helper._restore_group_until_connected("multi-series-group", helper._subscriptions["multi-series-group"])
+
+    asyncio.run(run())
+
+    assert calls == [
+        ("ReconnectToPush", ["multi-series-group"], 30),
+        ("JoinMultiSeries", [[{"seriesId": "RealtimeDemand", "countryId": "Gb"}]], 30),
+    ]
+    assert helper.group_names == ("new-multi-series-group",)
 
 
 def test_one_argument_callbacks_can_read_metadata_from_dataframe_attrs():
