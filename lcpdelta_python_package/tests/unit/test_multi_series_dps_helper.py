@@ -1,9 +1,19 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
 
 import pandas as pd
 
 from lcp_delta.enact.multi_series_dps_helper import MultiSeriesDPSHelper, MultiSeriesPushMetadata
+
+
+class _CapturingHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.messages = []
+
+    def emit(self, record):
+        self.messages.append(record.getMessage())
 
 
 async def _wait_for_callback_processing(helper):
@@ -12,6 +22,30 @@ async def _wait_for_callback_processing(helper):
     for task in helper._callback_tasks:
         task.cancel()
     await asyncio.gather(*helper._callback_tasks, return_exceptions=True)
+
+
+def test_unhandled_signalr_server_method_warning_is_suppressed_without_hiding_real_warnings():
+    MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    signalr_logger = logging.getLogger("pysignalr.client")
+    handler = _CapturingHandler()
+    previous_level = signalr_logger.level
+    previous_propagate = signalr_logger.propagate
+    previous_disabled = signalr_logger.disabled
+
+    signalr_logger.addHandler(handler)
+    signalr_logger.setLevel(logging.WARNING)
+    signalr_logger.propagate = False
+    signalr_logger.disabled = False
+    try:
+        signalr_logger.warning("No client method with the name '%s' found.", "zeroPnUpdate")
+        signalr_logger.warning("SignalR connection stopped unexpectedly: %s", "closed")
+    finally:
+        signalr_logger.removeHandler(handler)
+        signalr_logger.setLevel(previous_level)
+        signalr_logger.propagate = previous_propagate
+        signalr_logger.disabled = previous_disabled
+
+    assert handler.messages == ["SignalR connection stopped unexpectedly: closed"]
 
 
 def test_series_ping_payload_is_converted_to_dataframe_and_metadata():

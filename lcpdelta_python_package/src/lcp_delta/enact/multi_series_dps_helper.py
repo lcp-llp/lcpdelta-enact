@@ -23,6 +23,23 @@ ChartPushCallback = Callable[..., Any]
 MULTI_SERIES_RECONNECT_LEASE_DAYS = 14.0
 
 
+class _SignalRMissingMethodFilter(logging.Filter):
+    """Suppress pysignalr warnings for server methods this helper does not handle."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        return not (
+            record.name == "pysignalr.client"
+            and record.levelno == logging.WARNING
+            and message.startswith("No client method with the name ")
+            and message.endswith(" found.")
+        )
+
+
+_SIGNALR_MISSING_METHOD_FILTER = _SignalRMissingMethodFilter()
+_SIGNALR_LOG_FILTER_LOCK = threading.Lock()
+
+
 @dataclass(frozen=True)
 class PlantPushMetadata:
     """Plant metadata attached by the SignalR hub when a plant series push is routed."""
@@ -87,6 +104,7 @@ class MultiSeriesDPSHelper:
         reconnect_max_delay_seconds: float = 30.0,
         lease_refresh_interval_days: float | None = 13.0,
         callback_queue_maxsize: int = 0,
+        suppress_unhandled_server_method_logs: bool = True,
         logger: logging.Logger | None = None,
     ):
         """Create a multi-series DPS connection manager.
@@ -130,6 +148,11 @@ class MultiSeriesDPSHelper:
                 being processed across all shards. `0` means unbounded; set a
                 finite value in long-running production clients if callbacks
                 can be slower than the push rate.
+            suppress_unhandled_server_method_logs: When true, suppress
+                pysignalr warnings for backend broadcasts that do not have a
+                matching client handler, such as unrelated push types this
+                helper did not subscribe to. SignalR connection warnings and
+                errors are still logged.
             logger: Optional logger for connection, reconnect and callback
                 errors. Defaults to this module's logger.
         """
@@ -163,6 +186,7 @@ class MultiSeriesDPSHelper:
         self.reconnect_max_delay_seconds = reconnect_max_delay_seconds
         self.lease_refresh_interval_days = lease_refresh_interval_days
         self.callback_queue_maxsize = callback_queue_maxsize
+        self.suppress_unhandled_server_method_logs = suppress_unhandled_server_method_logs
         self.logger = logger or logging.getLogger(__name__)
 
         self._default_callback = callback
@@ -187,6 +211,9 @@ class MultiSeriesDPSHelper:
         self._callback_tasks: list[asyncio.Task] = []
         self._callback_worker_count = max_workers if concurrent_callbacks else 1
         self._callback_executor: ThreadPoolExecutor | None = None
+
+        if suppress_unhandled_server_method_logs:
+            self._install_signalr_missing_method_filter()
 
         if auto_connect:
             self.connect()
@@ -502,6 +529,14 @@ class MultiSeriesDPSHelper:
         if self._loop is None:
             raise RuntimeError("Event loop not ready")
         return asyncio.run_coroutine_threadsafe(coro, self._loop)
+
+    @staticmethod
+    def _install_signalr_missing_method_filter() -> None:
+        """Attach the targeted pysignalr missing-method log filter once per process."""
+        signalr_logger = logging.getLogger("pysignalr.client")
+        with _SIGNALR_LOG_FILTER_LOCK:
+            if _SIGNALR_MISSING_METHOD_FILTER not in signalr_logger.filters:
+                signalr_logger.addFilter(_SIGNALR_MISSING_METHOD_FILTER)
 
     async def _ensure_connection_started(self) -> None:
         """Start connection supervision and proactive lease refresh tasks if required."""
