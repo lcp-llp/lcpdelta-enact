@@ -20,6 +20,7 @@ from lcp_delta.global_helpers import is_2d_list_of_strings
 
 
 ChartPushCallback = Callable[..., Any]
+ReconnectCallback = Callable[..., Any]
 MULTI_SERIES_RECONNECT_LEASE_DAYS = 14.0
 
 
@@ -76,6 +77,13 @@ class _MultiSeriesSubscription:
     parse_datetimes: bool
 
 
+@dataclass
+class _PushProcessingGate:
+    ready: asyncio.Event
+    drained: asyncio.Event
+    pending: int = 0
+
+
 class MultiSeriesDPSHelper:
     """Manage Enact multi-series chart pushes over SignalR.
 
@@ -94,6 +102,7 @@ class MultiSeriesDPSHelper:
         username: str,
         public_api_key: str,
         callback: ChartPushCallback | None = None,
+        reconnect_callback: ReconnectCallback | None = None,
         *,
         parse_datetimes: bool = True,
         concurrent_callbacks: bool = False,
@@ -102,6 +111,7 @@ class MultiSeriesDPSHelper:
         reconnect: bool = True,
         reconnect_initial_delay_seconds: float = 2.0,
         reconnect_max_delay_seconds: float = 30.0,
+        reconnect_callback_timeout_seconds: float = 60.0,
         lease_refresh_interval_days: float | None = 13.0,
         callback_queue_maxsize: int = 0,
         suppress_unhandled_server_method_logs: bool = True,
@@ -116,6 +126,12 @@ class MultiSeriesDPSHelper:
                 `(dataframe, metadata)` or only `(dataframe)`. One-argument
                 callbacks can read the same metadata from
                 `dataframe.attrs["enact_push_metadata"]`.
+            reconnect_callback: Optional callback run after reconnecting and
+                restoring existing groups, after callbacks queued before the
+                disconnect have drained and before reconnect-era pushes are
+                processed. Use this to refresh local state from the API after
+                a disconnect. It can be sync or async, and can accept either
+                no arguments or this helper instance.
             parse_datetimes: When true, dataframe indexes are UTC pandas
                 timestamps. When false, they are UTC ISO strings.
             concurrent_callbacks: When false, callbacks run one at a time and
@@ -138,6 +154,9 @@ class MultiSeriesDPSHelper:
                 when the backend no longer accepts the previous group.
             reconnect_initial_delay_seconds: First wait before reconnecting.
             reconnect_max_delay_seconds: Maximum reconnect backoff delay.
+            reconnect_callback_timeout_seconds: Maximum time spent retrying
+                `reconnect_callback` after a reconnect before queued push
+                processing is released anyway.
             lease_refresh_interval_days: How often to renew the backend
                 multi-series group lease with `JoinMultiSeries`. The backend
                 lease lasts 14 days. The default refreshes on day 13. Set to
@@ -164,6 +183,8 @@ class MultiSeriesDPSHelper:
             raise ValueError(
                 "reconnect_max_delay_seconds must be greater than or equal to reconnect_initial_delay_seconds"
             )
+        if reconnect_callback_timeout_seconds < 0:
+            raise ValueError("reconnect_callback_timeout_seconds cannot be negative")
         if (
             lease_refresh_interval_days is not None
             and not 0 < lease_refresh_interval_days < MULTI_SERIES_RECONNECT_LEASE_DAYS
@@ -173,6 +194,8 @@ class MultiSeriesDPSHelper:
             raise ValueError("callback_queue_maxsize cannot be negative")
         if callback is not None and not callable(callback):
             raise TypeError("callback must be callable")
+        if reconnect_callback is not None and not callable(reconnect_callback):
+            raise TypeError("reconnect_callback must be callable")
 
         self._username = username
         self._public_api_key = public_api_key
@@ -184,12 +207,14 @@ class MultiSeriesDPSHelper:
         self.reconnect = reconnect
         self.reconnect_initial_delay_seconds = reconnect_initial_delay_seconds
         self.reconnect_max_delay_seconds = reconnect_max_delay_seconds
+        self.reconnect_callback_timeout_seconds = reconnect_callback_timeout_seconds
         self.lease_refresh_interval_days = lease_refresh_interval_days
         self.callback_queue_maxsize = callback_queue_maxsize
         self.suppress_unhandled_server_method_logs = suppress_unhandled_server_method_logs
         self.logger = logger or logging.getLogger(__name__)
 
         self._default_callback = callback
+        self._reconnect_callback = reconnect_callback
         self._subscriptions: dict[str, _MultiSeriesSubscription] = {}
         self._subscription_group_by_request_key: dict[str, str] = {}
         self._handlers_registered_for_client: set[str] = set()
@@ -207,6 +232,8 @@ class MultiSeriesDPSHelper:
         self._connection_task: asyncio.Task | None = None
         self._lease_refresh_task: asyncio.Task | None = None
         self._reconnect_tasks: set[asyncio.Task] = set()
+        self._push_processing_gate: _PushProcessingGate | None = None
+        self._pre_reconnect_drained: asyncio.Event | None = None
         self._callback_slots: asyncio.Semaphore | None = None
         self._callback_queues: list[asyncio.Queue] = []
         self._callback_tasks: list[asyncio.Task] = []
@@ -246,6 +273,13 @@ class MultiSeriesDPSHelper:
         return callback
 
     register_callback = on_chart_push
+
+    def on_reconnected(self, callback: ReconnectCallback) -> ReconnectCallback:
+        """Register a callback that runs before queued pushes resume after reconnect."""
+        if not callable(callback):
+            raise TypeError("callback must be callable")
+        self._reconnect_callback = callback
+        return callback
 
     def connect(self, timeout: float = 10) -> "MultiSeriesDPSHelper":
         """Start the background SignalR connection if it is not already running.
@@ -629,11 +663,95 @@ class MultiSeriesDPSHelper:
     async def _on_open(self) -> None:
         """Mark the connection open and reconnect existing multi-series groups."""
         self._connected.set()
-        for group_name, subscription in list(self._subscriptions.items()):
+        subscriptions = list(self._subscriptions.items())
+        pre_reconnect_drained = None
+        if subscriptions and self._reconnect_callback is not None:
+            pre_reconnect_drained = self._pause_push_processing()
+
+        for group_name, _subscription in subscriptions:
             self._register_group_handler(group_name)
-            task = asyncio.create_task(self._restore_group_until_connected(group_name, subscription))
-            self._reconnect_tasks.add(task)
-            task.add_done_callback(self._reconnect_tasks.discard)
+
+        if not subscriptions:
+            self._release_push_processing()
+            return
+
+        task = asyncio.create_task(self._restore_groups_after_open(subscriptions, pre_reconnect_drained))
+        self._reconnect_tasks.add(task)
+        task.add_done_callback(self._reconnect_tasks.discard)
+
+    async def _restore_groups_after_open(
+        self,
+        subscriptions: list[tuple[str, _MultiSeriesSubscription]],
+        pre_reconnect_drained: asyncio.Event | None = None,
+    ) -> None:
+        """Restore groups and run the reconnect callback before pushes resume."""
+        release_pushes = False
+        try:
+            restored = await asyncio.gather(
+                *(
+                    self._restore_group_until_connected(group_name, subscription)
+                    for group_name, subscription in subscriptions
+                )
+            )
+            if not all(restored):
+                release_pushes = not self._reconnect_restore_was_interrupted()
+                return
+
+            if pre_reconnect_drained is not None:
+                await pre_reconnect_drained.wait()
+            if self._reconnect_restore_was_interrupted():
+                return
+
+            await self._run_reconnect_callback_with_retries()
+            if self._reconnect_restore_was_interrupted():
+                return
+
+            release_pushes = True
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.logger.exception("Failed to complete multi-series DPS reconnect restore")
+            release_pushes = True
+        finally:
+            if release_pushes:
+                self._release_push_processing()
+
+    def _reconnect_restore_was_interrupted(self) -> bool:
+        """Return true when reconnect restore should be retried by the next connection."""
+        return self.reconnect and not self._stop_requested.is_set() and not self.is_connected
+
+    def _pause_push_processing(self) -> asyncio.Event | None:
+        """Create a closed gate for future pushes and return the previous gate drain signal."""
+        gate = self._get_push_processing_gate()
+        already_paused = not gate.ready.is_set()
+        if already_paused:
+            return self._pre_reconnect_drained
+
+        self._push_processing_gate = self._create_push_processing_gate(ready=False)
+        self._pre_reconnect_drained = gate.drained
+        return self._pre_reconnect_drained
+
+    def _release_push_processing(self) -> None:
+        """Allow queued push callbacks to run."""
+        self._get_push_processing_gate().ready.set()
+        self._pre_reconnect_drained = None
+
+    def _get_push_processing_gate(self) -> _PushProcessingGate:
+        """Return the event that gates user push callback execution."""
+        if self._push_processing_gate is None:
+            self._push_processing_gate = self._create_push_processing_gate(ready=True)
+        return self._push_processing_gate
+
+    @staticmethod
+    def _create_push_processing_gate(*, ready: bool) -> _PushProcessingGate:
+        ready_event = asyncio.Event()
+        if ready:
+            ready_event.set()
+
+        drained_event = asyncio.Event()
+        # A new gate has no queued/running work yet, so it is already drained.
+        drained_event.set()
+        return _PushProcessingGate(ready=ready_event, drained=drained_event)
 
     async def _on_close(self) -> None:
         """Mark the connection closed so callers can observe disconnected state."""
@@ -719,7 +837,7 @@ class MultiSeriesDPSHelper:
         self,
         group_name: str,
         subscription: _MultiSeriesSubscription,
-    ) -> None:
+    ) -> bool:
         """Keep trying to restore one group while the current connection is open."""
         delay = self.reconnect_initial_delay_seconds
 
@@ -727,24 +845,77 @@ class MultiSeriesDPSHelper:
             try:
                 current_subscription = self._subscriptions.get(group_name, subscription)
                 await self._reconnect_group(group_name, current_subscription)
-                return
+                return self.is_connected
             except asyncio.CancelledError:
                 raise
             except EnactApiError as exc:
                 self.logger.warning("Failed to restore multi-series DPS group %s, retrying: %s", group_name, exc)
                 if not self.reconnect:
-                    return
+                    return False
             except TimeoutError:
                 self.logger.warning("Timed out restoring multi-series DPS group %s, retrying", group_name)
                 if not self.reconnect:
-                    return
+                    return False
             except Exception:
                 self.logger.exception("Failed to restore multi-series DPS group %s", group_name)
                 if not self.reconnect:
-                    return
+                    return False
 
             await asyncio.sleep(delay)
             delay = min(max(delay * 2, self.reconnect_initial_delay_seconds), self.reconnect_max_delay_seconds)
+
+        return False
+
+    async def _run_reconnect_callback_with_retries(self) -> None:
+        """Run the reconnect callback, retrying briefly before queued pushes resume."""
+        if self._reconnect_callback is None:
+            return
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self.reconnect_callback_timeout_seconds
+        delay = self.reconnect_initial_delay_seconds
+
+        while not self._stop_requested.is_set() and self.is_connected:
+            try:
+                await self._run_reconnect_callback()
+                return
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    self.logger.exception(
+                        "Reconnect callback failed for %.1f seconds; releasing queued multi-series pushes",
+                        self.reconnect_callback_timeout_seconds,
+                    )
+                    return
+
+                retry_delay = delay if delay > 0 else min(0.1, remaining)
+                self.logger.warning("Reconnect callback failed; retrying before queued pushes resume: %s", exc)
+                await asyncio.sleep(min(retry_delay, remaining))
+                delay = min(max(delay * 2, self.reconnect_initial_delay_seconds), self.reconnect_max_delay_seconds)
+
+    async def _run_reconnect_callback(self) -> None:
+        """Invoke a sync or async reconnect callback without blocking the event loop."""
+        callback = self._reconnect_callback
+        if callback is None:
+            return
+
+        if inspect.iscoroutinefunction(callback):
+            result = self._invoke_reconnect_callback(callback)
+        else:
+            loop = asyncio.get_running_loop()
+            executor = self._get_callback_executor()
+            result = await loop.run_in_executor(executor, self._invoke_reconnect_callback, callback)
+
+        if inspect.isawaitable(result):
+            await result
+
+    def _invoke_reconnect_callback(self, callback: ReconnectCallback) -> Any:
+        """Call the reconnect callback with this helper when its signature accepts it."""
+        if self._callback_accepts_one_argument(callback):
+            return callback(self)
+        return callback()
 
     @staticmethod
     def _should_rejoin_after_reconnect_error(exc: EnactApiError) -> bool:
@@ -889,9 +1060,12 @@ class MultiSeriesDPSHelper:
 
         partition_key = self._get_callback_partition_key(metadata)
         shard_index = self._get_callback_shard_index(partition_key, len(self._callback_queues))
+        push_processing_gate = self._get_push_processing_gate()
+        self._mark_push_processing_started(push_processing_gate)
         try:
-            await self._callback_queues[shard_index].put((callback, frame, metadata))
+            await self._callback_queues[shard_index].put((callback, frame, metadata, push_processing_gate))
         except Exception:
+            self._mark_push_processing_finished(push_processing_gate)
             if self._callback_slots is not None:
                 self._callback_slots.release()
             raise
@@ -922,15 +1096,27 @@ class MultiSeriesDPSHelper:
     async def _drain_callback_shard(self, queue: asyncio.Queue) -> None:
         """Process one fixed callback shard sequentially."""
         while True:
-            callback, frame, metadata = await queue.get()
+            callback, frame, metadata, push_processing_gate = await queue.get()
             try:
+                await push_processing_gate.ready.wait()
                 await self._run_user_callback(callback, frame, metadata)
             except Exception:
                 self.logger.exception("Error in multi-series DPS callback for sequence %s", metadata.sequence)
             finally:
+                self._mark_push_processing_finished(push_processing_gate)
                 queue.task_done()
                 if self._callback_slots is not None:
                     self._callback_slots.release()
+
+    def _mark_push_processing_started(self, gate: _PushProcessingGate) -> None:
+        gate.pending += 1
+        gate.drained.clear()
+
+    def _mark_push_processing_finished(self, gate: _PushProcessingGate) -> None:
+        gate.pending -= 1
+        if gate.pending <= 0:
+            gate.pending = 0
+            gate.drained.set()
 
     async def _run_user_callback(
         self,
@@ -965,6 +1151,16 @@ class MultiSeriesDPSHelper:
     @staticmethod
     def _callback_accepts_metadata(callback: ChartPushCallback) -> bool:
         """Return true when a callback can accept `(dataframe, metadata)`."""
+        return MultiSeriesDPSHelper._callback_accepts_positional_count(callback, 2)
+
+    @staticmethod
+    def _callback_accepts_one_argument(callback: Callable[..., Any]) -> bool:
+        """Return true when a callback can accept one positional argument."""
+        return MultiSeriesDPSHelper._callback_accepts_positional_count(callback, 1)
+
+    @staticmethod
+    def _callback_accepts_positional_count(callback: Callable[..., Any], count: int) -> bool:
+        """Return true when a callback can accept at least `count` positional arguments."""
         try:
             signature = inspect.signature(callback)
         except (TypeError, ValueError):
@@ -980,7 +1176,7 @@ class MultiSeriesDPSHelper:
             parameter.kind == inspect.Parameter.VAR_POSITIONAL
             for parameter in signature.parameters.values()
         )
-        return has_varargs or len(positional) >= 2
+        return has_varargs or len(positional) >= count
 
     async def _shutdown_async(self, *, wait_for_callbacks: bool, leave_groups_timeout: float = 5.0) -> None:
         """Close SignalR, cancel background tasks and optionally drain callbacks."""
@@ -1000,6 +1196,8 @@ class MultiSeriesDPSHelper:
         if self._connection_task is not None and not self._connection_task.done():
             self._connection_task.cancel()
             await asyncio.gather(self._connection_task, return_exceptions=True)
+
+        self._release_push_processing()
 
         if wait_for_callbacks:
             for queue in self._callback_queues:

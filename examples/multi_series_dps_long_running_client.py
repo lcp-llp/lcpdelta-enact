@@ -67,6 +67,17 @@ def on_chart_push(df, metadata):
     print(df.tail(10))
 
 
+async def refresh_snapshot_after_reconnect(helper):
+    """Refresh local state before queued live pushes resume after reconnect.
+
+    The helper first drains callbacks queued before the disconnect. Replace
+    this with your own API/cache refresh. If it raises, the helper retries
+    until `reconnect_callback_timeout_seconds` elapses, then releases queued
+    pushes so live processing can continue.
+    """
+    print("Connection restored; refresh latest snapshot here before live pushes resume.")
+
+
 def get_credentials() -> tuple[str, str]:
     """Read credentials from environment variables."""
     username = os.getenv(USERNAME_ENV)
@@ -98,10 +109,12 @@ async def main() -> None:
         username,
         key,
         callback=on_chart_push,
+        reconnect_callback=refresh_snapshot_after_reconnect,
+        reconnect_callback_timeout_seconds=120,
         # Change these values if your callback workload needs different tuning.
         concurrent_callbacks=True,
         max_workers=5,
-        callback_queue_maxsize=1000,
+        callback_queue_maxsize=5000,
         # Leave reconnect=True for long-running processes.
         reconnect=True,
         auto_connect=False,

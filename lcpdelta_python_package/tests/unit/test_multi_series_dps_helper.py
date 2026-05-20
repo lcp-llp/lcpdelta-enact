@@ -25,6 +25,25 @@ async def _wait_for_callback_processing(helper):
     await asyncio.gather(*helper._callback_tasks, return_exceptions=True)
 
 
+def _test_push_metadata(sequence=1):
+    return MultiSeriesPushMetadata(
+        sequence=sequence,
+        received_at_utc=datetime.now(timezone.utc),
+        group_name="multi-series-group",
+        push_id="Gb&RealtimeDemand&none",
+        series_id="RealtimeDemand",
+        country_id="Gb",
+    )
+
+
+def _test_subscription(callback):
+    return type(
+        "Subscription",
+        (),
+        {"join_payload": [], "callback": callback, "parse_datetimes": True},
+    )()
+
+
 def test_unhandled_signalr_server_method_warning_is_suppressed_without_hiding_real_warnings():
     MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
     signalr_logger = logging.getLogger("pysignalr.client")
@@ -205,6 +224,337 @@ def test_concurrent_callbacks_start_in_fifo_order_and_respect_worker_limit():
     assert started_by_push_id[first_push_id] == [1, 3]
     assert started_by_push_id[second_push_id] == [2]
     assert max_running_count == 2
+
+
+def test_reconnect_callback_gates_queued_pushes_until_it_completes():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    events = []
+
+    async def callback(_frame, _metadata):
+        events.append("push")
+
+    async def fake_reconnect_group(group_name, _subscription):
+        events.append(f"restore:{group_name}")
+
+    async def run():
+        reconnect_started = asyncio.Event()
+        release_reconnect = asyncio.Event()
+
+        async def reconnect_callback(helper_arg):
+            assert helper_arg is helper
+            events.append("reconnect-start")
+            reconnect_started.set()
+            await release_reconnect.wait()
+            events.append("reconnect-end")
+
+        helper.on_reconnected(reconnect_callback)
+        helper._reconnect_group = fake_reconnect_group
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+        helper._pause_push_processing()
+
+        restore_task = asyncio.create_task(
+            helper._restore_groups_after_open([("multi-series-group", subscription)])
+        )
+        await reconnect_started.wait()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata())
+        await asyncio.sleep(0)
+
+        assert events == ["restore:multi-series-group", "reconnect-start"]
+
+        release_reconnect.set()
+        await restore_task
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["restore:multi-series-group", "reconnect-start", "reconnect-end", "push"]
+
+
+def test_pushes_queued_before_reconnect_pause_continue_to_drain():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    events = []
+    release_first_push = None
+
+    async def callback(_frame, metadata):
+        events.append(f"start:{metadata.sequence}")
+        if metadata.sequence == 1:
+            await release_first_push.wait()
+        events.append(f"end:{metadata.sequence}")
+
+    async def run():
+        nonlocal release_first_push
+        release_first_push = asyncio.Event()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata(sequence=1))
+        while events != ["start:1"]:
+            await asyncio.sleep(0)
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [2]}), _test_push_metadata(sequence=2))
+        helper._pause_push_processing()
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [3]}), _test_push_metadata(sequence=3))
+
+        release_first_push.set()
+        for _ in range(20):
+            if "end:2" in events:
+                break
+            await asyncio.sleep(0)
+
+        assert events == ["start:1", "end:1", "start:2", "end:2"]
+
+        helper._release_push_processing()
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["start:1", "end:1", "start:2", "end:2", "start:3", "end:3"]
+
+
+def test_reconnect_callback_waits_for_pre_reconnect_queue_to_drain():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    events = []
+    release_first_push = None
+
+    async def callback(_frame, metadata):
+        events.append(f"start:{metadata.sequence}")
+        if metadata.sequence == 1:
+            await release_first_push.wait()
+        events.append(f"end:{metadata.sequence}")
+
+    async def fake_reconnect_group(_group_name, _subscription):
+        events.append("restore")
+
+    async def reconnect_callback():
+        events.append("reconnect")
+
+    async def run():
+        nonlocal release_first_push
+        release_first_push = asyncio.Event()
+
+        helper.on_reconnected(reconnect_callback)
+        helper._reconnect_group = fake_reconnect_group
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata(sequence=1))
+        while events != ["start:1"]:
+            await asyncio.sleep(0)
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [2]}), _test_push_metadata(sequence=2))
+        pre_reconnect_drained = helper._pause_push_processing()
+        restore_task = asyncio.create_task(
+            helper._restore_groups_after_open([("multi-series-group", subscription)], pre_reconnect_drained)
+        )
+        while "restore" not in events:
+            await asyncio.sleep(0)
+
+        assert events == ["start:1", "restore"]
+
+        release_first_push.set()
+        await restore_task
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["start:1", "restore", "end:1", "start:2", "end:2", "reconnect"]
+
+
+def test_connection_loss_during_restore_retries_without_releasing_reconnect_queue():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    events = []
+    release_first_push = None
+    restore_attempts = 0
+
+    async def callback(_frame, metadata):
+        events.append(f"start:{metadata.sequence}")
+        if metadata.sequence == 1:
+            await release_first_push.wait()
+        events.append(f"end:{metadata.sequence}")
+
+    async def reconnect_callback():
+        events.append("reconnect")
+
+    async def fake_reconnect_group(_group_name, _subscription):
+        nonlocal restore_attempts
+        restore_attempts += 1
+        events.append(f"restore:{restore_attempts}")
+        if restore_attempts == 1:
+            helper._connected.clear()
+
+    async def run():
+        nonlocal release_first_push
+        release_first_push = asyncio.Event()
+
+        helper.on_reconnected(reconnect_callback)
+        helper._reconnect_group = fake_reconnect_group
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata(sequence=1))
+        while events != ["start:1"]:
+            await asyncio.sleep(0)
+
+        pre_reconnect_drained = helper._pause_push_processing()
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [2]}), _test_push_metadata(sequence=2))
+        await helper._restore_groups_after_open([("multi-series-group", subscription)], pre_reconnect_drained)
+        await asyncio.sleep(0)
+
+        assert events == ["start:1", "restore:1"]
+        assert not helper._get_push_processing_gate().ready.is_set()
+
+        helper._connected.set()
+        retry_pre_reconnect_drained = helper._pause_push_processing()
+        assert retry_pre_reconnect_drained is pre_reconnect_drained
+
+        restore_task = asyncio.create_task(
+            helper._restore_groups_after_open([("multi-series-group", subscription)], retry_pre_reconnect_drained)
+        )
+        while "restore:2" not in events:
+            await asyncio.sleep(0)
+
+        assert events == ["start:1", "restore:1", "restore:2"]
+
+        release_first_push.set()
+        await restore_task
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["start:1", "restore:1", "restore:2", "end:1", "reconnect", "start:2", "end:2"]
+
+
+def test_sync_reconnect_callback_can_accept_helper_argument():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    seen_helpers = []
+
+    def reconnect_callback(helper_arg):
+        seen_helpers.append(helper_arg)
+
+    async def run():
+        helper.on_reconnected(reconnect_callback)
+        helper._connected.set()
+        await helper._run_reconnect_callback_with_retries()
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert seen_helpers == [helper]
+
+
+def test_reconnect_callback_retries_failures_until_success():
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        reconnect_initial_delay_seconds=0.001,
+        reconnect_max_delay_seconds=0.001,
+        reconnect_callback_timeout_seconds=1,
+    )
+    attempts = 0
+
+    async def reconnect_callback():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("snapshot refresh failed")
+
+    async def run():
+        helper.on_reconnected(reconnect_callback)
+        helper._connected.set()
+        await helper._run_reconnect_callback_with_retries()
+
+    asyncio.run(run())
+
+    assert attempts == 2
+
+
+def test_reconnect_callback_timeout_releases_queued_pushes_after_failure():
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        reconnect_initial_delay_seconds=0,
+        reconnect_max_delay_seconds=0,
+        reconnect_callback_timeout_seconds=0,
+    )
+    attempts = 0
+    events = []
+
+    async def reconnect_callback():
+        nonlocal attempts
+        attempts += 1
+        raise RuntimeError("snapshot refresh still failing")
+
+    async def callback(_frame, _metadata):
+        events.append("push")
+
+    async def fake_reconnect_group(_group_name, _subscription):
+        return None
+
+    async def run():
+        helper.on_reconnected(reconnect_callback)
+        helper._reconnect_group = fake_reconnect_group
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+        helper._pause_push_processing()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata())
+        await helper._restore_groups_after_open([("multi-series-group", subscription)])
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert attempts == 1
+    assert events == ["push"]
+
+
+def test_shutdown_releases_paused_push_processing_before_waiting_for_callbacks():
+    helper = MultiSeriesDPSHelper("username", "api-key", reconnect_callback=lambda: None, auto_connect=False)
+    events = []
+
+    async def callback(_frame, _metadata):
+        events.append("push")
+
+    async def run():
+        helper._pause_push_processing()
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata())
+        await asyncio.wait_for(helper._shutdown_async(wait_for_callbacks=True), timeout=1)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["push"]
 
 
 def test_connect_is_safe_to_call_when_connection_task_is_already_running():
