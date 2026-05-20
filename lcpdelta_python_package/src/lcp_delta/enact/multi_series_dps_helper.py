@@ -562,7 +562,14 @@ class MultiSeriesDPSHelper:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                self.logger.warning("SignalR connection stopped unexpectedly: %s", exc)
+                if self.reconnect and not self._stop_requested.is_set():
+                    self.logger.warning(
+                        "SignalR connection lost; automatically reconnecting in %.1f seconds: %s",
+                        delay,
+                        exc,
+                    )
+                else:
+                    self.logger.warning("SignalR connection stopped unexpectedly: %s", exc)
             finally:
                 self._connected.clear()
 
