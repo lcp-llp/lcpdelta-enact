@@ -8,7 +8,7 @@ import threading
 import zlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Callable
 
 import pandas as pd
@@ -581,18 +581,18 @@ class MultiSeriesDPSHelper:
             self.lease_refresh_interval_days is not None
             and (self._lease_refresh_task is None or self._lease_refresh_task.done())
         ):
-            self._lease_refresh_task = asyncio.create_task(self._lease_refresh_loop())
+            self._lease_refresh_task = asyncio.create_task(self._lease_refresh_loop(self.lease_refresh_interval_days))
 
     async def _connection_supervisor(self) -> None:
         """Run the SignalR client and recreate it after unexpected disconnects."""
         delay = self.reconnect_initial_delay_seconds
 
         while not self._stop_requested.is_set():
-            self._build_hub_connection()
+            hub_connection = self._build_hub_connection()
             self._client_initialised.set()
 
             try:
-                await self.hub_connection.run()
+                await hub_connection.run()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -614,7 +614,7 @@ class MultiSeriesDPSHelper:
                 await asyncio.sleep(delay)
             delay = min(max(delay * 2, self.reconnect_initial_delay_seconds), self.reconnect_max_delay_seconds)
 
-    def _build_hub_connection(self) -> None:
+    def _build_hub_connection(self) -> SignalRClient:
         """Create a fresh SignalR client wired with auth and lifecycle handlers."""
         api_helper = self._ensure_api_helper()
         access_token_factory, headers = self._build_access_token_factory()
@@ -626,9 +626,13 @@ class MultiSeriesDPSHelper:
         )
         self._handlers_registered_for_client = set()
 
+        async def on_error(error) -> None:
+            self.logger.warning("SignalR error: %s", error)
+
         self.hub_connection.on_open(self._on_open)
         self.hub_connection.on_close(self._on_close)
-        self.hub_connection.on_error(lambda error: self.logger.warning("SignalR error: %s", error))
+        self.hub_connection.on_error(on_error)
+        return self.hub_connection
 
     def _ensure_api_helper(self) -> APIHelper:
         """Create the API helper lazily so construction can be deferred in tests/scripts."""
@@ -972,9 +976,9 @@ class MultiSeriesDPSHelper:
             request_key=self._get_subscription_request_key(subscription.join_payload),
         )
 
-    async def _lease_refresh_loop(self) -> None:
+    async def _lease_refresh_loop(self, refresh_interval_days: float) -> None:
         """Renew multi-series group leases before the backend's 14-day expiry."""
-        refresh_interval_seconds = self.lease_refresh_interval_days * 24 * 60 * 60
+        refresh_interval_seconds = timedelta(days=refresh_interval_days).total_seconds()
 
         while not self._stop_requested.is_set():
             await asyncio.sleep(refresh_interval_seconds)
