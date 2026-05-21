@@ -1009,6 +1009,9 @@ class MultiSeriesDPSHelper:
         try:
             await self.hub_connection.send(method, arguments, on_response)
             return await asyncio.wait_for(response_future, timeout=timeout)
+        except asyncio.CancelledError:
+            self._remove_pending_invocation_handler(on_response)
+            raise
         except Exception:
             self._remove_pending_invocation_handler(on_response)
             raise
@@ -1396,6 +1399,8 @@ class MultiSeriesDPSHelper:
         """Build a time-indexed dataframe from SeriesPing point-change objects."""
         frame = pd.DataFrame()
         frame.index.name = "DateTime"
+        rows: list[tuple[Any, list[Any]]] = []
+        force_multi_value_columns = False
 
         for change in changes:
             current = MultiSeriesDPSHelper._get_case_insensitive(change, "current") or {}
@@ -1407,10 +1412,20 @@ class MultiSeriesDPSHelper:
             if MultiSeriesDPSHelper._get_case_insensitive(change, "deletePoint"):
                 values = [pd.NA for _ in values] or [pd.NA]
 
-            column_names = MultiSeriesDPSHelper._get_value_column_names(metadata, len(values))
+            rows.append((timestamp, values))
+            force_multi_value_columns = force_multi_value_columns or len(values) > 1
+
+        for timestamp, values in rows:
+            column_names = MultiSeriesDPSHelper._get_value_column_names(
+                metadata,
+                len(values),
+                force_multi=force_multi_value_columns,
+            )
             for column_name, value in zip(column_names, values):
                 frame.loc[timestamp, column_name] = value
 
+        if force_multi_value_columns:
+            return MultiSeriesDPSHelper._drop_trailing_all_null_columns(frame)
         return frame
 
     @staticmethod
@@ -1448,7 +1463,7 @@ class MultiSeriesDPSHelper:
         """Extract one or more y-values from array or object point formats."""
         array_point = MultiSeriesDPSHelper._get_case_insensitive(current, "arrayPoint")
         if isinstance(array_point, list) and len(array_point) > 1:
-            return MultiSeriesDPSHelper._trim_trailing_null_values(array_point[1:])
+            return array_point[1:]
 
         object_point = MultiSeriesDPSHelper._get_case_insensitive(current, "objectPoint") or {}
         if isinstance(object_point, dict):
@@ -1466,25 +1481,29 @@ class MultiSeriesDPSHelper:
         return [current_value] if current_value is not None else [pd.NA]
 
     @staticmethod
-    def _trim_trailing_null_values(values: list[Any]) -> list[Any]:
-        """Remove right-hand null padding while preserving at least one value."""
-        trimmed = list(values)
-        while len(trimmed) > 1 and MultiSeriesDPSHelper._is_null_value(trimmed[-1]):
-            trimmed.pop()
-        return trimmed
+    def _drop_trailing_all_null_columns(frame: pd.DataFrame) -> pd.DataFrame:
+        """Drop right-hand value columns that are null for the whole payload."""
+        columns = list(frame.columns)
+        columns_to_drop = []
+        for column in reversed(columns[1:]):
+            if not frame[column].isna().all():
+                break
+            columns_to_drop.append(column)
+
+        if not columns_to_drop:
+            return frame
+        return frame.drop(columns=columns_to_drop)
 
     @staticmethod
-    def _is_null_value(value: Any) -> bool:
-        try:
-            return bool(pd.isna(value))
-        except (TypeError, ValueError):
-            return False
-
-    @staticmethod
-    def _get_value_column_names(metadata: MultiSeriesPushMetadata, value_count: int) -> list[str]:
+    def _get_value_column_names(
+        metadata: MultiSeriesPushMetadata,
+        value_count: int,
+        *,
+        force_multi: bool = False,
+    ) -> list[str]:
         """Create dataframe column names for single-value and multi-value points."""
         base_column = metadata.push_id or metadata.series_id or "value"
-        if value_count <= 1:
+        if value_count <= 1 and not force_multi:
             return [base_column]
         return [f"{base_column}_{index}" for index in range(value_count)]
 

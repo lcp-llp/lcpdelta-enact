@@ -8,6 +8,14 @@ from lcp_delta.common.http.exceptions import EnactApiError
 from lcp_delta.enact.multi_series_dps_helper import MultiSeriesDPSHelper, MultiSeriesPushMetadata
 
 
+def test_public_enact_package_exports_multi_series_helper():
+    from lcp_delta import enact
+    from lcp_delta.enact import MultiSeriesDPSHelper as PublicMultiSeriesDPSHelper
+
+    assert enact.MultiSeriesDPSHelper is MultiSeriesDPSHelper
+    assert PublicMultiSeriesDPSHelper is MultiSeriesDPSHelper
+
+
 class _CapturingHandler(logging.Handler):
     def __init__(self):
         super().__init__()
@@ -205,6 +213,41 @@ def test_series_ping_preserves_middle_null_multi_value_columns():
     ]
     assert pd.isna(frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_1"])
     assert frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_2"] == 131.98
+
+
+def test_series_ping_uses_consistent_multi_value_columns_after_trimming():
+    frame, _metadata = MultiSeriesDPSHelper._series_ping_to_frame_and_metadata(
+        {
+            "data": {
+                "id": "Gb&PredictedSystemPrice&P50",
+                "data": [
+                    {
+                        "current": {
+                            "arrayPoint": [1779379200000, 118.37, None, None],
+                            "datePeriod": {"datePeriodCombinedGmt": "2026-05-21T16:00:00Z"},
+                        },
+                    },
+                    {
+                        "current": {
+                            "arrayPoint": [1779381000000, 115.0, 119.9, None],
+                            "datePeriod": {"datePeriodCombinedGmt": "2026-05-21T16:30:00Z"},
+                        },
+                    },
+                ],
+            }
+        },
+        sequence=1,
+        group_name="multi-series-group",
+        parse_datetimes=True,
+    )
+
+    assert list(frame.columns) == [
+        "Gb&PredictedSystemPrice&P50_0",
+        "Gb&PredictedSystemPrice&P50_1",
+    ]
+    assert frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_0"] == 118.37
+    assert pd.isna(frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_1"])
+    assert frame.loc[pd.Timestamp("2026-05-21T16:30:00Z"), "Gb&PredictedSystemPrice&P50_1"] == 119.9
 
 
 def test_callback_dispatch_is_fifo_when_callbacks_are_sequential():
@@ -719,6 +762,30 @@ def test_timed_out_send_removes_pending_invocation_handler():
         except TimeoutError:
             return helper.hub_connection._invocation_handlers
         raise AssertionError("Expected TimeoutError")
+
+    assert asyncio.run(run()) == {}
+
+
+def test_cancelled_send_removes_pending_invocation_handler():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+
+    class FakeHubConnection:
+        def __init__(self):
+            self._invocation_handlers = {}
+
+        async def send(self, _method, _arguments, on_invocation):
+            self._invocation_handlers["invocation-id"] = on_invocation
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        task = asyncio.create_task(helper._send_with_response("ReconnectToPush", ["multi-series-group"], timeout=30))
+        await asyncio.sleep(0)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            return helper.hub_connection._invocation_handlers
+        raise AssertionError("Expected CancelledError")
 
     assert asyncio.run(run()) == {}
 
