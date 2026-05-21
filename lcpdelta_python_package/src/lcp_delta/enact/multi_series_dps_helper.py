@@ -933,6 +933,9 @@ class MultiSeriesDPSHelper:
     def _should_rejoin_after_reconnect_error(exc: EnactApiError) -> bool:
         """Return true only for errors that mean the previous push can no longer be restored."""
         error_code = str(exc.error_code or "").lower()
+        if error_code == "reconnectunavailable":
+            return True
+
         message = str(exc.message or "").lower()
         error_text = f"{error_code} {message}"
         non_reconnectable_terms = (

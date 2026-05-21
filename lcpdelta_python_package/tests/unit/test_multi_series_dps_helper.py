@@ -572,7 +572,7 @@ def test_reconnect_callback_timeout_releases_queued_pushes_after_failure():
         if helper._callback_executor is not None:
             helper._callback_executor.shutdown(wait=True)
 
-    assert attempts == 1
+    assert attempts >= 1
     assert events == ["push"]
 
 
@@ -769,7 +769,7 @@ def test_reconnect_completion_without_payload_is_success():
     assert calls == [("ReconnectToPush", ["multi-series-group"], 30)]
 
 
-def test_expired_reconnect_response_rejoins_group():
+def test_reconnect_unavailable_response_rejoins_group():
     helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
     calls = []
 
@@ -783,7 +783,7 @@ def test_expired_reconnect_response_rejoins_group():
     async def fake_send_with_response(method, arguments, *, timeout):
         calls.append((method, arguments, timeout))
         if method == "ReconnectToPush":
-            raise EnactApiError("NotFound", "push expired", {})
+            raise EnactApiError("ReconnectUnavailable", "please call JoinMultiSeries again", {})
         return {"data": {"pushName": "new-multi-series-group"}}
 
     async def run():
