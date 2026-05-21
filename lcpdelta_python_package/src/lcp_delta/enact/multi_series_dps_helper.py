@@ -861,7 +861,7 @@ class MultiSeriesDPSHelper:
                 if not self.reconnect:
                     return False
 
-            await asyncio.sleep(delay)
+            await asyncio.sleep(delay if delay > 0 else 0.1)
             delay = min(max(delay * 2, self.reconnect_initial_delay_seconds), self.reconnect_max_delay_seconds)
 
         return False
@@ -876,11 +876,25 @@ class MultiSeriesDPSHelper:
         delay = self.reconnect_initial_delay_seconds
 
         while not self._stop_requested.is_set() and self.is_connected:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                self.logger.warning(
+                    "Reconnect callback did not complete within %.1f seconds; releasing queued multi-series pushes",
+                    self.reconnect_callback_timeout_seconds,
+                )
+                return
+
             try:
-                await self._run_reconnect_callback()
+                await asyncio.wait_for(self._run_reconnect_callback(), timeout=remaining)
                 return
             except asyncio.CancelledError:
                 raise
+            except TimeoutError:
+                self.logger.warning(
+                    "Reconnect callback did not complete within %.1f seconds; releasing queued multi-series pushes",
+                    self.reconnect_callback_timeout_seconds,
+                )
+                return
             except Exception as exc:
                 remaining = deadline - loop.time()
                 if remaining <= 0:
@@ -904,9 +918,7 @@ class MultiSeriesDPSHelper:
         if inspect.iscoroutinefunction(callback):
             result = self._invoke_reconnect_callback(callback)
         else:
-            loop = asyncio.get_running_loop()
-            executor = self._get_callback_executor()
-            result = await loop.run_in_executor(executor, self._invoke_reconnect_callback, callback)
+            result = await asyncio.to_thread(self._invoke_reconnect_callback, callback)
 
         if inspect.isawaitable(result):
             await result

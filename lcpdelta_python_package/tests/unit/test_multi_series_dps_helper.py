@@ -491,6 +491,46 @@ def test_reconnect_callback_retries_failures_until_success():
     assert attempts == 2
 
 
+def test_hanging_reconnect_callback_timeout_releases_queued_pushes():
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        reconnect_callback_timeout_seconds=0.01,
+    )
+    events = []
+
+    async def reconnect_callback():
+        events.append("reconnect-start")
+        await asyncio.Event().wait()
+
+    async def callback(_frame, _metadata):
+        events.append("push")
+
+    async def fake_reconnect_group(_group_name, _subscription):
+        return None
+
+    async def run():
+        helper.on_reconnected(reconnect_callback)
+        helper._reconnect_group = fake_reconnect_group
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+        helper._pause_push_processing()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata())
+        await helper._restore_groups_after_open([("multi-series-group", subscription)])
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["reconnect-start", "push"]
+
+
 def test_reconnect_callback_timeout_releases_queued_pushes_after_failure():
     helper = MultiSeriesDPSHelper(
         "username",
@@ -498,7 +538,7 @@ def test_reconnect_callback_timeout_releases_queued_pushes_after_failure():
         auto_connect=False,
         reconnect_initial_delay_seconds=0,
         reconnect_max_delay_seconds=0,
-        reconnect_callback_timeout_seconds=0,
+        reconnect_callback_timeout_seconds=0.001,
     )
     attempts = 0
     events = []
@@ -657,6 +697,48 @@ def test_transient_reconnect_failure_retries_reconnect_without_rejoining():
         ("ReconnectToPush", ["multi-series-group"], 30),
         ("ReconnectToPush", ["multi-series-group"], 30),
     ]
+
+
+def test_zero_reconnect_delay_still_waits_between_restore_attempts(monkeypatch):
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        reconnect_initial_delay_seconds=0,
+        reconnect_max_delay_seconds=0,
+    )
+    sleep_calls = []
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def fake_reconnect_group(_group_name, _subscription):
+        raise EnactApiError("ServiceUnavailable", "temporary backend issue", {})
+
+    async def fake_sleep(delay):
+        sleep_calls.append(delay)
+        helper._connected.clear()
+
+    async def run():
+        subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+        helper._subscriptions["multi-series-group"] = type(
+            "Subscription",
+            (),
+            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
+        )()
+        helper._reconnect_group = fake_reconnect_group
+        helper._connected.set()
+        monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+
+        restored = await helper._restore_group_until_connected(
+            "multi-series-group",
+            helper._subscriptions["multi-series-group"],
+        )
+        assert restored is False
+
+    asyncio.run(run())
+
+    assert sleep_calls == [0.1]
 
 
 def test_reconnect_completion_without_payload_is_success():
