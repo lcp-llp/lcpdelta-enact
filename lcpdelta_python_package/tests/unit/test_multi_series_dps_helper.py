@@ -144,6 +144,69 @@ def test_series_ping_multi_option_id_is_split_into_option_metadata():
     assert frame.index[0] == "2026-09-18T08:00:00Z"
 
 
+def test_series_ping_trims_trailing_null_multi_value_columns():
+    frame, _metadata = MultiSeriesDPSHelper._series_ping_to_frame_and_metadata(
+        {
+            "data": {
+                "id": "Gb&PredictedSystemPrice&P50",
+                "data": [
+                    {
+                        "current": {
+                            "arrayPoint": [1779379200000, 118.37, 131.98, None, None],
+                            "datePeriod": {"datePeriodCombinedGmt": "2026-05-21T16:00:00Z"},
+                        },
+                    },
+                    {
+                        "current": {
+                            "arrayPoint": [1779381000000, 115.0, 119.9, None, None],
+                            "datePeriod": {"datePeriodCombinedGmt": "2026-05-21T16:30:00Z"},
+                        },
+                    },
+                ],
+            }
+        },
+        sequence=1,
+        group_name="multi-series-group",
+        parse_datetimes=True,
+    )
+
+    assert list(frame.columns) == [
+        "Gb&PredictedSystemPrice&P50_0",
+        "Gb&PredictedSystemPrice&P50_1",
+    ]
+    assert frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_0"] == 118.37
+    assert frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_1"] == 131.98
+
+
+def test_series_ping_preserves_middle_null_multi_value_columns():
+    frame, _metadata = MultiSeriesDPSHelper._series_ping_to_frame_and_metadata(
+        {
+            "data": {
+                "id": "Gb&PredictedSystemPrice&P50",
+                "data": [
+                    {
+                        "current": {
+                            "arrayPoint": [1779379200000, 118.37, None, 131.98, None],
+                            "datePeriod": {"datePeriodCombinedGmt": "2026-05-21T16:00:00Z"},
+                        },
+                    },
+                ],
+            }
+        },
+        sequence=1,
+        group_name="multi-series-group",
+        parse_datetimes=True,
+    )
+
+    assert list(frame.columns) == [
+        "Gb&PredictedSystemPrice&P50_0",
+        "Gb&PredictedSystemPrice&P50_1",
+        "Gb&PredictedSystemPrice&P50_2",
+    ]
+    assert pd.isna(frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_1"])
+    assert frame.loc[pd.Timestamp("2026-05-21T16:00:00Z"), "Gb&PredictedSystemPrice&P50_2"] == 131.98
+
+
 def test_callback_dispatch_is_fifo_when_callbacks_are_sequential():
     helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False, concurrent_callbacks=False)
     seen_sequences = []

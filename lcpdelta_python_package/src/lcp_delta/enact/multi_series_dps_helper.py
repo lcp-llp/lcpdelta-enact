@@ -1444,7 +1444,7 @@ class MultiSeriesDPSHelper:
         """Extract one or more y-values from array or object point formats."""
         array_point = MultiSeriesDPSHelper._get_case_insensitive(current, "arrayPoint")
         if isinstance(array_point, list) and len(array_point) > 1:
-            return array_point[1:]
+            return MultiSeriesDPSHelper._trim_trailing_null_values(array_point[1:])
 
         object_point = MultiSeriesDPSHelper._get_case_insensitive(current, "objectPoint") or {}
         if isinstance(object_point, dict):
@@ -1460,6 +1460,21 @@ class MultiSeriesDPSHelper:
 
         current_value = MultiSeriesDPSHelper._get_case_insensitive(change, "value")
         return [current_value] if current_value is not None else [pd.NA]
+
+    @staticmethod
+    def _trim_trailing_null_values(values: list[Any]) -> list[Any]:
+        """Remove right-hand null padding while preserving at least one value."""
+        trimmed = list(values)
+        while len(trimmed) > 1 and MultiSeriesDPSHelper._is_null_value(trimmed[-1]):
+            trimmed.pop()
+        return trimmed
+
+    @staticmethod
+    def _is_null_value(value: Any) -> bool:
+        try:
+            return bool(pd.isna(value))
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def _get_value_column_names(metadata: MultiSeriesPushMetadata, value_count: int) -> list[str]:
