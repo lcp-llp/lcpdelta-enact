@@ -113,6 +113,8 @@ async def main() -> None:
         reconnect_callback=refresh_snapshot_after_reconnect,
         reconnect_callback_timeout_seconds=120,
         # Change these values if your callback workload needs different tuning.
+        # callback_queue_maxsize is a backpressure buffer, so keep it above
+        # max_workers and large enough for expected reconnect/push bursts.
         concurrent_callbacks=True,
         max_workers=5,
         callback_queue_maxsize=5000,

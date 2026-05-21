@@ -164,10 +164,11 @@ class MultiSeriesDPSHelper:
                 `None` to disable proactive lease refresh. This planned lease
                 refresh is intentionally separate from disconnect recovery and
                 may be counted by the backend like a fresh multi-series join.
-            callback_queue_maxsize: Maximum number of received pushes queued or
-                being processed across all shards. `0` means unbounded; set a
-                finite value in long-running production clients if callbacks
-                can be slower than the push rate.
+            callback_queue_maxsize: Maximum number of callback items queued or
+                being processed across all shards. `0` means unbounded. A
+                finite value applies backpressure to SignalR receives once the
+                limit is reached, so choose a value comfortably above the
+                callback worker count and expected push bursts.
             suppress_unhandled_server_method_logs: When true, suppress
                 pysignalr warnings for backend broadcasts that do not have a
                 matching client handler, such as unrelated push types this
@@ -191,8 +192,11 @@ class MultiSeriesDPSHelper:
             and not 0 < lease_refresh_interval_days < MULTI_SERIES_RECONNECT_LEASE_DAYS
         ):
             raise ValueError("lease_refresh_interval_days must be greater than 0 and less than 14")
+        callback_worker_count = max_workers if concurrent_callbacks else 1
         if callback_queue_maxsize < 0:
             raise ValueError("callback_queue_maxsize cannot be negative")
+        if callback_queue_maxsize and callback_queue_maxsize < callback_worker_count:
+            raise ValueError("callback_queue_maxsize must be 0 or at least the callback worker count")
         if callback is not None and not callable(callback):
             raise TypeError("callback must be callable")
         if reconnect_callback is not None and not callable(reconnect_callback):
@@ -238,7 +242,7 @@ class MultiSeriesDPSHelper:
         self._callback_slots: asyncio.Semaphore | None = None
         self._callback_queues: list[asyncio.Queue] = []
         self._callback_tasks: list[asyncio.Task] = []
-        self._callback_worker_count = max_workers if concurrent_callbacks else 1
+        self._callback_worker_count = callback_worker_count
         self._callback_executor: ThreadPoolExecutor | None = None
 
         if suppress_unhandled_server_method_logs:
@@ -691,16 +695,43 @@ class MultiSeriesDPSHelper:
     ) -> None:
         """Restore groups and run the reconnect callback before pushes resume."""
         release_pushes = False
+        subscriptions_to_restore = subscriptions
+        restore_retry_delay = self.reconnect_initial_delay_seconds
         try:
-            restored = await asyncio.gather(
-                *(
-                    self._restore_group_until_connected(group_name, subscription)
-                    for group_name, subscription in subscriptions
+            while subscriptions_to_restore:
+                restored = await asyncio.gather(
+                    *(
+                        self._restore_group_until_connected(group_name, subscription)
+                        for group_name, subscription in subscriptions_to_restore
+                    )
                 )
-            )
-            if not all(restored):
-                release_pushes = not self._reconnect_restore_was_interrupted()
-                return
+                failed_subscriptions = [
+                    (group_name, subscription)
+                    for (group_name, subscription), did_restore in zip(subscriptions_to_restore, restored)
+                    if not did_restore and group_name in self._subscriptions
+                ]
+                if not failed_subscriptions:
+                    break
+                if self._reconnect_restore_was_interrupted():
+                    return
+                if not self.reconnect:
+                    self.logger.error(
+                        "Failed to restore multi-series DPS groups %s and reconnect is disabled; releasing queued pushes",
+                        ", ".join(group_name for group_name, _subscription in failed_subscriptions),
+                    )
+                    release_pushes = True
+                    return
+
+                self.logger.warning(
+                    "Multi-series DPS restore incomplete for groups %s; retrying before queued pushes resume",
+                    ", ".join(group_name for group_name, _subscription in failed_subscriptions),
+                )
+                await asyncio.sleep(restore_retry_delay if restore_retry_delay > 0 else 0.1)
+                restore_retry_delay = min(
+                    max(restore_retry_delay * 2, self.reconnect_initial_delay_seconds),
+                    self.reconnect_max_delay_seconds,
+                )
+                subscriptions_to_restore = failed_subscriptions
 
             if pre_reconnect_drained is not None:
                 await pre_reconnect_drained.wait()
@@ -1063,6 +1094,7 @@ class MultiSeriesDPSHelper:
         """Queue callback work on the partition for its push stream."""
         self._ensure_callback_processing()
         if self._callback_slots is not None:
+            # Intentional backpressure: slots cover queued plus running callback work.
             await self._callback_slots.acquire()
 
         partition_key = self._get_callback_partition_key(metadata)

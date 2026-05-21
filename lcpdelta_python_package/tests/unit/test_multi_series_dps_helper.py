@@ -335,6 +335,33 @@ def test_concurrent_callbacks_start_in_fifo_order_and_respect_worker_limit():
     assert max_running_count == 2
 
 
+def test_callback_queue_maxsize_must_cover_callback_workers():
+    try:
+        MultiSeriesDPSHelper(
+            "username",
+            "api-key",
+            auto_connect=False,
+            concurrent_callbacks=True,
+            max_workers=3,
+            callback_queue_maxsize=2,
+        )
+    except ValueError as exc:
+        assert "callback_queue_maxsize must be 0 or at least the callback worker count" in str(exc)
+    else:
+        raise AssertionError("Expected callback_queue_maxsize smaller than worker count to fail")
+
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        concurrent_callbacks=False,
+        max_workers=3,
+        callback_queue_maxsize=1,
+    )
+
+    assert helper._callback_worker_count == 1
+
+
 def test_reconnect_callback_gates_queued_pushes_until_it_completes():
     helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
     events = []
@@ -553,6 +580,55 @@ def test_connection_loss_during_restore_retries_without_releasing_reconnect_queu
             helper._callback_executor.shutdown(wait=True)
 
     assert events == ["start:1", "restore:1", "restore:2", "end:1", "reconnect", "start:2", "end:2"]
+
+
+def test_incomplete_restore_retries_active_groups_before_releasing_pushes(monkeypatch):
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        reconnect_initial_delay_seconds=0,
+        reconnect_max_delay_seconds=0,
+    )
+    events = []
+    restore_attempts = 0
+
+    async def callback(_frame, _metadata):
+        events.append("push")
+
+    async def reconnect_callback():
+        events.append("reconnect")
+
+    async def fake_restore_group_until_connected(_group_name, _subscription):
+        nonlocal restore_attempts
+        restore_attempts += 1
+        events.append(f"restore:{restore_attempts}")
+        return restore_attempts > 1
+
+    async def fake_sleep(_delay):
+        events.append("restore-backoff")
+        assert not helper._get_push_processing_gate().ready.is_set()
+
+    async def run():
+        monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+        helper.on_reconnected(reconnect_callback)
+        helper._restore_group_until_connected = fake_restore_group_until_connected
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+        helper._pause_push_processing()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata())
+        await helper._restore_groups_after_open([("multi-series-group", subscription)])
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["restore:1", "restore-backoff", "restore:2", "reconnect", "push"]
 
 
 def test_sync_reconnect_callback_can_accept_helper_argument():
