@@ -937,23 +937,7 @@ class MultiSeriesDPSHelper:
     def _should_rejoin_after_reconnect_error(exc: EnactApiError) -> bool:
         """Return true only for errors that mean the previous push can no longer be restored."""
         error_code = str(exc.error_code or "").lower()
-        if error_code == "reconnectunavailable":
-            return True
-
-        message = str(exc.message or "").lower()
-        error_text = f"{error_code} {message}"
-        non_reconnectable_terms = (
-            "cannot reconnect",
-            "does not exist",
-            "expired",
-            "invalid group",
-            "invalid push",
-            "no longer",
-            "not found",
-            "unknown group",
-            "unknown push",
-        )
-        return any(term in error_text for term in non_reconnectable_terms)
+        return error_code == "reconnectunavailable"
 
     @staticmethod
     def _raise_reconnect_error_if_present(response: Any) -> None:
@@ -1464,7 +1448,7 @@ class MultiSeriesDPSHelper:
         """Extract one or more y-values from array or object point formats."""
         array_point = MultiSeriesDPSHelper._get_case_insensitive(current, "arrayPoint")
         if isinstance(array_point, list) and len(array_point) > 1:
-            return array_point[1:]
+            return MultiSeriesDPSHelper._trim_trailing_null_values(array_point[1:])
 
         object_point = MultiSeriesDPSHelper._get_case_insensitive(current, "objectPoint") or {}
         if isinstance(object_point, dict):
@@ -1480,6 +1464,21 @@ class MultiSeriesDPSHelper:
 
         current_value = MultiSeriesDPSHelper._get_case_insensitive(change, "value")
         return [current_value] if current_value is not None else [pd.NA]
+
+    @staticmethod
+    def _trim_trailing_null_values(values: list[Any]) -> list[Any]:
+        """Remove right-hand null padding while preserving at least one value."""
+        trimmed = list(values)
+        while len(trimmed) > 1 and MultiSeriesDPSHelper._is_null_value(trimmed[-1]):
+            trimmed.pop()
+        return trimmed
+
+    @staticmethod
+    def _is_null_value(value: Any) -> bool:
+        try:
+            return bool(pd.isna(value))
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def _get_value_column_names(metadata: MultiSeriesPushMetadata, value_count: int) -> list[str]:
