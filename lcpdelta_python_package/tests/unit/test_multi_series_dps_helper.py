@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 import pandas as pd
 
@@ -290,7 +293,7 @@ def test_concurrent_callbacks_start_in_fifo_order_and_respect_worker_limit():
         if helper._get_callback_shard_index(first_push_id, 2)
         != helper._get_callback_shard_index(f"Gb&RealtimeFrequency&none-{index}", 2)
     )
-    started_by_push_id = {first_push_id: [], second_push_id: []}
+    started_by_push_id: dict[str | None, list[int]] = {first_push_id: [], second_push_id: []}
     running_count = 0
     max_running_count = 0
 
@@ -391,6 +394,7 @@ def test_pushes_queued_before_reconnect_pause_continue_to_drain():
     async def callback(_frame, metadata):
         events.append(f"start:{metadata.sequence}")
         if metadata.sequence == 1:
+            assert release_first_push is not None
             await release_first_push.wait()
         events.append(f"end:{metadata.sequence}")
 
@@ -434,6 +438,7 @@ def test_reconnect_callback_waits_for_pre_reconnect_queue_to_drain():
     async def callback(_frame, metadata):
         events.append(f"start:{metadata.sequence}")
         if metadata.sequence == 1:
+            assert release_first_push is not None
             await release_first_push.wait()
         events.append(f"end:{metadata.sequence}")
 
@@ -489,6 +494,7 @@ def test_connection_loss_during_restore_retries_without_releasing_reconnect_queu
     async def callback(_frame, metadata):
         events.append(f"start:{metadata.sequence}")
         if metadata.sequence == 1:
+            assert release_first_push is not None
             await release_first_push.wait()
         events.append(f"end:{metadata.sequence}")
 
@@ -1167,7 +1173,7 @@ def test_shutdown_closes_underlying_websocket_before_cancelling_connection_task(
 
 def test_shutdown_leaves_known_groups_before_closing_websocket():
     helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
-    events = []
+    events: list[Any] = []
 
     class FakeWebSocket:
         async def close(self):

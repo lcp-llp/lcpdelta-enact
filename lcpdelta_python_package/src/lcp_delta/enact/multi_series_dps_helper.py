@@ -22,6 +22,7 @@ from lcp_delta.global_helpers import is_2d_list_of_strings
 ChartPushCallback = Callable[..., Any]
 ReconnectCallback = Callable[..., Any]
 MULTI_SERIES_RECONNECT_LEASE_DAYS = 14.0
+ASYNC_TIMEOUT_ERRORS = (TimeoutError, asyncio.TimeoutError)
 
 
 class _SignalRMissingMethodFilter(logging.Filter):
@@ -856,7 +857,7 @@ class MultiSeriesDPSHelper:
                 self.logger.warning("Failed to restore multi-series DPS group %s, retrying: %s", group_name, exc)
                 if not self.reconnect:
                     return False
-            except TimeoutError:
+            except ASYNC_TIMEOUT_ERRORS:
                 self.logger.warning("Timed out restoring multi-series DPS group %s, retrying", group_name)
                 if not self.reconnect:
                     return False
@@ -893,7 +894,7 @@ class MultiSeriesDPSHelper:
                 return
             except asyncio.CancelledError:
                 raise
-            except TimeoutError:
+            except ASYNC_TIMEOUT_ERRORS:
                 self.logger.warning(
                     "Reconnect callback did not complete within %.1f seconds; releasing queued multi-series pushes",
                     self.reconnect_callback_timeout_seconds,

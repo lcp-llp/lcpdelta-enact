@@ -26,6 +26,7 @@ import logging
 import os
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any
 
 from lcp_delta.enact import MultiSeriesDPSHelper
 
@@ -36,7 +37,7 @@ RUN_SECONDS = int(os.getenv("RUN_SECONDS", str(24 * 60 * 60)))
 
 
 # Change this list to the series your process needs to listen to.
-SERIES_REQUESTS = [
+SERIES_REQUESTS: list[dict[str, Any]] = [
     {
         "seriesId": "RealtimeFrequency",
         "countryId": "Gb",
