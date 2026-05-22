@@ -978,8 +978,8 @@ class MultiSeriesDPSHelper:
         for message in messages:
             error_code = MultiSeriesDPSHelper._get_case_insensitive(message, "errorCode")
             error_message = MultiSeriesDPSHelper._get_case_insensitive(message, "message")
-            if error_code or error_message:
-                raise EnactApiError(error_code or "SignalRError", error_message or "SignalR request failed", response)
+            if error_code:
+                raise EnactApiError(error_code, error_message or "SignalR request failed", response)
 
     async def _rejoin_group(self, group_name: str, subscription: _MultiSeriesSubscription) -> str:
         """Recreate a multi-series group after reconnect fails or the lease expires."""
@@ -1093,19 +1093,28 @@ class MultiSeriesDPSHelper:
     ) -> None:
         """Queue callback work on the partition for its push stream."""
         self._ensure_callback_processing()
-        if self._callback_slots is not None:
-            # Intentional backpressure: slots cover queued plus running callback work.
-            await self._callback_slots.acquire()
-
-        partition_key = self._get_callback_partition_key(metadata)
-        shard_index = self._get_callback_shard_index(partition_key, len(self._callback_queues))
         push_processing_gate = self._get_push_processing_gate()
+        # Count the push before any bounded-queue wait so reconnect draining sees it.
         self._mark_push_processing_started(push_processing_gate)
+        slot_acquired = False
+
         try:
+            if self._callback_slots is not None:
+                # Intentional backpressure: slots cover queued plus running callback work.
+                await self._callback_slots.acquire()
+                slot_acquired = True
+
+            partition_key = self._get_callback_partition_key(metadata)
+            shard_index = self._get_callback_shard_index(partition_key, len(self._callback_queues))
             await self._callback_queues[shard_index].put((callback, frame, metadata, push_processing_gate))
+        except asyncio.CancelledError:
+            self._mark_push_processing_finished(push_processing_gate)
+            if slot_acquired and self._callback_slots is not None:
+                self._callback_slots.release()
+            raise
         except Exception:
             self._mark_push_processing_finished(push_processing_gate)
-            if self._callback_slots is not None:
+            if slot_acquired and self._callback_slots is not None:
                 self._callback_slots.release()
             raise
 
@@ -1378,8 +1387,8 @@ class MultiSeriesDPSHelper:
         for message in messages:
             error_code = MultiSeriesDPSHelper._get_case_insensitive(message, "errorCode")
             error_message = MultiSeriesDPSHelper._get_case_insensitive(message, "message")
-            if error_code or error_message:
-                raise EnactApiError(error_code or "SignalRError", error_message or "SignalR request failed", response)
+            if error_code:
+                raise EnactApiError(error_code, error_message or "SignalR request failed", response)
 
         data = MultiSeriesDPSHelper._get_case_insensitive(response, "data") or {}
         push_name = MultiSeriesDPSHelper._get_case_insensitive(data, "pushName")

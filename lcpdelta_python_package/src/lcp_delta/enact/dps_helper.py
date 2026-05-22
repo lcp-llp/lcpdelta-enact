@@ -213,6 +213,7 @@ class DPSHelper:
         )
 
     async def _callback_received(self, m, subscription_id: str, is_for_reconnect: bool = False):
+        self._raise_signalr_response_error(m)
         push_name = m["data"]["pushName"]
         if not is_for_reconnect:
             self._single_series_subscriptions.append((push_name, subscription_id))
@@ -220,13 +221,11 @@ class DPSHelper:
         # Create wrapper to capture subscription_id in callback
         async def push_handler(x):
             await self._process_push_data(x, subscription_id)
-        
+
         self.hub_connection.on(push_name, push_handler)
 
     async def _callback_received_multi_series(self, m, handle_data_method, parse_datetimes, is_for_reconnect: bool = False):
-        if "messages" in m and len(m["messages"]) > 0:
-            error_return = m["messages"][0]
-            raise EnactApiError(error_return["errorCode"], error_return["message"], m)
+        self._raise_signalr_response_error(m)
 
         push_name = m["data"]["pushName"]
         if not is_for_reconnect:
@@ -236,6 +235,18 @@ class DPSHelper:
             await self._process_multi_series_push(x, handle_data_method, parse_datetimes)
 
         self.hub_connection.on(push_name, push_handler)
+
+    @staticmethod
+    def _raise_signalr_response_error(m):
+        messages = m.get("messages", []) if isinstance(m, dict) else []
+        for error_return in messages:
+            if not isinstance(error_return, dict):
+                continue
+
+            error_code = error_return.get("errorCode") or error_return.get("ErrorCode")
+            message = error_return.get("message") or error_return.get("Message") or "SignalR request failed"
+            if error_code:
+                raise EnactApiError(error_code, message, m)
 
     async def _process_push_data(self, data_push, subscription_id):
         if subscription_id == EPEX_SUBSCRIPTION_ID:
@@ -564,4 +575,3 @@ class DPSHelper:
         if option_id:
             subscription_id += tuple(option_id)
         return subscription_id
-    

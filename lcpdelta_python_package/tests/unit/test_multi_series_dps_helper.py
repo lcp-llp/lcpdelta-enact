@@ -512,6 +512,80 @@ def test_reconnect_callback_waits_for_pre_reconnect_queue_to_drain():
     assert events == ["start:1", "restore", "end:1", "start:2", "end:2", "reconnect"]
 
 
+def test_reconnect_callback_waits_for_push_blocked_on_queue_capacity():
+    helper = MultiSeriesDPSHelper(
+        "username",
+        "api-key",
+        auto_connect=False,
+        concurrent_callbacks=False,
+        callback_queue_maxsize=1,
+    )
+    events = []
+    release_first_push = None
+
+    async def callback(_frame, metadata):
+        events.append(f"start:{metadata.sequence}")
+        if metadata.sequence == 1:
+            assert release_first_push is not None
+            await release_first_push.wait()
+        events.append(f"end:{metadata.sequence}")
+
+    async def fake_reconnect_group(_group_name, _subscription):
+        events.append("restore")
+
+    async def reconnect_callback():
+        events.append("reconnect")
+
+    async def run():
+        nonlocal release_first_push
+        release_first_push = asyncio.Event()
+
+        helper.on_reconnected(reconnect_callback)
+        helper._reconnect_group = fake_reconnect_group
+        subscription = _test_subscription(callback)
+        helper._subscriptions["multi-series-group"] = subscription
+        helper._connected.set()
+
+        await helper._enqueue_callback(callback, pd.DataFrame({"value": [1]}), _test_push_metadata(sequence=1))
+        while events != ["start:1"]:
+            await asyncio.sleep(0)
+
+        second_enqueue = asyncio.create_task(
+            helper._enqueue_callback(callback, pd.DataFrame({"value": [2]}), _test_push_metadata(sequence=2))
+        )
+        active_gate = helper._get_push_processing_gate()
+        for _ in range(20):
+            if active_gate.pending == 2:
+                break
+            await asyncio.sleep(0)
+
+        assert active_gate.pending == 2
+        pre_reconnect_drained = helper._pause_push_processing()
+        assert pre_reconnect_drained is active_gate.drained
+        assert not pre_reconnect_drained.is_set()
+
+        restore_task = asyncio.create_task(
+            helper._restore_groups_after_open([("multi-series-group", subscription)], pre_reconnect_drained)
+        )
+        while "restore" not in events:
+            await asyncio.sleep(0)
+
+        assert events == ["start:1", "restore"]
+
+        release_first_push.set()
+        await second_enqueue
+        await restore_task
+        await _wait_for_callback_processing(helper)
+
+    try:
+        asyncio.run(run())
+    finally:
+        if helper._callback_executor is not None:
+            helper._callback_executor.shutdown(wait=True)
+
+    assert events == ["start:1", "restore", "end:1", "start:2", "end:2", "reconnect"]
+
+
 def test_connection_loss_during_restore_retries_without_releasing_reconnect_queue():
     helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
     events = []
@@ -825,6 +899,33 @@ def test_send_with_response_raises_signalr_completion_errors():
         assert exc.message == "temporary backend issue"
     else:
         raise AssertionError("Expected EnactApiError")
+
+
+def test_join_multi_series_response_raises_signalr_error_messages():
+    response = {"messages": [{"errorCode": "RateLimited", "message": "Requests to JoinMultiSeries are rate limited."}]}
+
+    try:
+        MultiSeriesDPSHelper._extract_push_name_or_raise(response)
+    except EnactApiError as exc:
+        assert exc.error_code == "RateLimited"
+        assert exc.message == "Requests to JoinMultiSeries are rate limited."
+    else:
+        raise AssertionError("Expected EnactApiError")
+
+
+def test_join_multi_series_response_allows_message_only_entries_with_push_name():
+    response = {
+        "messages": [{"message": "Informational message"}],
+        "data": {"pushName": "multiSeries_group"},
+    }
+
+    assert MultiSeriesDPSHelper._extract_push_name_or_raise(response) == "multiSeries_group"
+
+
+def test_reconnect_response_allows_message_only_entries():
+    response = {"messages": [{"message": "Informational message"}]}
+
+    MultiSeriesDPSHelper._raise_reconnect_error_if_present(response)
 
 
 def test_timed_out_send_removes_pending_invocation_handler():
