@@ -7,7 +7,6 @@ import asyncio
 import zoneinfo
 from datetime import datetime as dt
 from datetime import timezone, timedelta
-from functools import partial
 from typing import Any, Callable
 from pysignalr.client import SignalRClient
 from lcp_delta.global_helpers import is_list_of_strings_or_empty, is_2d_list_of_strings
@@ -94,13 +93,13 @@ class DPSHelper:
             object, tuple[Callable[[pd.DataFrame], None], pd.DataFrame, bool]
         ] = {}
 
-        access_token_factory = partial(self._fetch_bearer_token)
+        access_token_factory, headers = self._build_access_token_factory()
         url = self.api_helper.endpoints.DPS
 
         self.hub_connection = SignalRClient(
             url,
             access_token_factory=access_token_factory,
-            headers={"Authorization": f"Bearer {access_token_factory()}"},
+            headers=headers,
         )
 
         self.hub_connection.on_open(self._on_open)
@@ -114,6 +113,23 @@ class DPSHelper:
     def _fetch_bearer_token(self):
         self.enact_credentials.get_bearer_token()
         return self.enact_credentials.bearer_token
+
+    def _build_access_token_factory(self) -> tuple[Callable[[], str], dict[str, str]]:
+        first_token = self.enact_credentials.bearer_token or self._fetch_bearer_token()
+        first_token_available = True
+        token_lock = threading.Lock()
+
+        def access_token_factory() -> str:
+            nonlocal first_token_available
+
+            with token_lock:
+                if first_token_available:
+                    first_token_available = False
+                    return first_token
+
+            return self._fetch_bearer_token()
+
+        return access_token_factory, {"Authorization": f"Bearer {first_token}"}
      
     async def _add_subscription(self, request_object: list[dict[str, str]], subscription_id: str):
         # Create wrapper to capture subscription_id in callback

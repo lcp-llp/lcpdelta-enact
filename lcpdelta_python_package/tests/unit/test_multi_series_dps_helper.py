@@ -28,6 +28,21 @@ class _CapturingHandler(logging.Handler):
         self.messages.append(record.getMessage())
 
 
+class _FakeCredentials:
+    def __init__(self):
+        self.bearer_token = "initial-token"
+        self.refresh_count = 0
+
+    def get_bearer_token(self):
+        self.refresh_count += 1
+        self.bearer_token = f"refreshed-token-{self.refresh_count}"
+
+
+class _FakeApiHelper:
+    def __init__(self, credentials):
+        self.credentials_holder = credentials
+
+
 async def _wait_for_callback_processing(helper):
     for queue in helper._callback_queues:
         await queue.join()
@@ -77,6 +92,21 @@ def test_unhandled_signalr_server_method_warning_is_suppressed_without_hiding_re
         signalr_logger.disabled = previous_disabled
 
     assert handler.messages == ["SignalR connection stopped unexpectedly: closed"]
+
+
+def test_access_token_factory_reuses_existing_initial_token():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    credentials = _FakeCredentials()
+    helper.api_helper = _FakeApiHelper(credentials)
+
+    access_token_factory, headers = helper._build_access_token_factory()
+
+    assert credentials.refresh_count == 0
+    assert headers == {"Authorization": "Bearer initial-token"}
+    assert access_token_factory() == "initial-token"
+    assert credentials.refresh_count == 0
+    assert access_token_factory() == "refreshed-token-1"
+    assert credentials.refresh_count == 1
 
 
 def test_series_ping_payload_is_converted_to_dataframe_and_metadata():

@@ -12,12 +12,37 @@ class _FakeHubConnection:
         self.handlers[push_name] = handler
 
 
+class _FakeCredentials:
+    def __init__(self):
+        self.bearer_token = "initial-token"
+        self.refresh_count = 0
+
+    def get_bearer_token(self):
+        self.refresh_count += 1
+        self.bearer_token = f"refreshed-token-{self.refresh_count}"
+
+
 def _helper_with_fake_hub():
     helper = object.__new__(DPSHelper)
     helper.hub_connection = _FakeHubConnection()
     helper._single_series_subscriptions = []
     helper._multi_series_subscriptions = []
     return helper
+
+
+def test_access_token_factory_reuses_existing_initial_token():
+    helper = object.__new__(DPSHelper)
+    credentials = _FakeCredentials()
+    helper.enact_credentials = credentials
+
+    access_token_factory, headers = helper._build_access_token_factory()
+
+    assert credentials.refresh_count == 0
+    assert headers == {"Authorization": "Bearer initial-token"}
+    assert access_token_factory() == "initial-token"
+    assert credentials.refresh_count == 0
+    assert access_token_factory() == "refreshed-token-1"
+    assert credentials.refresh_count == 1
 
 
 def test_single_series_join_response_raises_signalr_error_messages():

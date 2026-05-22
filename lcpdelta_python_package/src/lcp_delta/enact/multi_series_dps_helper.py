@@ -653,7 +653,8 @@ class MultiSeriesDPSHelper:
 
     def _build_access_token_factory(self) -> tuple[Callable[[], str], dict[str, str]]:
         """Create SignalR auth headers while avoiding a duplicate first token request."""
-        first_token = self._fetch_bearer_token()
+        credentials = self._ensure_api_helper().credentials_holder
+        first_token = credentials.bearer_token or self._fetch_bearer_token()
         first_token_available = True
         token_lock = threading.Lock()
 
