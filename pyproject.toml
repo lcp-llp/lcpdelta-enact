@@ -10,7 +10,7 @@ authors = [
 ]
 description = "LCPDelta Python Package"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["LCPDelta", "Enact", "Flextrack", "Storetrack"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -52,7 +52,7 @@ dev = [
 [tool.ruff]
 src = ["lcpdelta_python_package/src"]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = ["E402", "F401"]

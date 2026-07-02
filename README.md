@@ -4,7 +4,7 @@ The LCPDelta Python package provides streamlined access to data available from t
 It contains helper methods for requesting data from our API endpoints or subscribing to push groups, all of which are detailed on our [**developer documentation site**][Api_Docs].
 
 ### Installation
-The Python package requires Python 3.10 or greater, and can be installed via:
+The Python package requires Python 3.11 or greater, and can be installed via:
 
 ```
 pip install LCPDelta
