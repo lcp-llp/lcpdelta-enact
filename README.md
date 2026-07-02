@@ -4,7 +4,7 @@ The LCPDelta Python package provides streamlined access to data available from t
 It contains helper methods for requesting data from our API endpoints or subscribing to push groups, all of which are detailed on our [**developer documentation site**][Api_Docs].
 
 ### Installation
-The Python package requires Python 3.9 or greater, and can be installed via:
+The Python package requires Python 3.11 or greater, and can be installed via:
 
 ```
 pip install LCPDelta
@@ -31,6 +31,7 @@ flextrack_api_helper = flextrack.APIHelper(username, public_api_key)
 
 From here, you can call any of the available helper methods to retrieve data in one call or listen for pushes. The following example makes use of Enact's Series Data endpoint:
 ```python
+from datetime import date
 
 from_date = date(2023,10,1)
 to_date = date(2024,10,1)
