@@ -50,7 +50,7 @@ class APIHelper(APIHelperBase):
         Returns:
             Response: The response object containing the series data.
         """
-        endpoint = "https://enact-staticchartapi.azurewebsites.net/FLEXTrackAPI/Exporter/Data"
+        endpoint = "https://enact.lcp.com/staticchart/FLEXTrackAPI/Exporter/Data"
         request_body = exporter_service.generate_request(
             date_from,
             date_to,
@@ -80,7 +80,7 @@ class APIHelper(APIHelperBase):
         weighting_metric: list[str] = None,
     ) -> pd.DataFrame:
         """An asynchronous version of `get_exporter_data`."""
-        endpoint = "https://enact-staticchartapi.azurewebsites.net/FLEXTrackAPI/Exporter/Data"
+        endpoint = "https://enact.lcp.com/staticchart/FLEXTrackAPI/Exporter/Data"
         request_body = exporter_service.generate_request(
             date_from,
             date_to,
