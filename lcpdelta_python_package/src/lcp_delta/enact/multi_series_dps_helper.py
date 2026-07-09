@@ -23,6 +23,11 @@ ChartPushCallback = Callable[..., Any]
 ReconnectCallback = Callable[..., Any]
 MULTI_SERIES_RECONNECT_LEASE_DAYS = 14.0
 ASYNC_TIMEOUT_ERRORS = (TimeoutError, asyncio.TimeoutError)
+JOIN_MULTI_SERIES_WITH_OPTIONS = "JoinMultiSeriesWithOptions"
+RECONNECT_TO_PUSH_WITH_OPTIONS = "ReconnectToPushWithOptions"
+LEAVE_GROUP = "LeaveGroup"
+ACTIVE_SUBSCRIPTION_CONFLICT_ERROR_CODE = "ActiveSubscriptionConflict"
+RECONNECT_UNAVAILABLE_ERROR_CODE = "ReconnectUnavailable"
 
 
 class _SignalRMissingMethodFilter(logging.Filter):
@@ -76,6 +81,14 @@ class _MultiSeriesSubscription:
     join_payload: list[dict[str, Any]]
     callback: ChartPushCallback
     parse_datetimes: bool
+    force_replace_existing_connection: bool = False
+
+
+@dataclass(frozen=True)
+class _PushConnectionResponse:
+    push_name: str
+    replaced_existing_connection: bool = False
+    superseded_connection_count: int = 0
 
 
 @dataclass
@@ -151,19 +164,20 @@ class MultiSeriesDPSHelper:
                 connection starts on `connect()` or first subscribe.
             reconnect: When true, supervise the SignalR connection and reconnect
                 after an unexpected close. Existing groups use
-                `ReconnectToPush` first, falling back to `JoinMultiSeries` only
-                when the backend no longer accepts the previous group.
+                `ReconnectToPushWithOptions` first, falling back to
+                `JoinMultiSeriesWithOptions` only when the backend no longer
+                accepts the previous group.
             reconnect_initial_delay_seconds: First wait before reconnecting.
             reconnect_max_delay_seconds: Maximum reconnect backoff delay.
             reconnect_callback_timeout_seconds: Maximum time spent retrying
                 `reconnect_callback` after a reconnect before queued push
                 processing is released anyway.
             lease_refresh_interval_days: How often to renew the backend
-                multi-series group lease with `JoinMultiSeries`. The backend
-                lease lasts 14 days. The default refreshes on day 13. Set to
-                `None` to disable proactive lease refresh. This planned lease
-                refresh is intentionally separate from disconnect recovery and
-                may be counted by the backend like a fresh multi-series join.
+                multi-series group lease with `JoinMultiSeriesWithOptions`. The
+                backend lease lasts 14 days. The default refreshes on day 13.
+                Set to `None` to disable proactive lease refresh. This planned
+                lease refresh is intentionally separate from disconnect recovery
+                and may be counted by the backend like a fresh multi-series join.
             callback_queue_maxsize: Maximum number of callback items queued or
                 being processed across all shards. `0` means unbounded. A
                 finite value applies backpressure to SignalR receives once the
@@ -342,11 +356,12 @@ class MultiSeriesDPSHelper:
         callback: ChartPushCallback | None = None,
         *,
         parse_datetimes: bool | None = None,
+        force_replace_existing_connection: bool = False,
         timeout: float = 30,
     ) -> str:
         """Subscribe to Enact multi-series chart pushes.
 
-        `series_requests` uses the backend JoinMultiSeries shape:
+        `series_requests` uses the backend multi-series subscription shape:
         `[{"seriesId": "...", "countryId": "Gb", "optionIds": [["..."]]}]`.
 
         Args:
@@ -359,8 +374,12 @@ class MultiSeriesDPSHelper:
                 `on_chart_push()` is used.
             parse_datetimes: Optional per-subscription override for dataframe
                 index parsing.
+            force_replace_existing_connection: When true, tell the backend
+                `JoinMultiSeriesWithOptions` call to replace an existing
+                connection for the same subscription instead of rejecting this
+                subscription as a duplicate.
             timeout: Seconds to wait for the SignalR connection and
-                `JoinMultiSeries` response.
+                `JoinMultiSeriesWithOptions` response.
 
         Returns:
             The backend multi-series group name. The helper uses this group for
@@ -375,7 +394,13 @@ class MultiSeriesDPSHelper:
         join_payload = self._normalise_series_requests(series_requests)
         should_parse_datetimes = self.parse_datetimes if parse_datetimes is None else parse_datetimes
         future = self._run_in_loop(
-            self._subscribe_join_payload(join_payload, callback_to_use, should_parse_datetimes, timeout=timeout)
+            self._subscribe_join_payload(
+                join_payload,
+                callback_to_use,
+                should_parse_datetimes,
+                force_replace_existing_connection=force_replace_existing_connection,
+                timeout=timeout,
+            )
         )
         return future.result(timeout=timeout + 5)
 
@@ -387,13 +412,15 @@ class MultiSeriesDPSHelper:
         callback: ChartPushCallback | None = None,
         *,
         parse_datetimes: bool | None = None,
+        force_replace_existing_connection: bool = False,
         timeout: float = 30,
     ) -> str:
         """Subscribe to chart pushes without blocking the caller's event loop.
 
         This is the async equivalent of `subscribe_to_chart_pushes()`. It uses
         the same duplicate-subscription cache, so an identical request reuses
-        the existing group and updates that subscription's callback.
+        the existing group and updates that subscription's callback unless
+        `force_replace_existing_connection=True`.
         """
         callback_to_use = self._resolve_callback(callback)
 
@@ -407,7 +434,13 @@ class MultiSeriesDPSHelper:
         return await asyncio.wait_for(
             asyncio.wrap_future(
                 self._run_in_loop(
-                    self._subscribe_join_payload(join_payload, callback_to_use, should_parse_datetimes, timeout=timeout)
+                    self._subscribe_join_payload(
+                        join_payload,
+                        callback_to_use,
+                        should_parse_datetimes,
+                        force_replace_existing_connection=force_replace_existing_connection,
+                        timeout=timeout,
+                    )
                 )
             ),
             timeout + 5,
@@ -670,6 +703,87 @@ class MultiSeriesDPSHelper:
 
         return access_token_factory, {"Authorization": f"Bearer {first_token}"}
 
+    @staticmethod
+    def _build_multi_series_options(*, force_replace_existing_connection: bool) -> dict[str, Any]:
+        """Build the options object expected by the backend `*WithOptions` hub methods."""
+        return {"forceReplaceExistingConnection": force_replace_existing_connection}
+
+    @staticmethod
+    def _build_join_multi_series_request(
+        join_payload: list[dict[str, Any]],
+        *,
+        force_replace_existing_connection: bool,
+    ) -> dict[str, Any]:
+        """Build the backend `JoinMultiSeriesWithOptions` request object."""
+        return {
+            "subscriptions": join_payload,
+            **MultiSeriesDPSHelper._build_multi_series_options(
+                force_replace_existing_connection=force_replace_existing_connection,
+            ),
+        }
+
+    @staticmethod
+    def _build_reconnect_to_push_request(
+        group_name: str,
+        *,
+        force_replace_existing_connection: bool,
+    ) -> dict[str, Any]:
+        """Build the backend `ReconnectToPushWithOptions` request object."""
+        return {
+            "groupToConnectTo": group_name,
+            **MultiSeriesDPSHelper._build_multi_series_options(
+                force_replace_existing_connection=force_replace_existing_connection,
+            ),
+        }
+
+    def _log_replaced_existing_connections(
+        self,
+        *,
+        action: str,
+        group_name: str,
+        superseded_connection_count: int,
+    ) -> None:
+        connection_count = superseded_connection_count if superseded_connection_count > 0 else "one or more"
+        self.logger.info(
+            "%s to multi-series group %s replaced %s existing backend connection(s) for the same push/API key.",
+            action,
+            group_name,
+            connection_count,
+        )
+
+    def _log_active_subscription_conflict_if_present(
+        self,
+        exc: EnactApiError,
+        *,
+        operation: str,
+        force_replace_existing_connection: bool,
+    ) -> None:
+        if not self._is_active_subscription_conflict_error(exc.error_code):
+            return
+
+        if force_replace_existing_connection:
+            self.logger.warning(
+                "%s was rejected by the backend even though "
+                "force_replace_existing_connection=True. Backend error %s: %s",
+                operation,
+                exc.error_code,
+                exc.message,
+            )
+            return
+
+        self.logger.warning(
+            "%s was rejected because another connection is already subscribed for the same "
+            "push/API key. Use force_replace_existing_connection=True to replace the existing connection. "
+            "Backend error %s: %s",
+            operation,
+            exc.error_code,
+            exc.message,
+        )
+
+    @staticmethod
+    def _is_active_subscription_conflict_error(error_code: Any) -> bool:
+        return str(error_code or "").lower() == ACTIVE_SUBSCRIPTION_CONFLICT_ERROR_CODE.lower()
+
     async def _on_open(self) -> None:
         """Mark the connection open and reconnect existing multi-series groups."""
         self._connected.set()
@@ -802,14 +916,49 @@ class MultiSeriesDPSHelper:
         callback: ChartPushCallback,
         parse_datetimes: bool,
         *,
+        force_replace_existing_connection: bool = False,
         timeout: float,
         replace_group_name: str | None = None,
         request_key: str | None = None,
     ) -> str:
-        """Call `JoinMultiSeries`, store the subscription and register its event handler."""
-        response = await self._send_with_response("JoinMultiSeries", [join_payload], timeout=timeout)
-        group_name = self._extract_push_name_or_raise(response)
-        subscription = _MultiSeriesSubscription(join_payload, callback, parse_datetimes)
+        """Call `JoinMultiSeriesWithOptions`, store the subscription and register its event handler."""
+        try:
+            response = await self._send_with_response(
+                JOIN_MULTI_SERIES_WITH_OPTIONS,
+                [
+                    self._build_join_multi_series_request(
+                        join_payload,
+                        force_replace_existing_connection=force_replace_existing_connection,
+                    )
+                ],
+                timeout=timeout,
+            )
+            push_response = self._extract_push_response_or_raise(response)
+        except EnactApiError as exc:
+            self._log_active_subscription_conflict_if_present(
+                exc,
+                operation="Multi-series subscription",
+                force_replace_existing_connection=force_replace_existing_connection,
+            )
+            raise
+
+        group_name = push_response.push_name
+        if push_response.replaced_existing_connection:
+            self._log_replaced_existing_connections(
+                action=(
+                    "Forced multi-series subscription"
+                    if force_replace_existing_connection
+                    else "Multi-series subscription"
+                ),
+                group_name=group_name,
+                superseded_connection_count=push_response.superseded_connection_count,
+            )
+        subscription = _MultiSeriesSubscription(
+            join_payload,
+            callback,
+            parse_datetimes,
+            force_replace_existing_connection,
+        )
 
         if replace_group_name is not None and replace_group_name != group_name:
             self._subscriptions.pop(replace_group_name, None)
@@ -827,26 +976,34 @@ class MultiSeriesDPSHelper:
         callback: ChartPushCallback,
         parse_datetimes: bool,
         *,
+        force_replace_existing_connection: bool = False,
         timeout: float,
     ) -> str:
-        """Subscribe to a JoinMultiSeries payload, reusing an existing identical group."""
+        """Subscribe to a multi-series payload, reusing an existing identical group."""
         request_key = self._get_subscription_request_key(join_payload)
         existing_group = self._subscription_group_by_request_key.get(request_key)
-        subscription = _MultiSeriesSubscription(join_payload, callback, parse_datetimes)
+        subscription = _MultiSeriesSubscription(
+            join_payload,
+            callback,
+            parse_datetimes,
+            force_replace_existing_connection,
+        )
 
-        if existing_group in self._subscriptions:
+        if existing_group in self._subscriptions and not force_replace_existing_connection:
             self._subscriptions[existing_group] = subscription
             self._register_group_handler(existing_group)
             return existing_group
 
-        if existing_group is not None:
+        if existing_group is not None and existing_group not in self._subscriptions:
             self._subscription_group_by_request_key.pop(request_key, None)
 
         return await self._join_multi_series(
             join_payload,
             callback,
             parse_datetimes,
+            force_replace_existing_connection=force_replace_existing_connection,
             timeout=timeout,
+            replace_group_name=existing_group if force_replace_existing_connection else None,
             request_key=request_key,
         )
 
@@ -861,13 +1018,34 @@ class MultiSeriesDPSHelper:
     async def _reconnect_group(self, group_name: str, subscription: _MultiSeriesSubscription) -> None:
         """Reconnect an existing group without adding usage, rejoining only if needed."""
         try:
-            response = await self._send_with_response("ReconnectToPush", [group_name], timeout=30)
+            response = await self._send_with_response(
+                RECONNECT_TO_PUSH_WITH_OPTIONS,
+                [
+                    self._build_reconnect_to_push_request(
+                        group_name,
+                        force_replace_existing_connection=subscription.force_replace_existing_connection,
+                    )
+                ],
+                timeout=30,
+            )
             self._raise_reconnect_error_if_present(response)
+            replaced_existing_connection, superseded_connection_count = self._extract_replacement_info(response)
+            if replaced_existing_connection:
+                self._log_replaced_existing_connections(
+                    action="Reconnect",
+                    group_name=group_name,
+                    superseded_connection_count=superseded_connection_count,
+                )
         except EnactApiError as exc:
             if not self._should_rejoin_after_reconnect_error(exc):
+                self._log_active_subscription_conflict_if_present(
+                    exc,
+                    operation=f"Reconnect to multi-series group {group_name}",
+                    force_replace_existing_connection=subscription.force_replace_existing_connection,
+                )
                 raise
 
-            self.logger.info("ReconnectToPush cannot restore %s, rejoining: %s", group_name, exc)
+            self.logger.info("%s cannot restore %s, rejoining: %s", RECONNECT_TO_PUSH_WITH_OPTIONS, group_name, exc)
             await self._rejoin_group(group_name, subscription)
 
     async def _restore_group_until_connected(
@@ -969,14 +1147,23 @@ class MultiSeriesDPSHelper:
     @staticmethod
     def _should_rejoin_after_reconnect_error(exc: EnactApiError) -> bool:
         """Return true only for errors that mean the previous push can no longer be restored."""
-        error_code = str(exc.error_code or "").lower()
-        return error_code == "reconnectunavailable"
+        return str(exc.error_code or "").lower() == RECONNECT_UNAVAILABLE_ERROR_CODE.lower()
 
     @staticmethod
     def _raise_reconnect_error_if_present(response: Any) -> None:
         """Raise only for explicit reconnect errors; no reconnect payload still means success."""
+        MultiSeriesDPSHelper._raise_signalr_error_messages(response)
+
+    @staticmethod
+    def _raise_signalr_error_messages(response: Any) -> None:
+        """Raise for explicit SignalR error messages while allowing informational messages."""
         messages = MultiSeriesDPSHelper._get_case_insensitive(response, "messages") or []
+        if not isinstance(messages, list):
+            return
+
         for message in messages:
+            if not isinstance(message, dict):
+                continue
             error_code = MultiSeriesDPSHelper._get_case_insensitive(message, "errorCode")
             error_message = MultiSeriesDPSHelper._get_case_insensitive(message, "message")
             if error_code:
@@ -988,6 +1175,7 @@ class MultiSeriesDPSHelper:
             subscription.join_payload,
             subscription.callback,
             subscription.parse_datetimes,
+            force_replace_existing_connection=subscription.force_replace_existing_connection,
             timeout=30,
             replace_group_name=group_name,
             request_key=self._get_subscription_request_key(subscription.join_payload),
@@ -1014,6 +1202,7 @@ class MultiSeriesDPSHelper:
                     subscription.join_payload,
                     subscription.callback,
                     subscription.parse_datetimes,
+                    force_replace_existing_connection=subscription.force_replace_existing_connection,
                     timeout=30,
                     replace_group_name=group_name,
                     request_key=self._get_subscription_request_key(subscription.join_payload),
@@ -1280,7 +1469,7 @@ class MultiSeriesDPSHelper:
             return
 
         try:
-            await self._send_with_response("LeaveGroup", [group_name], timeout=timeout)
+            await self._send_with_response(LEAVE_GROUP, [group_name], timeout=timeout)
         except Exception:
             self.logger.warning("Failed to leave multi-series DPS group %s", group_name, exc_info=True)
 
@@ -1310,7 +1499,7 @@ class MultiSeriesDPSHelper:
             await result
 
     def _normalise_series_requests(self, series_requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Validate and normalise caller input to the backend JoinMultiSeries shape."""
+        """Validate and normalise caller input to the backend multi-series subscription shape."""
         if not isinstance(series_requests, list) or not series_requests:
             raise ValueError("series_requests must be a non-empty list of dictionaries")
 
@@ -1344,7 +1533,7 @@ class MultiSeriesDPSHelper:
 
     @staticmethod
     def _get_subscription_request_key(join_payload: list[dict[str, Any]]) -> str:
-        """Return a stable key used to avoid duplicate JoinMultiSeries calls."""
+        """Return a stable key used to avoid duplicate multi-series subscription calls."""
         canonical_payload = []
         for series_entry in join_payload:
             canonical_entry: dict[str, Any] = {
@@ -1384,18 +1573,68 @@ class MultiSeriesDPSHelper:
     @staticmethod
     def _extract_push_name_or_raise(response: dict[str, Any]) -> str:
         """Read `data.pushName` from a SignalR response or raise an EnactApiError."""
-        messages = MultiSeriesDPSHelper._get_case_insensitive(response, "messages") or []
-        for message in messages:
-            error_code = MultiSeriesDPSHelper._get_case_insensitive(message, "errorCode")
-            error_message = MultiSeriesDPSHelper._get_case_insensitive(message, "message")
-            if error_code:
-                raise EnactApiError(error_code, error_message or "SignalR request failed", response)
+        return MultiSeriesDPSHelper._extract_push_response_or_raise(response).push_name
+
+    @staticmethod
+    def _extract_push_response_or_raise(response: dict[str, Any]) -> _PushConnectionResponse:
+        """Read push response fields from a SignalR response or raise an EnactApiError."""
+        MultiSeriesDPSHelper._raise_signalr_error_messages(response)
 
         data = MultiSeriesDPSHelper._get_case_insensitive(response, "data") or {}
         push_name = MultiSeriesDPSHelper._get_case_insensitive(data, "pushName")
-        if not push_name:
+        if not isinstance(push_name, str) or not push_name:
             raise EnactApiError("DataFormatError", "SignalR response did not include a pushName", response)
-        return push_name
+
+        replaced_existing_connection, superseded_connection_count = MultiSeriesDPSHelper._extract_replacement_info(
+            response
+        )
+        return _PushConnectionResponse(
+            push_name=push_name,
+            replaced_existing_connection=replaced_existing_connection,
+            superseded_connection_count=superseded_connection_count,
+        )
+
+    @staticmethod
+    def _extract_replacement_info(response: Any) -> tuple[bool, int]:
+        """Read duplicate-connection replacement fields from a SignalR response."""
+        data = MultiSeriesDPSHelper._get_case_insensitive(response, "data") or {}
+        if not isinstance(data, dict):
+            return False, 0
+
+        replaced_existing_connection = MultiSeriesDPSHelper._coerce_bool(
+            MultiSeriesDPSHelper._get_case_insensitive(data, "replacedExistingConnection")
+        )
+        superseded_connection_count = MultiSeriesDPSHelper._coerce_non_negative_int(
+            MultiSeriesDPSHelper._get_case_insensitive(data, "supersededConnectionCount")
+        )
+        return replaced_existing_connection, superseded_connection_count
+
+    @staticmethod
+    def _coerce_bool(value: Any) -> bool:
+        """Coerce backend boolean-ish values without treating every non-empty string as true."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes"}
+        if isinstance(value, (int, float)):
+            return value != 0
+        return False
+
+    @staticmethod
+    def _coerce_non_negative_int(value: Any) -> int:
+        """Coerce backend count-ish values while avoiding bool-as-int surprises."""
+        if isinstance(value, bool):
+            return 0
+        if isinstance(value, int):
+            return max(value, 0)
+        if isinstance(value, float) and value.is_integer():
+            return max(int(value), 0)
+        if isinstance(value, str):
+            try:
+                return max(int(value), 0)
+            except ValueError:
+                return 0
+        return 0
 
     @staticmethod
     def _series_ping_to_frame_and_metadata(
@@ -1445,6 +1684,9 @@ class MultiSeriesDPSHelper:
         rows: list[tuple[Any, list[Any]]] = []
         force_multi_value_columns = False
 
+        if not isinstance(changes, list):
+            changes = []
+
         for change in changes:
             current = MultiSeriesDPSHelper._get_case_insensitive(change, "current") or {}
             timestamp = MultiSeriesDPSHelper._get_timestamp_from_change(current, parse_datetimes)
@@ -1479,7 +1721,7 @@ class MultiSeriesDPSHelper:
 
         if timestamp is None:
             array_point = MultiSeriesDPSHelper._get_case_insensitive(current, "arrayPoint") or []
-            if array_point:
+            if isinstance(array_point, list) and array_point:
                 timestamp = array_point[0]
 
         if timestamp is None:
@@ -1517,7 +1759,7 @@ class MultiSeriesDPSHelper:
             return [
                 value
                 for key, value in object_point.items()
-                if key.lower() not in {"x", "name", "dateperiod"}
+                if not isinstance(key, str) or key.lower() not in {"x", "name", "dateperiod"}
             ]
 
         current_value = MultiSeriesDPSHelper._get_case_insensitive(change, "value")
