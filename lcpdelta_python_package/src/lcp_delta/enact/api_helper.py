@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import datetime
+from datetime import date, datetime
 from typing import Union
 
 from lcp_delta.global_helpers import convert_datetime_to_iso
@@ -17,6 +17,7 @@ from lcp_delta.enact.services import news_table_service
 from lcp_delta.enact.services import nordpool_service
 from lcp_delta.enact.services import plant_service
 from lcp_delta.enact.services import series_service
+from lcp_delta.enact.services import skip_rates_service
 from lcp_delta.enact.services import niv_evolution_service
 from lcp_delta.enact.services import carbon_calculator_service
 
@@ -1543,6 +1544,115 @@ class APIHelper(APIHelperBase):
         )
         response = await self._post_request_async(self.endpoints.CONTRACT_EVOLUTION, request_body)
         return contract_evolution_service.process_contract_evolution_response(response)
+
+    def get_skip_rates_data(
+        self,
+        date_from: date | datetime,
+        date_to: date | datetime,
+        selected_granularity: str = "Day",
+        action_type: str = "Combined",
+        stage: str = "Five",
+        source: str = "Psa",
+        selected_zone: list[str] | None = None,
+        selected_fuel: list[str] | None = None,
+        selected_owners: list[str] | None = None,
+        selected_optimisers: list[str] | None = None,
+        selected_capacity: list[int] | tuple[int, int] | None = None,
+        selected_duration: list[float] | tuple[float, float] | None = None,
+        selected_plants: list[str] | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """Gets skip rates data from Enact.
+
+        Args:
+            date_from `datetime.date` or `datetime.datetime`: The start GB local date.
+
+            date_to `datetime.date` or `datetime.datetime`: The end GB local date.
+
+            selected_granularity `str` (optional): The granularity of the data. "FiveMinute",
+                "HalfHourly", "Day" (default), "Week", "Month" or "Year".
+
+            action_type `str` (optional): The action type. "Bid", "Offer" or "Combined" (default).
+
+            stage `str` (optional): The skip-rate stage. "Zero", "One", "Two", "Three", "Four" or
+                "Five" (default).
+
+            source `str` (optional): The source dataset. "Psa" (default) or "AllBm".
+
+            selected_zone `list[str]` (optional): GB zone filters, or ["All Zones"]. Defaults to all zones.
+
+            selected_fuel `list[str]` (optional): Fuel filters, or ["All Fuels"]. Defaults to all fuels.
+
+            selected_owners `list[str]` (optional): Owner filters.
+
+            selected_optimisers `list[str]` (optional): Optimiser filters.
+
+            selected_capacity `list[int]` (optional): Minimum and maximum capacity filter.
+
+            selected_duration `list[float]` (optional): Minimum and maximum battery duration filter.
+
+            selected_plants `list[str]` (optional): Plant IDs to filter to. This should not be combined
+                with other plant filters.
+
+            parse_datetimes `bool` (optional): Parse the returned "GB Local Time" column to datetimes.
+                Defaults to False.
+
+        Returns:
+            Response: A pandas DataFrame containing skip rates data.
+        """
+        request_body = skip_rates_service.generate_request(
+            date_from,
+            date_to,
+            selected_granularity,
+            action_type,
+            stage,
+            source,
+            selected_zone,
+            selected_fuel,
+            selected_owners,
+            selected_optimisers,
+            selected_capacity,
+            selected_duration,
+            selected_plants,
+        )
+        response = self._post_request(self.endpoints.SKIP_RATES, request_body)
+        return skip_rates_service.process_response(response, parse_datetimes)
+
+    async def get_skip_rates_data_async(
+        self,
+        date_from: date | datetime,
+        date_to: date | datetime,
+        selected_granularity: str = "Day",
+        action_type: str = "Combined",
+        stage: str = "Five",
+        source: str = "Psa",
+        selected_zone: list[str] | None = None,
+        selected_fuel: list[str] | None = None,
+        selected_owners: list[str] | None = None,
+        selected_optimisers: list[str] | None = None,
+        selected_capacity: list[int] | tuple[int, int] | None = None,
+        selected_duration: list[float] | tuple[float, float] | None = None,
+        selected_plants: list[str] | None = None,
+        parse_datetimes: bool = False,
+    ) -> pd.DataFrame:
+        """An asynchronous version of `get_skip_rates_data`."""
+        request_body = skip_rates_service.generate_request(
+            date_from,
+            date_to,
+            selected_granularity,
+            action_type,
+            stage,
+            source,
+            selected_zone,
+            selected_fuel,
+            selected_owners,
+            selected_optimisers,
+            selected_capacity,
+            selected_duration,
+            selected_plants,
+        )
+        response = await self._post_request_async(self.endpoints.SKIP_RATES, request_body)
+        return skip_rates_service.process_response(response, parse_datetimes)
 
     def get_ancillary_contract_data(
         self,

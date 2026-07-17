@@ -125,6 +125,8 @@ class EnactApiEndpoints:
     def CONTRACT_EVOLUTION(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/ContractEvolution"
     @property
     def NORDPOOL_CURVES(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/NordpoolBuySellCurves"
+    @property
+    def SKIP_RATES(self): return f"{self._base_endpoints.SERIES_BASE_URL}/api/SkipRates"
 
     @property
     def EPEX_TRADES(self): return f"{self._base_endpoints.EPEX_BASE_URL}/EnactAPI/Data/Trades"
