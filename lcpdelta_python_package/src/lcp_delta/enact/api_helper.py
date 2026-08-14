@@ -689,6 +689,25 @@ class APIHelper(APIHelperBase):
         response = await self._post_request_async(self.endpoints.PLANT_IDS, request_body)
         return plant_service.process_country_fuel_response(response)
 
+    def get_list_of_fuels(self, dispatch_type : str | None = None) -> list[str]:
+        """Get a list of all the fuels, optionally supplying a dispatch type.
+
+        Args:
+            dispatch_type `str` (optional): The dispatch type. Defaults to None, which will return all fuels.
+
+        Returns:
+            Response: The response object containing the plant data.
+        """
+        request_body = plant_service.generate_fuel_list_request(dispatch_type)
+        response = self._post_request(self.endpoints.FUEL_LIST, request_body)
+        return plant_service.process_country_fuel_response(response)
+
+    async def get_list_of_fuels(self, dispatch_type : str | None = None) -> list[str]:
+        """An asynchronous version of `get_list_of_fuels`."""
+        request_body = plant_service.generate_fuel_list_request(dispatch_type)
+        response = await self._post_request_async(self.endpoints.FUEL_LIST, request_body)
+        return plant_service.process_country_fuel_response(response)
+
     def get_history_of_forecast_for_given_date(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
     ) -> pd.DataFrame:
