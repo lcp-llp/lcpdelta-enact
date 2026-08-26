@@ -10,7 +10,6 @@ def generate_country_fuel_request(country_id: str, fuel_id: str) -> dict:
 def generate_fuel_list_request(dispatch_type: str | None = None) -> dict:
     return {"DispatchType": dispatch_type}
 
-
 def process_country_fuel_response(response: dict) -> dict:
     return response["data"]
 
