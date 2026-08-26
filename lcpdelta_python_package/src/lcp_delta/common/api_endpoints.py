@@ -88,7 +88,7 @@ class EnactApiEndpoints:
     @property
     def PLANT_IDS(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Plant/Data/PlantList"
     @property
-    def PLANT_IDS(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Plant/Data/FuelList"
+    def FUEL_LIST(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Plant/Data/FuelList"
 
     @property
     def HOF(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/HistoryOfForecast/Data_V2"
