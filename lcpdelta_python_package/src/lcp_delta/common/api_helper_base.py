@@ -3,10 +3,10 @@ from abc import ABC
 from json import JSONDecodeError
 from typing import Callable
 
-from common.credentials_holder import CredentialsHolder
-from api_endpoints import EnactApiEndpoints
-from http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
-from http.exceptions import EnactApiError
+from lcp_delta.common.credentials_holder import CredentialsHolder
+from lcp_delta.common.api_endpoints import EnactApiEndpoints
+from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
+from lcp_delta.common.http.exceptions import EnactApiError
 
 class APIHelperBase(ABC):
     def __init__(self, username: str, public_api_key: str, bypass_frontdoor: bool = False):

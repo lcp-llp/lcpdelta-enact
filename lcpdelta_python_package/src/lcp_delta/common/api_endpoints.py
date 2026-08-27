@@ -1,7 +1,7 @@
 from lcp_delta.enact.loader import get_base_endpoints
-import constants as constants
-from credentials_holder import CredentialsHolder
-from http.retry_policies import DEFAULT_RETRY_POLICY
+import lcp_delta.common.constants as constants
+from lcp_delta.common.credentials_holder import CredentialsHolder
+from lcp_delta.common.http.retry_policies import DEFAULT_RETRY_POLICY
 import httpx
 
 
