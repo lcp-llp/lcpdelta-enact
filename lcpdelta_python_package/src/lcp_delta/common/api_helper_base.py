@@ -3,7 +3,7 @@ from abc import ABC
 from json import JSONDecodeError
 from typing import Callable
 
-from credentials_holder import CredentialsHolder
+from common.credentials_holder import CredentialsHolder
 from api_endpoints import EnactApiEndpoints
 from http.retry_policies import DEFAULT_RETRY_POLICY, UNAUTHORISED_INCLUSIVE_RETRY_POLICY
 from http.exceptions import EnactApiError
