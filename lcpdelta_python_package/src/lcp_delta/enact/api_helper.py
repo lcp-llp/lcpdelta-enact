@@ -5,20 +5,22 @@ from typing import Union
 from lcp_delta.global_helpers import convert_datetime_to_iso
 from lcp_delta.common import APIHelperBase
 from lcp_delta.enact.helpers import get_month_name
-from lcp_delta.enact.services import ancillary_service
-from lcp_delta.enact.services import contract_evolution_service
-from lcp_delta.enact.services import bm_service
-from lcp_delta.enact.services import day_ahead_service
-from lcp_delta.enact.services import epex_service
-from lcp_delta.enact.services import hof_service
-from lcp_delta.enact.services import leaderboard_service
-from lcp_delta.enact.services import index_service
-from lcp_delta.enact.services import news_table_service
-from lcp_delta.enact.services import nordpool_service
-from lcp_delta.enact.services import plant_service
-from lcp_delta.enact.services import series_service
-from lcp_delta.enact.services import niv_evolution_service
-from lcp_delta.enact.services import carbon_calculator_service
+from lcp_delta.enact.services import (
+    ancillary_service,
+    bm_service,
+    carbon_calculator_service,
+    contract_evolution_service,
+    day_ahead_service,
+    epex_service,
+    hof_service,
+    index_service,
+    leaderboard_service,
+    news_table_service,
+    niv_evolution_service,
+    nordpool_service,
+    plant_service,
+    series_service,
+)
 
 class APIHelper(APIHelperBase):
     def _make_series_request(
@@ -688,6 +690,25 @@ class APIHelper(APIHelperBase):
         request_body = plant_service.generate_country_fuel_request(country_id, fuel_id)
         response = await self._post_request_async(self.endpoints.PLANT_IDS, request_body)
         return plant_service.process_country_fuel_response(response)
+
+    def get_list_of_fuels(self, dispatch_type : str | None = None) -> list[str]:
+        """Get a list of all the fuels, optionally supplying a dispatch type.
+
+        Args:
+            dispatch_type `str` (optional): The dispatch type. If no dispatch type is specified, all fuels are returned. Options are "Dispatchable", "Fixed", "Interconnector", "Wind", "Solar", "Hydro", "Storage" and "None".
+
+        Returns:
+            Response: The response object containing the plant data.
+        """
+        request_body = plant_service.generate_fuel_list_request(dispatch_type)
+        response = self._post_request(self.endpoints.FUEL_LIST, request_body)
+        return plant_service.process_fuel_list_response(response)
+
+    async def get_list_of_fuels_async(self, dispatch_type : str | None = None) -> list[str]:
+        """An asynchronous version of `get_list_of_fuels`."""
+        request_body = plant_service.generate_fuel_list_request(dispatch_type)
+        response = await self._post_request_async(self.endpoints.FUEL_LIST, request_body)
+        return plant_service.process_fuel_list_response(response)
 
     def get_history_of_forecast_for_given_date(
         self, series_id: str, date: datetime, country_id: str, option_id: str | None = None
