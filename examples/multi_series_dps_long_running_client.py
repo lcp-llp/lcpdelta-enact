@@ -124,6 +124,8 @@ async def main() -> None:
     )
 
     try:
+        # Set force_replace_existing_connection=True here if this process must
+        # take over an existing backend push subscription for the same request.
         group_name = await helper.async_subscribe_to_chart_pushes(SERIES_REQUESTS)
         print(f"Subscribed to group: {group_name}")
         print(f"Listening for {RUN_SECONDS} seconds... Press Ctrl+C to stop early.")

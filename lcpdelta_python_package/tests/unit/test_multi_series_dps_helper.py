@@ -8,7 +8,11 @@ from typing import Any
 import pandas as pd
 
 from lcp_delta.common.http.exceptions import EnactApiError
-from lcp_delta.enact.multi_series_dps_helper import MultiSeriesDPSHelper, MultiSeriesPushMetadata
+from lcp_delta.enact.multi_series_dps_helper import (
+    MultiSeriesDPSHelper,
+    MultiSeriesPushMetadata,
+    _MultiSeriesSubscription,
+)
 
 
 def test_public_enact_package_exports_multi_series_helper():
@@ -62,12 +66,13 @@ def _test_push_metadata(sequence=1):
     )
 
 
-def _test_subscription(callback):
-    return type(
-        "Subscription",
-        (),
-        {"join_payload": [], "callback": callback, "parse_datetimes": True},
-    )()
+def _test_subscription(callback, join_payload=None, *, force_replace_existing_connection=False):
+    return _MultiSeriesSubscription(
+        join_payload or [],
+        callback,
+        parse_datetimes=True,
+        force_replace_existing_connection=force_replace_existing_connection,
+    )
 
 
 def test_unhandled_signalr_server_method_warning_is_suppressed_without_hiding_real_warnings():
@@ -920,7 +925,7 @@ def test_send_with_response_raises_signalr_completion_errors():
 
     async def run():
         helper.hub_connection = FakeHubConnection()
-        return await helper._send_with_response("ReconnectToPush", ["multi-series-group"], timeout=1)
+        return await helper._send_with_response("ReconnectToPushWithOptions", ["multi-series-group"], timeout=1)
 
     try:
         asyncio.run(run())
@@ -952,6 +957,45 @@ def test_join_multi_series_response_allows_message_only_entries_with_push_name()
     assert MultiSeriesDPSHelper._extract_push_name_or_raise(response) == "multiSeries_group"
 
 
+def test_extract_push_response_returns_new_replacement_fields():
+    response = {
+        "data": {
+            "pushName": "multiSeries_group",
+            "replacedExistingConnection": True,
+            "supersededConnectionCount": 2,
+        }
+    }
+
+    push_response = MultiSeriesDPSHelper._extract_push_response_or_raise(response)
+
+    assert push_response.push_name == "multiSeries_group"
+    assert push_response.replaced_existing_connection is True
+    assert push_response.superseded_connection_count == 2
+
+
+def test_extract_push_response_defaults_replacement_fields_when_missing():
+    response = {
+        "data": {"pushName": "multiSeries_group"},
+    }
+
+    push_response = MultiSeriesDPSHelper._extract_push_response_or_raise(response)
+
+    assert push_response.push_name == "multiSeries_group"
+    assert push_response.replaced_existing_connection is False
+    assert push_response.superseded_connection_count == 0
+
+
+def test_extract_replacement_info_coerces_backend_values_without_truthy_string_surprises():
+    response = {
+        "data": {
+            "replacedExistingConnection": "false",
+            "supersededConnectionCount": True,
+        }
+    }
+
+    assert MultiSeriesDPSHelper._extract_replacement_info(response) == (False, 0)
+
+
 def test_reconnect_response_allows_message_only_entries():
     response = {"messages": [{"message": "Informational message"}]}
 
@@ -971,7 +1015,7 @@ def test_timed_out_send_removes_pending_invocation_handler():
     async def run():
         helper.hub_connection = FakeHubConnection()
         try:
-            await helper._send_with_response("ReconnectToPush", ["multi-series-group"], timeout=0.01)
+            await helper._send_with_response("ReconnectToPushWithOptions", ["multi-series-group"], timeout=0.01)
         except TimeoutError:
             return helper.hub_connection._invocation_handlers
         raise AssertionError("Expected TimeoutError")
@@ -991,7 +1035,9 @@ def test_cancelled_send_removes_pending_invocation_handler():
 
     async def run():
         helper.hub_connection = FakeHubConnection()
-        task = asyncio.create_task(helper._send_with_response("ReconnectToPush", ["multi-series-group"], timeout=30))
+        task = asyncio.create_task(
+            helper._send_with_response("ReconnectToPushWithOptions", ["multi-series-group"], timeout=30)
+        )
         await asyncio.sleep(0)
         task.cancel()
         try:
@@ -1024,11 +1070,7 @@ def test_transient_reconnect_failure_retries_reconnect_without_rejoining():
 
     async def run():
         subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
-        helper._subscriptions["multi-series-group"] = type(
-            "Subscription",
-            (),
-            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
-        )()
+        helper._subscriptions["multi-series-group"] = _test_subscription(callback, subscription)
         helper._send_with_response = fake_send_with_response
         helper._connected.set()
 
@@ -1037,8 +1079,16 @@ def test_transient_reconnect_failure_retries_reconnect_without_rejoining():
     asyncio.run(run())
 
     assert calls == [
-        ("ReconnectToPush", ["multi-series-group"], 30),
-        ("ReconnectToPush", ["multi-series-group"], 30),
+        (
+            "ReconnectToPushWithOptions",
+            [{"groupToConnectTo": "multi-series-group", "forceReplaceExistingConnection": False}],
+            30,
+        ),
+        (
+            "ReconnectToPushWithOptions",
+            [{"groupToConnectTo": "multi-series-group", "forceReplaceExistingConnection": False}],
+            30,
+        ),
     ]
 
 
@@ -1064,11 +1114,7 @@ def test_zero_reconnect_delay_still_waits_between_restore_attempts(monkeypatch):
 
     async def run():
         subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
-        helper._subscriptions["multi-series-group"] = type(
-            "Subscription",
-            (),
-            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
-        )()
+        helper._subscriptions["multi-series-group"] = _test_subscription(callback, subscription)
         helper._reconnect_group = fake_reconnect_group
         helper._connected.set()
         monkeypatch.setattr(asyncio, "sleep", fake_sleep)
@@ -1097,11 +1143,7 @@ def test_reconnect_completion_without_payload_is_success():
 
     async def run():
         subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
-        helper._subscriptions["multi-series-group"] = type(
-            "Subscription",
-            (),
-            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
-        )()
+        helper._subscriptions["multi-series-group"] = _test_subscription(callback, subscription)
         helper._send_with_response = fake_send_with_response
         helper._connected.set()
 
@@ -1109,7 +1151,90 @@ def test_reconnect_completion_without_payload_is_success():
 
     asyncio.run(run())
 
-    assert calls == [("ReconnectToPush", ["multi-series-group"], 30)]
+    assert calls == [
+        (
+            "ReconnectToPushWithOptions",
+            [{"groupToConnectTo": "multi-series-group", "forceReplaceExistingConnection": False}],
+            30,
+        )
+    ]
+
+
+def test_reconnect_replacement_payload_without_push_name_is_success_and_logged(caplog):
+    logger = logging.getLogger("test.reconnect.replaced")
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False, logger=logger)
+    calls = []
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def fake_send_with_response(method, arguments, *, timeout):
+        calls.append((method, arguments, timeout))
+        return {
+            "data": {
+                "replacedExistingConnection": True,
+                "supersededConnectionCount": "2",
+            }
+        }
+
+    async def run():
+        subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+        helper._subscriptions["multi-series-group"] = _test_subscription(
+            callback,
+            subscription,
+            force_replace_existing_connection=True,
+        )
+        helper._send_with_response = fake_send_with_response
+
+        with caplog.at_level(logging.INFO, logger=logger.name):
+            await helper._reconnect_group("multi-series-group", helper._subscriptions["multi-series-group"])
+
+    asyncio.run(run())
+
+    assert calls == [
+        (
+            "ReconnectToPushWithOptions",
+            [{"groupToConnectTo": "multi-series-group", "forceReplaceExistingConnection": True}],
+            30,
+        )
+    ]
+    assert "Reconnect to multi-series group multi-series-group replaced 2 existing backend connection(s)" in caplog.text
+
+
+def test_reconnect_active_subscription_conflict_is_logged_before_error(caplog):
+    logger = logging.getLogger("test.reconnect.conflict")
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False, logger=logger)
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def fake_send_with_response(_method, _arguments, *, timeout):
+        return {
+            "messages": [
+                {
+                    "errorCode": "ActiveSubscriptionConflict",
+                    "message": "A connection is already subscribed for this push.",
+                }
+            ]
+        }
+
+    async def run():
+        subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+        helper._subscriptions["multi-series-group"] = _test_subscription(callback, subscription)
+        helper._send_with_response = fake_send_with_response
+
+        with caplog.at_level(logging.WARNING, logger=logger.name):
+            try:
+                await helper._reconnect_group("multi-series-group", helper._subscriptions["multi-series-group"])
+            except EnactApiError as exc:
+                assert exc.error_code == "ActiveSubscriptionConflict"
+                return
+        raise AssertionError("Expected EnactApiError")
+
+    asyncio.run(run())
+
+    assert "Reconnect to multi-series group multi-series-group was rejected" in caplog.text
+    assert "force_replace_existing_connection=True" in caplog.text
 
 
 def test_reconnect_unavailable_response_rejoins_group():
@@ -1125,18 +1250,14 @@ def test_reconnect_unavailable_response_rejoins_group():
 
     async def fake_send_with_response(method, arguments, *, timeout):
         calls.append((method, arguments, timeout))
-        if method == "ReconnectToPush":
+        if method == "ReconnectToPushWithOptions":
             raise EnactApiError("ReconnectUnavailable", "please call JoinMultiSeries again", {})
         return {"data": {"pushName": "new-multi-series-group"}}
 
     async def run():
         helper.hub_connection = FakeHubConnection()
         subscription = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
-        helper._subscriptions["multi-series-group"] = type(
-            "Subscription",
-            (),
-            {"join_payload": subscription, "callback": callback, "parse_datetimes": True},
-        )()
+        helper._subscriptions["multi-series-group"] = _test_subscription(callback, subscription)
         helper._subscription_group_by_request_key[helper._get_subscription_request_key(subscription)] = (
             "multi-series-group"
         )
@@ -1148,8 +1269,21 @@ def test_reconnect_unavailable_response_rejoins_group():
     asyncio.run(run())
 
     assert calls == [
-        ("ReconnectToPush", ["multi-series-group"], 30),
-        ("JoinMultiSeries", [[{"seriesId": "RealtimeDemand", "countryId": "Gb"}]], 30),
+        (
+            "ReconnectToPushWithOptions",
+            [{"groupToConnectTo": "multi-series-group", "forceReplaceExistingConnection": False}],
+            30,
+        ),
+        (
+            "JoinMultiSeriesWithOptions",
+            [
+                {
+                    "subscriptions": [{"seriesId": "RealtimeDemand", "countryId": "Gb"}],
+                    "forceReplaceExistingConnection": False,
+                },
+            ],
+            30,
+        ),
     ]
     assert helper.group_names == ("new-multi-series-group",)
 
@@ -1301,6 +1435,196 @@ def test_equivalent_subscription_requests_reuse_group_when_order_changes():
     assert len(join_calls) == 1
 
 
+def test_force_replace_existing_connection_joins_again_for_identical_subscription():
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
+    join_calls = []
+
+    class FakeHubConnection:
+        def on(self, _group_name, _callback):
+            return None
+
+    async def fake_send_with_response(method, arguments, *, timeout):
+        join_calls.append((method, arguments, timeout))
+        if len(join_calls) == 1:
+            return {"data": {"pushName": "multi-series-group"}}
+        return {"data": {"pushName": "replacement-multi-series-group"}}
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        helper._send_with_response = fake_send_with_response
+        join_payload = helper._normalise_series_requests([
+            {"seriesId": "RealtimeDemand", "countryId": "Gb"}
+        ])
+
+        first_group_name = await helper._subscribe_join_payload(
+            join_payload,
+            callback,
+            parse_datetimes=True,
+            timeout=1,
+        )
+        second_group_name = await helper._subscribe_join_payload(
+            join_payload,
+            callback,
+            parse_datetimes=True,
+            force_replace_existing_connection=True,
+            timeout=1,
+        )
+
+        return first_group_name, second_group_name
+
+    first_group_name, second_group_name = asyncio.run(run())
+
+    assert first_group_name == "multi-series-group"
+    assert second_group_name == "replacement-multi-series-group"
+    assert join_calls == [
+        (
+            "JoinMultiSeriesWithOptions",
+            [
+                {
+                    "subscriptions": [{"seriesId": "RealtimeDemand", "countryId": "Gb"}],
+                    "forceReplaceExistingConnection": False,
+                },
+            ],
+            1,
+        ),
+        (
+            "JoinMultiSeriesWithOptions",
+            [
+                {
+                    "subscriptions": [{"seriesId": "RealtimeDemand", "countryId": "Gb"}],
+                    "forceReplaceExistingConnection": True,
+                },
+            ],
+            1,
+        ),
+    ]
+    assert helper.group_names == ("replacement-multi-series-group",)
+
+
+def test_force_replace_existing_connection_logs_superseded_connections(caplog):
+    logger = logging.getLogger("test.force.replaced")
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False, logger=logger)
+
+    class FakeHubConnection:
+        def on(self, _group_name, _callback):
+            return None
+
+    async def fake_send_with_response(_method, _arguments, *, timeout):
+        return {
+            "data": {
+                "pushName": "replacement-multi-series-group",
+                "replacedExistingConnection": True,
+                "supersededConnectionCount": 1,
+            }
+        }
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def run():
+        helper.hub_connection = FakeHubConnection()
+        helper._send_with_response = fake_send_with_response
+        join_payload = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+
+        with caplog.at_level(logging.INFO, logger=logger.name):
+            await helper._subscribe_join_payload(
+                join_payload,
+                callback,
+                parse_datetimes=True,
+                force_replace_existing_connection=True,
+                timeout=1,
+            )
+
+    asyncio.run(run())
+
+    assert (
+        "Forced multi-series subscription to multi-series group replacement-multi-series-group "
+        "replaced 1 existing backend connection(s)"
+    ) in caplog.text
+
+
+def test_duplicate_subscription_rejection_is_logged_before_error(caplog):
+    logger = logging.getLogger("test.duplicate.rejected")
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False, logger=logger)
+
+    async def fake_send_with_response(_method, _arguments, *, timeout):
+        return {
+            "messages": [
+                {
+                    "errorCode": "ActiveSubscriptionConflict",
+                    "message": "A connection is already subscribed for this push.",
+                }
+            ]
+        }
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def run():
+        helper._send_with_response = fake_send_with_response
+        join_payload = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+
+        with caplog.at_level(logging.WARNING, logger=logger.name):
+            try:
+                await helper._subscribe_join_payload(
+                    join_payload,
+                    callback,
+                    parse_datetimes=True,
+                    timeout=1,
+                )
+            except EnactApiError as exc:
+                assert exc.error_code == "ActiveSubscriptionConflict"
+                return
+        raise AssertionError("Expected EnactApiError")
+
+    asyncio.run(run())
+
+    assert "was rejected because another connection is already subscribed" in caplog.text
+    assert "force_replace_existing_connection=True" in caplog.text
+
+
+def test_duplicate_subscription_rejection_logging_uses_backend_error_code_not_message_text(caplog):
+    logger = logging.getLogger("test.duplicate.not_conflict")
+    helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False, logger=logger)
+
+    async def fake_send_with_response(_method, _arguments, *, timeout):
+        return {
+            "messages": [
+                {
+                    "errorCode": "DataFormatError",
+                    "message": "A connection is already subscribed for this push.",
+                }
+            ]
+        }
+
+    async def callback(_frame, _metadata):
+        return None
+
+    async def run():
+        helper._send_with_response = fake_send_with_response
+        join_payload = helper._normalise_series_requests([{"seriesId": "RealtimeDemand", "countryId": "Gb"}])
+
+        with caplog.at_level(logging.WARNING, logger=logger.name):
+            try:
+                await helper._subscribe_join_payload(
+                    join_payload,
+                    callback,
+                    parse_datetimes=True,
+                    timeout=1,
+                )
+            except EnactApiError as exc:
+                assert exc.error_code == "DataFormatError"
+                return
+        raise AssertionError("Expected EnactApiError")
+
+    asyncio.run(run())
+
+    assert "was rejected because another connection is already subscribed" not in caplog.text
+
+
 def test_unsubscribe_unknown_group_is_safe_noop():
     helper = MultiSeriesDPSHelper("username", "api-key", auto_connect=False)
 
@@ -1318,7 +1642,7 @@ def test_unsubscribe_removes_subscription_and_leaves_group_when_connected():
 
     async def fake_send_with_response(method, arguments, *, timeout):
         calls.append((method, arguments, timeout))
-        if method == "JoinMultiSeries":
+        if method == "JoinMultiSeriesWithOptions":
             return {"data": {"pushName": "multi-series-group"}}
         return {}
 
@@ -1341,7 +1665,16 @@ def test_unsubscribe_removes_subscription_and_leaves_group_when_connected():
     assert helper.group_names == ()
     assert helper._subscription_group_by_request_key == {}
     assert calls == [
-        ("JoinMultiSeries", [[{"seriesId": "RealtimeDemand", "countryId": "Gb"}]], 1),
+        (
+            "JoinMultiSeriesWithOptions",
+            [
+                {
+                    "subscriptions": [{"seriesId": "RealtimeDemand", "countryId": "Gb"}],
+                    "forceReplaceExistingConnection": False,
+                },
+            ],
+            1,
+        ),
         ("LeaveGroup", ["multi-series-group"], 1),
     ]
 
