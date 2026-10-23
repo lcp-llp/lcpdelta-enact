@@ -179,6 +179,45 @@ class APIHelper(APIHelperBase):
         request_body = series_service.generate_series_info_request(series_id, country_id)
         return await self._post_request_async(self.endpoints.SERIES_INFO, request_body)
 
+    def get_series_availability(
+        self,
+        series_id: str,
+        country_id: str,
+        option_id: list[str] | None = None,
+    ) -> dict:
+        """Gets the earliest stored historical day for an exact series selection.
+
+        Args:
+            series_id `str`: The Enact series ID.
+            country_id `str`: The country ID, e.g. "Gb".
+            option_id `list[str]` (optional): Options in series order. For plant
+                series, put the plant ID first, followed by any other options.
+                Omit for series without options.
+
+        Returns:
+            A dictionary with `firstAvailableDate` as a "YYYY-MM-DD" string,
+            or None when no historical values were found. The backend scans
+            historical data during the request; forecast history is excluded.
+
+        Example:
+            helper.get_series_availability(
+                "SkipRateAllBm", "Gb",
+                option_id=["DRAXX-4", "Offer", "Five", "HalfHourly"],
+            )
+        """
+        request_body = series_service.generate_series_availability_request(series_id, country_id, option_id)
+        return self._post_request(self.endpoints.SERIES_AVAILABILITY, request_body)
+
+    async def get_series_availability_async(
+        self,
+        series_id: str,
+        country_id: str,
+        option_id: list[str] | None = None,
+    ) -> dict:
+        """An asynchronous version of `get_series_availability`."""
+        request_body = series_service.generate_series_availability_request(series_id, country_id, option_id)
+        return await self._post_request_async(self.endpoints.SERIES_AVAILABILITY, request_body)
+
     def get_series_by_fuel(
         self,
         series_id: str,

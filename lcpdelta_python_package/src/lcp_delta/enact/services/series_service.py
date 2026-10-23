@@ -51,6 +51,15 @@ def generate_series_info_request(series_id: str, country_id: str | None):
     return request_body
 
 
+def generate_series_availability_request(
+    series_id: str, country_id: str, option_id: list[str] | None
+) -> dict:
+    if option_id is not None and not is_list_of_strings_or_empty(option_id):
+        raise ValueError("Option ID input must be a list of strings")
+
+    return {"SeriesId": series_id, "CountryId": country_id, "OptionId": option_id}
+
+
 def generate_multi_series_data_request(
     series_ids: list[str],
     date_from: str,
