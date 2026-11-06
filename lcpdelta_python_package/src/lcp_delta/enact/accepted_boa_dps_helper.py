@@ -180,9 +180,20 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             self._restore_task.cancel()
 
     def _register_handler(self) -> None:
-        if ACCEPTED_BOA_PUSH_NAME not in self._handlers_registered_for_client:
-            self.hub_connection.on(ACCEPTED_BOA_PUSH_NAME, self._handle_batch)
-            self._handlers_registered_for_client.add(ACCEPTED_BOA_PUSH_NAME)
+        handlers = {
+            ACCEPTED_BOA_PUSH_NAME: self._handle_batch,
+            "heartbeat": self._ignore_broadcast,
+            "zeroPnUpdate": self._ignore_broadcast,
+        }
+        for name, handler in handlers.items():
+            if name not in self._handlers_registered_for_client:
+                self.hub_connection.on(name, handler)
+                self._handlers_registered_for_client.add(name)
+
+    @staticmethod
+    async def _ignore_broadcast(*_args) -> None:
+        """Ignore known server-wide broadcasts unrelated to this feed."""
+        pass
 
     def _get_subscription_lock(self):
         if self._subscription_lock is None:

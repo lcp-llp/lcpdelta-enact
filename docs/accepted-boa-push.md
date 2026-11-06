@@ -33,6 +33,8 @@ Callbacks accept one `AcceptedBoaPush` and may be sync or async. Each source bat
 
 A positive `callback_queue_maxsize` bounds queued plus running callbacks and applies receive backpressure. Zero is unbounded. Callback failures are logged without row contents; failed callbacks are not retried. Unsubscribe stops future delivery; already queued batches may finish. `close(wait_for_callbacks=True)` drains queued work during orderly shutdown.
 
+The helper ignores the server-wide `heartbeat` and `zeroPnUpdate` application broadcasts. This prevents missing-handler warnings for those known unrelated events without adding subscriptions or changing logger levels. Other unhandled-event warnings and connection errors remain visible.
+
 ## Public wire contract
 
 For non-Python consumers, authenticate with the usual public API bearer token, connect to `/dataHub`, and register a handler for `acceptedBoaUpdated` before invoking `JoinAcceptedBoaPush` with no arguments. A successful join returns the usual API envelope containing `data.pushName: "acceptedBoaUpdated"`. Registering a handler alone does not authorize or join the feed. Structured API errors remain in `messages`.

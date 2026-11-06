@@ -105,7 +105,7 @@ def test_subscription_reuses_group_and_updates_callback_without_duplicate_handle
         assert stream._callback is second
         assert stream.group_names == (ACCEPTED_BOA_PUSH_NAME,)
         assert stream.hub_connection.calls == [("JoinAcceptedBoaPush", [])]
-        assert list(stream.hub_connection.handlers) == [ACCEPTED_BOA_PUSH_NAME]
+        assert list(stream.hub_connection.handlers) == [ACCEPTED_BOA_PUSH_NAME, "heartbeat", "zeroPnUpdate"]
         assert await stream._unsubscribe(1)
         assert not await stream._unsubscribe(1)
         assert stream.hub_connection.calls[-1] == ("LeaveGroup", [ACCEPTED_BOA_PUSH_NAME])
