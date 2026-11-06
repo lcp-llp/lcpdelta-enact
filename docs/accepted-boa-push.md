@@ -68,7 +68,7 @@ Each row uses the existing public BOA projection, with `deltaId` and nullable `a
 | `coords`, `additionalBsadData` | Existing public location and BSAD metadata; BSAD metadata may be null. |
 | `acceptedTime` | Source acceptance timestamp when available; may be null. |
 
-The public row projection follows the existing public BOA endpoint, including its treatment of synthetic accepted entries. It does not expose the raw frontend row or its internal prediction/detail fields.
+The row fields follow the existing public BOA projection, but this feed contains actual accepted rows only. Rows marked `NonBmStorPrediction` or `TheoreticalPredicted` are excluded from both previous and current lists before comparison. If a row becomes predicted, its previous actual entry is removed; if it becomes actual, it is added. Frontend prediction updates remain unchanged. The public row does not expose raw frontend prediction/detail fields.
 
 Identify records using settlement date, period, bid/offer side, and `deltaId`. A volume correction keeps the ID; a price or flag correction can change it. In that case the same batch contains removal of the old ID and insertion of the new ID. Apply removals before changed rows when updating local state.
 
