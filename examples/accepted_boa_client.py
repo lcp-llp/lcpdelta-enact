@@ -27,6 +27,7 @@ async def main() -> None:
         callback=on_update,
         auto_connect=False,
         callback_queue_maxsize=1000,
+        heartbeat_timeout_seconds=30,
     )
     try:
         await stream.async_subscribe_to_accepted_boa_updates()

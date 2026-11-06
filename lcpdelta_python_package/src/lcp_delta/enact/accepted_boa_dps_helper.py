@@ -4,10 +4,12 @@ import asyncio
 import copy
 import inspect
 import logging
+import math
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date
+from time import monotonic
 from typing import Any, Callable
 
 from lcp_delta.common.http.exceptions import EnactApiError
@@ -76,6 +78,11 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
     Callbacks run sequentially. A finite ``callback_queue_maxsize`` bounds
     queued plus running callbacks and applies backpressure (0 is unbounded).
 
+    The engine broadcasts a heartbeat every five seconds. A missing heartbeat
+    warns once after ``heartbeat_timeout_seconds`` (default 30); receipt after
+    a warning logs recovery once. This monitors engine-to-client delivery,
+    independently of the SignalR connection. Set the timeout to None to disable.
+
     Reconnect restores future updates only: there is no initial snapshot,
     replay, revision deduplication, automatic HTTP fetch, or reload handling.
     Close the helper or use its synchronous context manager on shutdown.
@@ -92,12 +99,17 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         reconnect_initial_delay_seconds: float = 2.0,
         reconnect_max_delay_seconds: float = 30.0,
         callback_queue_maxsize: int = 0,
+        heartbeat_timeout_seconds: float | None = 30.0,
         logger: logging.Logger | None = None,
     ):
         if callback is not None and not callable(callback):
             raise TypeError("callback must be callable")
         if callback_queue_maxsize < 0:
             raise ValueError("callback_queue_maxsize cannot be negative")
+        if heartbeat_timeout_seconds is not None and (
+            not math.isfinite(heartbeat_timeout_seconds) or heartbeat_timeout_seconds <= 0
+        ):
+            raise ValueError("heartbeat_timeout_seconds must be a positive finite number or None")
         if reconnect_initial_delay_seconds < 0 or reconnect_max_delay_seconds < reconnect_initial_delay_seconds:
             raise ValueError("Invalid reconnect delays")
         self._username, self._public_api_key = username, public_api_key
@@ -107,6 +119,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         self.reconnect_initial_delay_seconds = reconnect_initial_delay_seconds
         self.reconnect_max_delay_seconds = reconnect_max_delay_seconds
         self.callback_queue_maxsize = callback_queue_maxsize
+        self.heartbeat_timeout_seconds = heartbeat_timeout_seconds
         self._default_callback = callback
         self._callback = callback
         self._subscribed = False
@@ -119,6 +132,10 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         self._stop_requested = threading.Event()
         self._connection_task = None
         self._restore_task = None
+        self._heartbeat_task = None
+        self._heartbeat_monitor_started_at = None
+        self._last_heartbeat_monotonic = None
+        self._heartbeat_overdue = False
         self.hub_connection = None
         self._handlers_registered_for_client = set()
         self._subscription_lock = None
@@ -169,20 +186,23 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
     async def _on_open(self) -> None:
         if self._restore_task is not None:
             self._restore_task.cancel()
+        await self._stop_heartbeat_monitor()
         self._connected.set()
         self._register_handler()
         if self._subscribed:
+            self._start_heartbeat_monitor()
             self._restore_task = asyncio.create_task(self._restore_subscription())
 
     async def _on_close(self) -> None:
         self._connected.clear()
+        await self._stop_heartbeat_monitor()
         if self._restore_task is not None:
             self._restore_task.cancel()
 
     def _register_handler(self) -> None:
         handlers = {
             ACCEPTED_BOA_PUSH_NAME: self._handle_batch,
-            "heartbeat": self._ignore_broadcast,
+            "heartbeat": self._handle_heartbeat,
             "zeroPnUpdate": self._ignore_broadcast,
         }
         for name, handler in handlers.items():
@@ -194,6 +214,57 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
     async def _ignore_broadcast(*_args) -> None:
         """Ignore known server-wide broadcasts unrelated to this feed."""
         pass
+
+    async def _handle_heartbeat(self, *_args) -> None:
+        """Measure local receipt time; server timestamp formats and clock skew are irrelevant."""
+        if not self.is_connected or self._stop_requested.is_set():
+            return
+        self._last_heartbeat_monotonic = monotonic()
+        if self._heartbeat_overdue:
+            self._heartbeat_overdue = False
+            self.logger.info("Enact heartbeat resumed; live heartbeat delivery has recovered.")
+
+    def _start_heartbeat_monitor(self) -> None:
+        if self.heartbeat_timeout_seconds is None:
+            return
+        self._heartbeat_monitor_started_at = monotonic()
+        self._last_heartbeat_monotonic = None
+        self._heartbeat_overdue = False
+        if self._heartbeat_task is None or self._heartbeat_task.done():
+            self._heartbeat_task = asyncio.create_task(self._monitor_heartbeat())
+
+    async def _stop_heartbeat_monitor(self) -> None:
+        if self._heartbeat_task is not None:
+            self._heartbeat_task.cancel()
+            await asyncio.gather(self._heartbeat_task, return_exceptions=True)
+            self._heartbeat_task = None
+        self._heartbeat_monitor_started_at = None
+        self._last_heartbeat_monotonic = None
+        self._heartbeat_overdue = False
+
+    async def _monitor_heartbeat(self) -> None:
+        while True:
+            await asyncio.sleep(min(5.0, self.heartbeat_timeout_seconds))
+            self._check_heartbeat()
+
+    def _check_heartbeat(self) -> None:
+        if (
+            self.heartbeat_timeout_seconds is None
+            or self._heartbeat_monitor_started_at is None
+            or not self._subscribed
+            or not self.is_connected
+            or self._stop_requested.is_set()
+        ):
+            return
+        last_received = self._last_heartbeat_monotonic
+        if last_received is None:
+            last_received = self._heartbeat_monitor_started_at
+        age = monotonic() - last_received
+        if age >= self.heartbeat_timeout_seconds and not self._heartbeat_overdue:
+            self._heartbeat_overdue = True
+            self.logger.warning(
+                "Enact heartbeat overdue: no heartbeat received for %.1f seconds; live updates may be stale.", age
+            )
 
     def _get_subscription_lock(self):
         if self._subscription_lock is None:
@@ -207,6 +278,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                 self._register_handler()
                 await self._join(timeout)
                 self._subscribed = True
+                self._start_heartbeat_monitor()
             return ACCEPTED_BOA_PUSH_NAME
 
     async def _join(self, timeout) -> None:
@@ -306,11 +378,13 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             if not self._subscribed:
                 return False
             self._subscribed = False
+            await self._stop_heartbeat_monitor()
             self._callback = None
             await self._leave_signalr_group(ACCEPTED_BOA_PUSH_NAME, timeout=timeout)
             return True
 
     async def _shutdown_async(self, *, wait_for_callbacks: bool, leave_groups_timeout: float = 5) -> None:
+        await self._stop_heartbeat_monitor()
         if self._restore_task is not None:
             self._restore_task.cancel()
             await asyncio.gather(self._restore_task, return_exceptions=True)

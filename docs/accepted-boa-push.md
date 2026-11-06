@@ -22,6 +22,7 @@ with AcceptedBoaDPSHelper(
     os.environ["LCPDELTA_ENACT_API_KEY"],
     callback=on_update,
     callback_queue_maxsize=1000,
+    heartbeat_timeout_seconds=30,
 ) as stream:
     stream.subscribe_to_accepted_boa_updates()
     Event().wait()
@@ -33,7 +34,11 @@ Callbacks accept one `AcceptedBoaPush` and may be sync or async. Each source bat
 
 A positive `callback_queue_maxsize` bounds queued plus running callbacks and applies receive backpressure. Zero is unbounded. Callback failures are logged without row contents; failed callbacks are not retried. Unsubscribe stops future delivery; already queued batches may finish. `close(wait_for_callbacks=True)` drains queued work during orderly shutdown.
 
-The helper ignores the server-wide `heartbeat` and `zeroPnUpdate` application broadcasts. This prevents missing-handler warnings for those known unrelated events without adding subscriptions or changing logger levels. Other unhandled-event warnings and connection errors remain visible.
+The engine broadcasts `heartbeat` every five seconds. While subscribed and connected, the helper logs one warning if no heartbeat arrives for `heartbeat_timeout_seconds` (default 30 seconds), then one INFO message when receipt resumes. It checks at intervals of at most five seconds using local monotonic receipt time, independently of the server timestamp. Disconnect, unsubscribe and shutdown stop monitoring; reconnect starts a fresh grace period. Set a positive finite timeout to customize it, or `None` to disable monitoring. Healthy heartbeats do not produce log messages or BOA callbacks.
+
+An overdue heartbeat means engine-to-client delivery may be stale, even if SignalR remains connected. It does not prove the transport is disconnected or detect missed BOA batches, and does not trigger a reconnect or HTTP fetch.
+
+The helper ignores the server-wide `zeroPnUpdate` broadcast, which tells frontend plant details to refresh last-off/zero-PN information. Both known events have handlers, so they produce no missing-handler warnings. Other unhandled-event warnings and connection errors remain visible.
 
 ## Public wire contract
 

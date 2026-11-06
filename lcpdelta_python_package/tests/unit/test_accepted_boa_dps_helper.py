@@ -1,11 +1,13 @@
 import asyncio
 import json
+import logging
 import threading
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
+import lcp_delta.enact.accepted_boa_dps_helper as boa_module
 
 from lcp_delta.common.http.exceptions import EnactApiError
 from lcp_delta.enact import AcceptedBoaDPSHelper, AcceptedBoaPush
@@ -338,5 +340,155 @@ def test_backpressured_batch_keeps_its_callback_when_unsubscribing():
         await asyncio.wait_for(stream._queue.join(), 1)
         assert received == [1, 2]
         await stream._shutdown_async(wait_for_callbacks=True)
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("timeout", [0, -1, float("nan"), float("inf"), -float("inf")])
+def test_heartbeat_timeout_requires_positive_finite_value(timeout):
+    with pytest.raises(ValueError, match="heartbeat_timeout_seconds"):
+        helper(heartbeat_timeout_seconds=timeout)
+
+
+def test_heartbeat_warns_once_per_outage_and_logs_recovery_using_local_receipt_time(monkeypatch, caplog):
+    clock = [100.0]
+    monkeypatch.setattr(boa_module, "monotonic", lambda: clock[0])
+    caplog.set_level(logging.INFO)
+
+    async def run():
+        stream = helper()
+        await stream._subscribe(lambda _batch: pytest.fail("Heartbeat reached BOA callback"), 1)
+        clock[0] = 129.9
+        stream._check_heartbeat()
+        assert not caplog.records
+        clock[0] = 130
+        stream._check_heartbeat()
+        clock[0] = 180
+        stream._check_heartbeat()
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.WARNING
+        assert "live updates may be stale" in caplog.text
+        assert stream.is_connected
+
+        # The server timestamp can be invalid or skewed; only receipt time matters.
+        await stream.hub_connection.handlers["heartbeat"](["invalid-server-timestamp"])
+        await stream.hub_connection.handlers["heartbeat"](["different-server-clock"])
+        assert len(caplog.records) == 2
+        assert caplog.records[1].levelno == logging.INFO
+        assert "resumed" in caplog.records[1].getMessage()
+        clock[0] = 209.9
+        stream._check_heartbeat()
+        assert len(caplog.records) == 2
+        clock[0] = 210
+        await stream.hub_connection.handlers["zeroPnUpdate"]([])
+        stream._check_heartbeat()
+        assert len(caplog.records) == 3
+        assert stream._queue is None
+        assert stream.hub_connection.calls == [("JoinAcceptedBoaPush", [])]
+        await stream._shutdown_async(wait_for_callbacks=True)
+
+    asyncio.run(run())
+
+
+def test_heartbeat_monitor_pauses_on_disconnect_and_resets_grace_on_reconnect(monkeypatch, caplog):
+    clock = [100.0]
+    monkeypatch.setattr(boa_module, "monotonic", lambda: clock[0])
+
+    async def run():
+        stream = helper()
+        await stream._subscribe(lambda _batch: None, 1)
+        first_monitor = stream._heartbeat_task
+        clock[0] = 130
+        stream._check_heartbeat()
+        assert len(caplog.records) == 1
+        await stream._on_close()
+        assert first_monitor.cancelled()
+        clock[0] = 1000
+        stream._check_heartbeat()
+        assert len(caplog.records) == 1
+        stream.hub_connection = FakeHub()
+        stream._handlers_registered_for_client = set()
+        await stream._on_open()
+        clock[0] = 1029.9
+        stream._check_heartbeat()
+        assert len(caplog.records) == 1
+        clock[0] = 1030
+        stream._check_heartbeat()
+        assert len(caplog.records) == 2
+        await stream._shutdown_async(wait_for_callbacks=True)
+        assert stream._heartbeat_task is None
+
+    asyncio.run(run())
+
+
+def test_unsubscribe_and_shutdown_cancel_heartbeat_monitor_without_false_warnings(monkeypatch, caplog):
+    clock = [100.0]
+    monkeypatch.setattr(boa_module, "monotonic", lambda: clock[0])
+
+    async def run():
+        stream = helper()
+        callback = lambda _batch: None
+        await stream._subscribe(callback, 1)
+        first_monitor = stream._heartbeat_task
+        await stream._unsubscribe(1)
+        clock[0] = 1000
+        stream._check_heartbeat()
+        assert first_monitor.cancelled()
+        assert stream._heartbeat_task is None
+        assert not caplog.records
+        await stream._subscribe(callback, 1)
+        second_monitor = stream._heartbeat_task
+        assert second_monitor is not first_monitor
+        clock[0] = 2000
+        stream._stop_requested.set()
+        stream._check_heartbeat()
+        assert not caplog.records
+        await stream._shutdown_async(wait_for_callbacks=True)
+        assert second_monitor.cancelled()
+        assert stream._heartbeat_task is None
+
+    asyncio.run(run())
+
+
+def test_heartbeat_monitor_can_be_disabled(monkeypatch, caplog):
+    clock = [100.0]
+    monkeypatch.setattr(boa_module, "monotonic", lambda: clock[0])
+
+    async def run():
+        stream = helper(heartbeat_timeout_seconds=None)
+        await stream._subscribe(lambda _batch: None, 1)
+        assert stream._heartbeat_task is None
+        clock[0] = 10000
+        stream._check_heartbeat()
+        await stream._handle_heartbeat([])
+        assert not caplog.records
+        await stream._shutdown_async(wait_for_callbacks=True)
+
+    asyncio.run(run())
+
+
+def test_heartbeat_watchdog_task_checks_freshness_without_a_heartbeat(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr(boa_module, "monotonic", lambda: clock[0])
+
+    async def run():
+        warning = asyncio.Event()
+
+        class CaptureWarning(logging.Handler):
+            def emit(self, record):
+                if "Enact heartbeat overdue" in record.getMessage():
+                    warning.set()
+
+        logger = logging.Logger("heartbeat-watchdog-test")
+        logger.addHandler(CaptureWarning())
+        stream = helper(heartbeat_timeout_seconds=0.01, logger=logger)
+        await stream._subscribe(lambda _batch: None, 1)
+        clock[0] = 101
+        try:
+            await asyncio.wait_for(warning.wait(), 1)
+            assert stream._heartbeat_overdue
+            assert stream.is_connected
+        finally:
+            await stream._shutdown_async(wait_for_callbacks=True)
 
     asyncio.run(run())
