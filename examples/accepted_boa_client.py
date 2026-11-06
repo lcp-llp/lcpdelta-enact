@@ -21,7 +21,6 @@ def on_update(batch: AcceptedBoaPush) -> None:
     # Each collection contains changed rows only, not a complete snapshot.
     # If maintaining state, remove old deltaIds before inserting changed rows.
     table_rows = []
-    row_ids = []
     for action, side, rows, price_key in (
         ("REMOVED", "BID", batch.removed_accepted_bids, "bidPrice"),
         ("REMOVED", "OFFER", batch.removed_accepted_offers, "offerPrice"),
@@ -37,19 +36,19 @@ def on_update(batch: AcceptedBoaPush) -> None:
                 row.get("bodId"),
                 row.get("volume"),
                 row.get(price_key),
+                # Match the site's flagged filter: SO, STOR or CADL.
+                "Yes" if any(row.get(flag, False) for flag in ("soFlag", "storFlag", "cadlFlag")) else "No",
                 row.get("acceptedTime"),
             )
             table_rows.append(["-" if value is None else str(value) for value in values])
-            row_ids.append(row["deltaId"])
 
     table = pd.DataFrame(
-        table_rows, columns=["Row", "Change", "Side", "Plant", "BOD", "Volume", "Price", "Accepted time"]
+        table_rows, columns=["Row", "Change", "Side", "Plant", "BOD", "Volume", "Price", "Flagged", "Accepted time"]
     )
     print(
         f"\nReceived at: {received_at} (local callback time)\n"
         f"Settlement date: {batch.date} | Period: {batch.period} | Revision: {batch.revision}\n"
-        f"{table.to_string(index=False)}\n"
-        "Row IDs (deltaId):\n" + "\n".join(f"  [{number}] {row_id}" for number, row_id in enumerate(row_ids, start=1)),
+        f"{table.to_string(index=False)}",
         flush=True,
     )
 
