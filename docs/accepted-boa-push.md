@@ -38,7 +38,7 @@ The engine broadcasts `heartbeat` every five seconds. While subscribed and conne
 
 An overdue heartbeat means engine-to-client delivery may be stale, even if SignalR remains connected. It does not prove the transport is disconnected or detect missed BOA batches, and does not trigger a reconnect or HTTP fetch.
 
-The helper ignores the server-wide `zeroPnUpdate` broadcast, which tells frontend plant details to refresh last-off/zero-PN information. Both known events have handlers, so they produce no missing-handler warnings. Other unhandled-event warnings and connection errors remain visible.
+The helper ignores the server-wide `zeroPnUpdate` broadcast, which tells frontend plant details to refresh last-off/zero-PN information, and `earliestDateInBuffer`, which tells frontend charts the earliest date available in the live buffer for choosing live versus historical requests. These broadcasts do not affect BOA callbacks or heartbeat monitoring. All three known events have handlers, so they produce no missing-handler warnings. Other unhandled-event warnings and connection errors remain visible.
 
 ## Public wire contract
 

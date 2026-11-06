@@ -204,6 +204,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             ACCEPTED_BOA_PUSH_NAME: self._handle_batch,
             "heartbeat": self._handle_heartbeat,
             "zeroPnUpdate": self._ignore_broadcast,
+            "earliestDateInBuffer": self._ignore_broadcast,
         }
         for name, handler in handlers.items():
             if name not in self._handlers_registered_for_client:

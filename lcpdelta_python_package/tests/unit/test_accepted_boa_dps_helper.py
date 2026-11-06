@@ -107,7 +107,12 @@ def test_subscription_reuses_group_and_updates_callback_without_duplicate_handle
         assert stream._callback is second
         assert stream.group_names == (ACCEPTED_BOA_PUSH_NAME,)
         assert stream.hub_connection.calls == [("JoinAcceptedBoaPush", [])]
-        assert list(stream.hub_connection.handlers) == [ACCEPTED_BOA_PUSH_NAME, "heartbeat", "zeroPnUpdate"]
+        assert list(stream.hub_connection.handlers) == [
+            ACCEPTED_BOA_PUSH_NAME,
+            "heartbeat",
+            "zeroPnUpdate",
+            "earliestDateInBuffer",
+        ]
         assert await stream._unsubscribe(1)
         assert not await stream._unsubscribe(1)
         assert stream.hub_connection.calls[-1] == ("LeaveGroup", [ACCEPTED_BOA_PUSH_NAME])
@@ -380,7 +385,9 @@ def test_heartbeat_warns_once_per_outage_and_logs_recovery_using_local_receipt_t
         stream._check_heartbeat()
         assert len(caplog.records) == 2
         clock[0] = 210
-        await stream.hub_connection.handlers["zeroPnUpdate"]([])
+        for name in ("zeroPnUpdate", "earliestDateInBuffer"):
+            await stream.hub_connection.handlers[name]([])
+        assert stream._last_heartbeat_monotonic == 180
         stream._check_heartbeat()
         assert len(caplog.records) == 3
         assert stream._queue is None
