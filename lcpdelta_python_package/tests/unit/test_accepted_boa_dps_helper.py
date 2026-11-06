@@ -121,7 +121,9 @@ def test_subscription_reuses_group_and_updates_callback_without_duplicate_handle
     asyncio.run(run())
 
 
-def test_join_errors_keep_structured_fields():
+def test_join_errors_keep_structured_fields(caplog):
+    caplog.set_level(logging.INFO)
+
     async def run():
         stream = helper()
         stream.hub_connection.responses["JoinAcceptedBoaPush"] = {
@@ -132,6 +134,7 @@ def test_join_errors_keep_structured_fields():
         assert error.value.error_code == "DataCapped"
         assert error.value.message == "Allowance exhausted"
         assert not stream._subscribed
+        assert "Subscribed to accepted BOA updates." not in caplog.text
 
     asyncio.run(run())
 
@@ -151,7 +154,9 @@ def test_reconnect_restores_future_delivery_and_rejoins_expired_subscription():
     asyncio.run(run())
 
 
-def test_unauthorized_reconnect_does_not_fall_back_to_join():
+def test_unauthorized_reconnect_does_not_fall_back_to_join(caplog):
+    caplog.set_level(logging.INFO)
+
     async def run():
         stream = helper(reconnect=False)
         stream._subscribed = True
@@ -160,6 +165,7 @@ def test_unauthorized_reconnect_does_not_fall_back_to_join():
         }
         await stream._restore_subscription()
         assert [method for method, _ in stream.hub_connection.calls] == ["ReconnectToPush"]
+        assert "subscription restored" not in caplog.text
 
     asyncio.run(run())
 
@@ -231,7 +237,8 @@ def test_malformed_and_empty_batches_are_ignored_without_logging_customer_data(c
     asyncio.run(run())
 
 
-def test_public_sync_async_subscription_and_close_parity_without_network():
+def test_public_sync_async_subscription_and_close_parity_without_network(caplog):
+    caplog.set_level(logging.INFO)
     stream = helper()
     stream.connect = lambda **_kwargs: stream
     stream._start_loop_thread()
@@ -246,6 +253,12 @@ def test_public_sync_async_subscription_and_close_parity_without_network():
         assert not stream._thread.is_alive()
         assert stream.hub_connection.closed
         stream.close()
+        messages = [record.getMessage() for record in caplog.records]
+        assert messages.count("Closing accepted BOA SignalR connection...") == 1
+        assert messages.count("Accepted BOA SignalR connection closed.") == 1
+        assert messages.index("Closing accepted BOA SignalR connection...") < messages.index(
+            "Accepted BOA SignalR connection closed."
+        )
     finally:
         if not stream._closed:
             stream.close()
@@ -363,6 +376,7 @@ def test_heartbeat_warns_once_per_outage_and_logs_recovery_using_local_receipt_t
     async def run():
         stream = helper()
         await stream._subscribe(lambda _batch: pytest.fail("Heartbeat reached BOA callback"), 1)
+        caplog.clear()
         clock[0] = 129.9
         stream._check_heartbeat()
         assert not caplog.records
@@ -410,20 +424,59 @@ def test_heartbeat_monitor_pauses_on_disconnect_and_resets_grace_on_reconnect(mo
         assert len(caplog.records) == 1
         await stream._on_close()
         assert first_monitor.cancelled()
+        caplog.clear()
         clock[0] = 1000
         stream._check_heartbeat()
-        assert len(caplog.records) == 1
+        assert not caplog.records
         stream.hub_connection = FakeHub()
         stream._handlers_registered_for_client = set()
         await stream._on_open()
         clock[0] = 1029.9
         stream._check_heartbeat()
-        assert len(caplog.records) == 1
+        assert not caplog.records
         clock[0] = 1030
         stream._check_heartbeat()
-        assert len(caplog.records) == 2
+        assert len(caplog.records) == 1
         await stream._shutdown_async(wait_for_callbacks=True)
         assert stream._heartbeat_task is None
+
+    asyncio.run(run())
+
+
+def test_lifecycle_logs_distinguish_open_connection_from_restored_subscription(caplog):
+    caplog.set_level(logging.INFO)
+
+    async def run():
+        stream = helper(heartbeat_timeout_seconds=None)
+        stream._connected.clear()
+        await stream._on_open()
+        assert "SignalR connection opened." in caplog.text
+        assert "Subscribed to accepted BOA updates." not in caplog.text
+
+        await stream._subscribe(lambda _batch: None, 1)
+        await stream._subscribe(lambda _batch: None, 1)
+        assert caplog.text.count("Subscribed to accepted BOA updates.") == 1
+
+        caplog.clear()
+        await stream._on_close()
+        await stream._on_close()
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.WARNING
+        assert "may be missed while disconnected" in caplog.text
+
+        await stream._on_open()
+        assert "Restoring accepted BOA subscription..." in caplog.text
+        assert "subscription restored" not in caplog.text
+        await stream._restore_task
+        assert "Accepted BOA subscription restored" in caplog.text
+        assert "not replayed" in caplog.text
+
+        caplog.clear()
+        stream._stop_requested.set()
+        await stream._on_close()
+        assert not caplog.records  # Orderly shutdown should not warn about unexpected disconnection.
+        await stream._shutdown_async(wait_for_callbacks=True)
+        assert "Stopped accepted BOA subscription." in caplog.text
 
     asyncio.run(run())
 

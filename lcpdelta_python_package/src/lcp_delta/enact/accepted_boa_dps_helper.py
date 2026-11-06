@@ -189,15 +189,20 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         await self._stop_heartbeat_monitor()
         self._connected.set()
         self._register_handler()
+        self.logger.info("SignalR connection opened.")
         if self._subscribed:
+            self.logger.info("Restoring accepted BOA subscription...")
             self._start_heartbeat_monitor()
             self._restore_task = asyncio.create_task(self._restore_subscription())
 
     async def _on_close(self) -> None:
+        was_connected = self.is_connected
         self._connected.clear()
         await self._stop_heartbeat_monitor()
         if self._restore_task is not None:
             self._restore_task.cancel()
+        if was_connected and not self._stop_requested.is_set():
+            self.logger.warning("SignalR connection closed; accepted BOA updates may be missed while disconnected.")
 
     def _register_handler(self) -> None:
         handlers = {
@@ -280,6 +285,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                 await self._join(timeout)
                 self._subscribed = True
                 self._start_heartbeat_monitor()
+                self.logger.info("Subscribed to accepted BOA updates.")
             return ACCEPTED_BOA_PUSH_NAME
 
     async def _join(self, timeout) -> None:
@@ -312,6 +318,12 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                         if exc.error_code not in {"DataFormatError", "ReconnectUnavailable"}:
                             raise
                         await self._join(30)
+                    if not self.is_connected or self._stop_requested.is_set():
+                        return
+                    self.logger.info(
+                        "Accepted BOA subscription restored; listening for future updates. "
+                        "Updates missed during disconnection are not replayed."
+                    )
                 return
             except asyncio.CancelledError:
                 raise
@@ -382,6 +394,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             await self._stop_heartbeat_monitor()
             self._callback = None
             await self._leave_signalr_group(ACCEPTED_BOA_PUSH_NAME, timeout=timeout)
+            self.logger.info("Stopped accepted BOA subscription.")
             return True
 
     async def _shutdown_async(self, *, wait_for_callbacks: bool, leave_groups_timeout: float = 5) -> None:
@@ -407,6 +420,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             raise RuntimeError("Close the helper from outside its callback loop")
         if self._closed:
             return
+        self.logger.info("Closing accepted BOA SignalR connection...")
         self._stop_requested.set()
         drained = False
         try:
@@ -430,6 +444,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                     wait=wait_for_callbacks and drained, cancel_futures=not wait_for_callbacks or not drained
                 )
             self._closed = True
+        self.logger.info("Accepted BOA SignalR connection closed.")
 
     async def async_close(self, *, wait_for_callbacks: bool = True, timeout: float = 10) -> None:
         """Close without blocking the caller's event loop; call outside this helper's callbacks."""

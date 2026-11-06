@@ -30,6 +30,10 @@ with AcceptedBoaDPSHelper(
 
 `remove_bid` and `replace_bid` represent application code. The runnable example is `examples/accepted_boa_client.py`. In an asyncio application use `async_subscribe_to_accepted_boa_updates()`, `async_unsubscribe_from_accepted_boa_updates()`, and `async_close()`. Construct with `auto_connect=False` to defer network activity until subscribing.
 
+The runnable example displays each batch as a table with settlement date, period, revision and full row IDs. Its UTC "Received at" timestamp records when the local callback begins; queued work can delay it beyond network receipt. It is separate from each row's source `acceptedTime`. Replace this example display callback with your own handling of the raw batch.
+
+At INFO level, the helper logs connection opening, successful subscription, restoration start/success, subscription stop and connection shutdown. An unexpected disconnect logs a warning. Restoration success is logged only after the server confirms the subscription, and notes that missed updates are not replayed. Enable INFO logging as the example does to see these lifecycle messages.
+
 Callbacks accept one `AcceptedBoaPush` and may be sync or async. Each source batch results in one callback, containing four tuples of public row dictionaries. Callbacks run sequentially; synchronous callbacks run on a dedicated worker thread, while asynchronous callbacks run on the helper's background event loop. Do not assume the callback runs on the application's event loop. Keep callbacks fast and close the helper from outside its callbacks.
 
 A positive `callback_queue_maxsize` bounds queued plus running callbacks and applies receive backpressure. Zero is unbounded. Callback failures are logged without row contents; failed callbacks are not retried. Unsubscribe stops future delivery; already queued batches may finish. `close(wait_for_callbacks=True)` drains queued work during orderly shutdown.
