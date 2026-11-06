@@ -51,6 +51,10 @@ print(response.head(5))
 
 Check out our [**API guides**][Api_Docs] for detailed instructions on getting started with the API, our [**Recipes page**][Api_Recipes] for example scripts using our Python package, and our [**API reference**][Api_Reference] for details on each specific API endpoint (and corresponding Python package method).
 
+### Accepted BOA push updates
+
+`enact.AcceptedBoaDPSHelper` receives batches of live GB accepted bid/offer changes, including removals, through the public SignalR API. It requires live GB BOA access and the compatible backend. Each callback receives one `AcceptedBoaPush` containing date, period, source revision, and changed/removed accepted-row collections. See the [contract and usage guide](docs/accepted-boa-push.md) and [runnable example](examples/accepted_boa_client.py).
+
 Full documentation of our API and Python package can be found on our [**documentation site**][Api_Docs].
 
 [Api_Docs]: https://api.lcpdelta.com/
