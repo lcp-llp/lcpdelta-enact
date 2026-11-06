@@ -107,13 +107,13 @@ The example row is illustrative, not an exhaustive schema. Define its complete a
 
 ### Verification outcome
 
-- Python: **68 credential-free unit tests passed** against the local checkout, including the new helper, existing live helpers, C# contract fixture decoding, backpressure/unsubscribe regression, and shutdown timeout cleanup.
+- Python: **77 credential-free unit tests passed** against the local checkout after merging the latest `main`, including the new helper, existing live helpers, C# contract fixture decoding, backpressure/unsubscribe regression, shutdown timeout cleanup, and existing skip-rates tests.
 - Backend: **68 focused xUnit tests passed**, covering accepted-BOA projection/publication, the shared JSON contract fixture, existing frontend BOA behaviour, DPS access/subscriptions, rate limiting, and connection tracking.
 - The SignalR project and xUnit project/dependencies (including engine/buffer consumers) built successfully. Existing compiler warnings and unavailable NuGet vulnerability feeds remain; no new compile errors remain.
 - Direct Ruff lint and formatting checks passed for all seven changed Python code/test/example files. The configured pre-commit runner could not initialize because the installed `virtualenv` dependency chain lacks `filelock`; no environment repair was attempted.
 - Built `dist/lcpdelta-1.1.10-py3-none-any.whl` from final sources. The C# and Python copies of `accepted-boa-push.json` are identical.
 - Final diff review completed; Python whitespace checks passed, and backend whitespace checks passed with CRLF recognized as Windows line endings. Existing user endpoint edits and untracked instruction/worktree files were preserved.
-- Live integration was **not run**: these additive hub/engine changes are not deployed. The integration subscription test is ready for an entitled account against a compatible deployment; controlled acceptance-update verification remains a release follow-up. No deployment, package publication, PR modification, or commit was performed.
+- Live integration was **not run**: these additive hub/engine changes are not deployed. The integration subscription test is ready for an entitled account against a compatible deployment; controlled acceptance-update verification remains a release follow-up. Implementation was subsequently committed and published in the PRs recorded below; no deployment or package publication was performed.
 
 ## Current Unknowns
 
@@ -153,3 +153,4 @@ The example row is illustrative, not an exhaustive schema. Define its complete a
 | 2026-11-06 | Added AcceptedBoaDPSHelper, private shared connection lifecycle, mock-based tests, subscription integration test, runnable example, and contract documentation. Local-source Python suite passes 67 tests; package 1.1.10 wheel builds. Shared connection also retries initial auth failures and cancels residual tasks on shutdown. |
 | 2026-11-06 | Pre-commit could not initialize its virtualenv because the installed environment lacks `filelock`. Direct Ruff validation is used and the environment limitation is retained; existing backend builds also emit NuGet vulnerability-feed and pre-existing compiler warnings. |
 | 2026-11-06 | Completed local implementation and final review. All 68 Python unit tests and 68 focused backend tests pass, the shared JSON fixture matches both implementations, direct Ruff checks pass, and the final 1.1.10 wheel builds. Live integration, deployment and external publication remain release follow-ups. |
+| 2026-11-06 | Committed and pushed both implementations at the user's request. Backend PR [83869](https://dev.azure.com/lcpdevelop/Enact/_git/Enact/pullrequest/83869) and Python PR [88](https://github.com/lcp-llp/lcpdelta-enact/pull/88) both target main. Backend commit `f1ca294804` depends on PR 80581. Python implementation commit `961d23f` was followed by merge `559c013` from current main; all 77 Python unit tests pass after that merge. Existing endpoint edits and AGENTS.md remain outside the commits. |
