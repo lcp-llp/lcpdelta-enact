@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "LCPDelta"
-version = "1.1.9"
+version = "1.1.10"
 authors = [
   { name="LCP Delta", email="enact.helpdesk@lcp.uk.com" },
 ]
@@ -62,6 +62,7 @@ select = ["FBT003", "RET504"]
 
 [tool.pytest.ini_options]
 testpaths = ["lcpdelta_python_package/tests/unit"]
+pythonpath = ["lcpdelta_python_package/src"]
 
 [tool.setuptools.packages.find]
 where = ["lcpdelta_python_package/src"]
