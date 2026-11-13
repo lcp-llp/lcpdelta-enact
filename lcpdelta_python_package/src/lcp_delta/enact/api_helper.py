@@ -2251,7 +2251,7 @@ class APIHelper(APIHelperBase):
             request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
             response = self._get_request(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
             if response is None:
-                raise ValueError("NIV evolution API returned null instead of a paginated response.")
+                raise ValueError("NIV evolution pagination failed.")
             day_data = niv_evolution_service.process_response(response["data"])
             all_data.append(day_data)
                 
