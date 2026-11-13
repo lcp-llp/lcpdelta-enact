@@ -10,7 +10,7 @@ COLUMNS = ["Date", "Period", "Metric", "Timestamp", "Value"]
 
 def _validate_options(options: list[str]):
     if any(option.casefold() in {"systemprice", "1"} for option in options):
-        raise ValueError("SystemPrice is not supported for NIV evolution because backend data collection is disabled.")
+        raise ValueError("SystemPrice is not currently supported for Niv evolution")
 
 
 def generate_by_period_request(period: int, date: datetime, options: list[str]):
