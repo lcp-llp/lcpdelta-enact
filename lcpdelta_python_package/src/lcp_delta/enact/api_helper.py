@@ -2250,9 +2250,20 @@ class APIHelper(APIHelperBase):
         while more_pages:
             request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
             response = self._get_request(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
+
+            page_date = cursor or start_date.strftime("%Y-%m-%d")
             if response is None:
-                raise ValueError("NIV evolution pagination failed.")
-            day_data = niv_evolution_service.process_response(response["data"])
+                raise ValueError(
+                    f"NIV evolution API pagination failed for {page_date}."
+                )
+            
+            try:
+                day_data = niv_evolution_service.process_response(response["data"])
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ValueError(
+                    f"Failed to process NIV evolution page {page_date}: {exc}"
+                ) from exc
+            
             all_data.append(day_data)
                 
             cursor = response.get("nextCursor")
@@ -2278,9 +2289,20 @@ class APIHelper(APIHelperBase):
         while more_pages:
             request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
             response = await self._get_request_async(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
+
+            page_date = cursor or start_date.strftime("%Y-%m-%d")
             if response is None:
-                raise ValueError("NIV evolution API returned null instead of a paginated response.")
-            day_data = niv_evolution_service.process_response(response["data"])
+                raise ValueError(
+                    f"NIV evolution API pagination failed for {page_date}."
+                )
+            
+            try:
+                day_data = niv_evolution_service.process_response(response["data"])
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ValueError(
+                    f"Failed to process NIV evolution page {page_date}: {exc}"
+                ) from exc
+            
             all_data.append(day_data)
                 
             cursor = response.get("nextCursor")
