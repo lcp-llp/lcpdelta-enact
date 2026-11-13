@@ -103,7 +103,7 @@ async def test_range_null_or_entirely_empty(asynchronous, response):
     setattr(api, "_get_request_async" if asynchronous else "_get_request", request)
     method = getattr(api, "get_niv_evolution_for_date_range" + ("_async" if asynchronous else ""))
     if response is None:
-        with pytest.raises(ValueError, match="NIV evolution API returned null"):
+        with pytest.raises(ValueError, match=r"NIV evolution API pagination failed for 2026-11-10\."):
             if asynchronous:
                 await method(DAY, DAY, OPTIONS)
             else:
