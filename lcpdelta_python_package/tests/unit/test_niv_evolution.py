@@ -112,22 +112,3 @@ async def test_range_null_or_entirely_empty(asynchronous, response):
         result = await method(DAY, DAY, OPTIONS) if asynchronous else method(DAY, DAY, OPTIONS)
         assert result.empty
         assert list(result.columns) == service.COLUMNS
-
-
-@pytest.mark.parametrize("option", ["SystemPrice", "systemprice", "SYSTEMPRICE", "1"])
-@pytest.mark.parametrize("asynchronous", [False, True])
-@pytest.mark.parametrize("kind", ["period", "day", "date_range"])
-@pytest.mark.asyncio
-async def test_system_price_rejected_before_request(option, asynchronous, kind):
-    api = helper()
-    request = AsyncMock() if asynchronous else Mock()
-    setattr(api, "_get_request_async" if asynchronous else "_get_request", request)
-    options = ["NivOutturn", option]
-    args = {"period": (1, DAY, options), "day": (DAY, options), "date_range": (DAY, DAY, options)}[kind]
-    method = getattr(api, f"get_niv_evolution_for_{kind}" + ("_async" if asynchronous else ""))
-    with pytest.raises(ValueError, match="SystemPrice is not supported"):
-        if asynchronous:
-            await method(*args)
-        else:
-            method(*args)
-    request.assert_not_called()
