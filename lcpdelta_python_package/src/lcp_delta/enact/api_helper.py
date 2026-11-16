@@ -2115,7 +2115,6 @@ class APIHelper(APIHelperBase):
             options 'List[str]' : List of options to get evolution metrics for. Accepted values:
             [       
                 NivOutturn,
-                SystemPrice,
                 MostExpensiveBidAccepted,
                 MostExpensiveOfferAccepted,
                 MostExpensiveUnflaggedBidAccepted,
@@ -2167,7 +2166,6 @@ class APIHelper(APIHelperBase):
             options 'List[str]' : List of options to get evolution metrics for. Accepted values:
             [       
                 NivOutturn,
-                SystemPrice,
                 MostExpensiveBidAccepted,
                 MostExpensiveOfferAccepted,
                 MostExpensiveUnflaggedBidAccepted,
@@ -2211,7 +2209,11 @@ class APIHelper(APIHelperBase):
         options: list[str],
     ) -> pd.DataFrame:
         """
-        Get Niv Evolution Metrics for all periods, over a date range.
+        Get NIV evolution metrics over an inclusive date range.
+
+        Fetches every daily page automatically (one API usage unit per page).
+        Returns Date, Period, Metric, Timestamp and Value columns. Dates retain
+        the API's dd-MM-yyyy format; timestamps are returned without conversion.
 
         Args:
             start_date 'datetime' : start date to request
@@ -2220,7 +2222,6 @@ class APIHelper(APIHelperBase):
             options 'List[str]' : List of options to get evolution metrics for. Accepted values:
             [       
                 NivOutturn,
-                SystemPrice,
                 MostExpensiveBidAccepted,
                 MostExpensiveOfferAccepted,
                 MostExpensiveUnflaggedBidAccepted,
@@ -2249,13 +2250,21 @@ class APIHelper(APIHelperBase):
         while more_pages:
             request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
             response = self._get_request(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
-            page_data = response.get("data", {})
 
-            if not page_data:
-                print(f"No data for date: {cursor}")
-            else: 
-                day_data = niv_evolution_service.process_response(page_data)
-                all_data.append(day_data)
+            page_date = cursor or start_date.strftime("%Y-%m-%d")
+            if response is None:
+                raise ValueError(
+                    f"NIV evolution API pagination failed for {page_date}."
+                )
+            
+            try:
+                day_data = niv_evolution_service.process_response(response["data"])
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ValueError(
+                    f"Failed to process NIV evolution page {page_date}: {exc}"
+                ) from exc
+            
+            all_data.append(day_data)
                 
             cursor = response.get("nextCursor")
             if not cursor:
@@ -2264,7 +2273,7 @@ class APIHelper(APIHelperBase):
         if all_data:
             df_all = pd.concat(all_data, ignore_index=True)
         else:
-            df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
+            df_all = pd.DataFrame(columns=niv_evolution_service.COLUMNS)
         return df_all
     
     async def get_niv_evolution_for_date_range_async(
@@ -2280,13 +2289,21 @@ class APIHelper(APIHelperBase):
         while more_pages:
             request_body = niv_evolution_service.generate_date_range_request(start_date, end_date, options, cursor)
             response = await self._get_request_async(self.endpoints.NIV_EVOLUTION_DATE_RANGE, request_body, long_timeout=True)
-            page_data = response.get("data", {})
 
-            if not page_data:
-                print(f"No data for date: {cursor}")
-            else: 
-                day_data = niv_evolution_service.process_response(page_data)
-                all_data.append(day_data)
+            page_date = cursor or start_date.strftime("%Y-%m-%d")
+            if response is None:
+                raise ValueError(
+                    f"NIV evolution API pagination failed for {page_date}."
+                )
+            
+            try:
+                day_data = niv_evolution_service.process_response(response["data"])
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ValueError(
+                    f"Failed to process NIV evolution page {page_date}: {exc}"
+                ) from exc
+            
+            all_data.append(day_data)
                 
             cursor = response.get("nextCursor")
             if not cursor:
@@ -2295,7 +2312,7 @@ class APIHelper(APIHelperBase):
         if all_data:
             df_all = pd.concat(all_data, ignore_index=True)
         else:
-            df_all = pd.DataFrame(columns=["Date", "Period", "Timestamp"])
+            df_all = pd.DataFrame(columns=niv_evolution_service.COLUMNS)
         return df_all
     
     def get_carbon_emissions(
