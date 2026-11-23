@@ -69,6 +69,8 @@ class EnactApiEndpoints:
     @property
     def SERIES_INFO(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Info"
     @property
+    def SERIES_AVAILABILITY(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/availability"
+    @property
     def SERIES_BY_FUEL(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Fuel"
     @property
     def SERIES_BY_ZONE(self): return f"{self._base_endpoints.MAIN_BASE_URL}/EnactAPI/Series/Zone"
