@@ -51,6 +51,10 @@ print(response.head(5))
 
 Check out our [**API guides**][Api_Docs] for detailed instructions on getting started with the API, our [**Recipes page**][Api_Recipes] for example scripts using our Python package, and our [**API reference**][Api_Reference] for details on each specific API endpoint (and corresponding Python package method).
 
+### BOA push updates
+
+`enact.BoaDPSHelper` receives cleaned actual accepted and on-table bid/offer changes through one public SignalR subscription and one callback. The backend maintains a rolling 24-hour window from the current settlement period. Each `BoaPush` contains date, period, source revision and changed/removed collections. Predicted rows are ignored. See the [contract and usage guide](docs/boa-push.md) and [runnable example](examples/boa_client.py).
+
 Full documentation of our API and Python package can be found on our [**documentation site**][Api_Docs].
 
 [Api_Docs]: https://api.lcpdelta.com/
