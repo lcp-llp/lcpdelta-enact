@@ -1,0 +1,61 @@
+{
+  "item": {
+    "revision": 105,
+    "acceptedBids": [
+      {
+        "deltaId": "EXAMPLE_PLANT_-1_False_False_False_False_100_50",
+        "plantId": "EXAMPLE_PLANT",
+        "isBid": 1,
+        "isAccepted": 1,
+        "bodId": "-1",
+        "volume": -12.5,
+        "offerPrice": 100.0,
+        "bidPrice": 50.0,
+        "soFlag": false,
+        "storFlag": false,
+        "cadlFlag": false,
+        "cost": 0.0,
+        "bidOnTableTypeEnum": "TurnOn",
+        "fuelType": null,
+        "sel": null,
+        "mzt": null,
+        "ndb": null,
+        "ndo": null,
+        "ndz": null,
+        "mnzt": null,
+        "coords": [
+          0.0,
+          0.0
+        ],
+        "additionalBsadData": null,
+        "timeAccepted": null,
+        "colour": "private presentation",
+        "theoretical": false,
+        "nonBmPrediction": false
+      }
+    ],
+    "acceptedOffers": [],
+    "removedAcceptedBids": [],
+    "removedAcceptedOffers": [],
+    "previousRevision": 104,
+    "reloadRequired": false,
+    "tableBids": [
+      {
+        "bodId": "-1",
+        "plantId": "TABLE",
+        "isBid": 1,
+        "coords": null,
+        "deltaId": "TABLE_-1",
+        "isAccepted": 0,
+        "volume": -30.0
+      }
+    ],
+    "tableOffers": [],
+    "removedTableBids": [],
+    "removedTableOffers": []
+  },
+  "datePeriod": {
+    "period": 24,
+    "date": "2026-11-06T00:00:00"
+  }
+}

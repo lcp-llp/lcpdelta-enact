@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import logging
 import threading
@@ -7,33 +8,44 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-import lcp_delta.enact.accepted_boa_dps_helper as boa_module
+import lcp_delta.enact.boa_dps_helper as boa_module
 
 from lcp_delta.common.http.exceptions import EnactApiError
-from lcp_delta.enact import AcceptedBoaDPSHelper, AcceptedBoaPush
-from lcp_delta.enact.accepted_boa_dps_helper import ACCEPTED_BOA_PUSH_NAME
+from lcp_delta.enact import BoaDPSHelper, BoaPush
+from lcp_delta.enact.boa_dps_helper import BOA_PUSH_NAME
 
 
 def payload(revision=105):
     return {
-        "date": "2026-11-06",
-        "period": 24,
-        "revision": revision,
-        "acceptedBids": [{"deltaId": "bid-1", "isBid": True, "volume": -12.5, "sel": None}],
-        "acceptedOffers": [{"deltaId": "offer-1", "isBid": False, "volume": 20.0}],
-        "removedAcceptedBids": [{"deltaId": "old-bid", "isBid": True, "volume": -10.0}],
-        "removedAcceptedOffers": [],
+        "datePeriod": {"date": "2026-11-06T00:00:00", "period": 24},
+        "item": {
+            "previousRevision": revision - 1,
+            "revision": revision,
+            "reloadRequired": False,
+            "acceptedBids": [{"deltaId": "bid-1", "isBid": 1, "isAccepted": 1, "volume": -12.5, "sel": None}],
+            "acceptedOffers": [{"deltaId": "offer-1", "isBid": 0, "isAccepted": 1, "volume": 20.0}],
+            "removedAcceptedBids": [{"deltaId": "old-bid", "isBid": 1, "isAccepted": 1, "volume": -10.0}],
+            "removedAcceptedOffers": [],
+            "tableBids": [{"deltaId": "table-bid", "isBid": 1, "isAccepted": 0, "volume": -30.0}],
+            "tableOffers": [],
+            "removedTableBids": [],
+            "removedTableOffers": [{"deltaId": "old-table-offer", "isBid": 0, "isAccepted": 0, "volume": 40.0}],
+        },
     }
 
 
 def test_backend_serialization_fixture_decodes_without_losing_public_fields():
-    raw = json.loads((Path(__file__).parent / "fixtures/accepted-boa-push.json").read_text())
-    batch = AcceptedBoaPush.from_payload(raw)
+    raw = json.loads((Path(__file__).parent / "fixtures/boa-push.json").read_text())
+    batch = BoaPush.from_payload(raw)
     assert batch.date == date(2026, 11, 6)
     assert batch.revision == 105
-    assert batch.accepted_bids[0] == raw["acceptedBids"][0]
     assert batch.accepted_bids[0]["deltaId"] == "EXAMPLE_PLANT_-1_False_False_False_False_100_50"
     assert batch.accepted_bids[0]["acceptedTime"] is None
+    assert batch.accepted_bids[0]["isBid"] is True
+    assert batch.accepted_bids[0]["isAccepted"] is True
+    assert batch.table_bids[0]["isAccepted"] is False
+    assert "colour" not in batch.accepted_bids[0]
+    assert "theoretical" not in batch.accepted_bids[0]
 
 
 class FakeHub:
@@ -49,14 +61,14 @@ class FakeHub:
 
     async def send(self, method, args, callback):
         self.calls.append((method, args))
-        await callback(self.responses.get(method, {"data": {"pushName": ACCEPTED_BOA_PUSH_NAME}}))
+        await callback(self.responses.get(method, {"data": {"pushName": BOA_PUSH_NAME}}))
 
     async def close(self):
         self.closed = True
 
 
 def helper(callback=lambda _batch: None, **kwargs):
-    stream = AcceptedBoaDPSHelper("user", "key", callback, auto_connect=False, **kwargs)
+    stream = BoaDPSHelper("user", "key", callback, auto_connect=False, **kwargs)
     stream.hub_connection = FakeHub()
     stream._connected.set()
     return stream
@@ -64,8 +76,8 @@ def helper(callback=lambda _batch: None, **kwargs):
 
 def test_decodes_complete_batch_without_changing_values_or_aliasing_input():
     raw = payload()
-    raw["acceptedBids"][0]["bidPrice"] = Decimal("51.234567")
-    batch = AcceptedBoaPush.from_payload([raw])
+    raw["item"]["acceptedBids"][0]["bidPrice"] = Decimal("51.234567")
+    batch = BoaPush.from_payload([raw])
     assert batch.date == date(2026, 11, 6)
     assert (batch.period, batch.revision) == (24, 105)
     assert batch.accepted_bids[0]["bidPrice"] == Decimal("51.234567")
@@ -73,8 +85,123 @@ def test_decodes_complete_batch_without_changing_values_or_aliasing_input():
     assert batch.accepted_offers[0]["deltaId"] == "offer-1"
     assert batch.removed_accepted_bids[0]["deltaId"] == "old-bid"
     assert batch.removed_accepted_offers == ()
-    raw["acceptedBids"][0]["volume"] = 999
+    assert batch.table_bids[0]["deltaId"] == "table-bid"
+    assert batch.removed_table_offers[0]["deltaId"] == "old-table-offer"
+    raw["item"]["acceptedBids"][0]["volume"] = 999
     assert batch.accepted_bids[0]["volume"] == -12.5
+
+
+def test_public_projection_rounds_coordinates_maps_time_and_hides_frontend_details():
+    raw = payload()
+    row = raw["item"]["acceptedBids"][0]
+    row.update(
+        {
+            "coords": [-4.1235, 57.9995],
+            "timeAccepted": "2026-11-06T11:31:02Z",
+            "fuelType": "BSAD",
+            "colour": "private",
+            "allBoaInfoRaw": [{"private": True}],
+            "theoretical": False,
+            "additionalBsadData": {
+                "assetId": "ASSET",
+                "partyId": "PARTY",
+                "fuelType": "Battery",
+                "serviceType": "private",
+            },
+        }
+    )
+    result = BoaPush.from_payload(raw).accepted_bids[0]
+    assert result["coords"] == [-4.124, 58.0]
+    assert result["acceptedTime"] == row["timeAccepted"]
+    assert result["isBid"] is True
+    assert result["additionalBsadData"] == {"plantId": "ASSET", "partyName": "PARTY", "fuelType": "Battery"}
+    assert not {"colour", "allBoaInfoRaw", "theoretical", "timeAccepted"} & result.keys()
+
+
+@pytest.mark.parametrize("flag", ["theoretical", "nonBmPrediction"])
+def test_predictions_are_ignored_in_changes_and_removals_without_synthetic_removals(flag):
+    raw = payload()
+    for key, rows in raw["item"].items():
+        if isinstance(rows, list):
+            raw["item"][key] = [{"deltaId": "prediction", flag: True}]
+    result = BoaPush.from_payload(raw)
+    assert not any(
+        (
+            result.accepted_bids,
+            result.accepted_offers,
+            result.removed_accepted_bids,
+            result.removed_accepted_offers,
+            result.table_bids,
+            result.table_offers,
+            result.removed_table_bids,
+            result.removed_table_offers,
+        )
+    )
+
+
+def test_reload_required_and_previous_revision_do_not_change_or_enter_the_public_batch():
+    raw = payload()
+    expected = BoaPush.from_payload(raw)
+    raw["item"].update(reloadRequired=True, previousRevision="ignored frontend metadata")
+    result = BoaPush.from_payload(raw)
+    assert result == expected
+    assert not hasattr(result, "reload_required")
+    assert not hasattr(result, "previous_revision")
+
+
+@pytest.mark.parametrize("collection", ["tableBids", "tableOffers", "removedTableBids", "removedTableOffers"])
+def test_on_table_only_batches_reach_the_single_callback(collection):
+    async def run():
+        received = []
+        stream = helper(received.append)
+        raw = payload()
+        for key, rows in raw["item"].items():
+            if isinstance(rows, list):
+                raw["item"][key] = []
+        raw["item"][collection] = [{"deltaId": "table", "isAccepted": 0}]
+        await stream._handle_batch(raw)
+        await stream._queue.join()
+        assert len(received) == 1
+        await stream._shutdown_async(wait_for_callbacks=True)
+        stream._callback_executor.shutdown()
+
+    asyncio.run(run())
+
+
+def test_prediction_for_previously_delivered_actual_id_is_ignored_then_explicit_removal_is_delivered(caplog):
+    async def run():
+        received = []
+        stream = helper(received.append)
+        raw = payload()
+        for key, rows in raw["item"].items():
+            if isinstance(rows, list):
+                raw["item"][key] = []
+        actual = {"deltaId": "same-id", "isAccepted": 1, "volume": 10}
+        raw["item"]["acceptedBids"] = [actual]
+        await stream._handle_batch(raw)
+        prediction = copy.deepcopy(raw)
+        prediction["item"]["acceptedBids"][0]["theoretical"] = True
+        await stream._handle_batch(prediction)
+        reload_only = copy.deepcopy(raw)
+        reload_only["item"]["acceptedBids"] = []
+        reload_only["item"]["reloadRequired"] = True
+        await stream._handle_batch(reload_only)
+        await stream._queue.join()
+        assert len(received) == 1
+        assert received[0].accepted_bids[0]["volume"] == 10
+        assert received[0].removed_accepted_bids == ()
+        assert not caplog.records
+        removal = copy.deepcopy(raw)
+        removal["item"]["acceptedBids"] = []
+        removal["item"]["removedAcceptedBids"] = [actual]
+        await stream._handle_batch(removal)
+        await stream._queue.join()
+        assert len(received) == 2
+        assert received[1].removed_accepted_bids[0]["deltaId"] == "same-id"
+        await stream._shutdown_async(wait_for_callbacks=True)
+        stream._callback_executor.shutdown()
+
+    asyncio.run(run())
 
 
 @pytest.mark.parametrize(
@@ -92,9 +219,9 @@ def test_decodes_complete_batch_without_changing_values_or_aliasing_input():
 )
 def test_rejects_malformed_contract(change):
     raw = payload()
-    raw.update(change)
+    raw["datePeriod" if "date" in change or "period" in change else "item"].update(change)
     with pytest.raises((ValueError, KeyError, TypeError)):
-        AcceptedBoaPush.from_payload(raw)
+        BoaPush.from_payload(raw)
 
 
 def test_subscription_reuses_group_and_updates_callback_without_duplicate_handlers():
@@ -102,20 +229,21 @@ def test_subscription_reuses_group_and_updates_callback_without_duplicate_handle
         stream = helper()
         first = lambda _batch: None
         second = lambda _batch: None
-        assert await stream._subscribe(first, 1) == ACCEPTED_BOA_PUSH_NAME
-        assert await stream._subscribe(second, 1) == ACCEPTED_BOA_PUSH_NAME
+        assert await stream._subscribe(first, 1) == BOA_PUSH_NAME
+        assert await stream._subscribe(second, 1) == BOA_PUSH_NAME
         assert stream._callback is second
-        assert stream.group_names == (ACCEPTED_BOA_PUSH_NAME,)
-        assert stream.hub_connection.calls == [("JoinAcceptedBoaPush", [])]
+        assert stream.group_names == (BOA_PUSH_NAME,)
+        assert stream.hub_connection.calls == [("JoinBoaPush", [])]
         assert list(stream.hub_connection.handlers) == [
-            ACCEPTED_BOA_PUSH_NAME,
+            BOA_PUSH_NAME,
             "heartbeat",
             "zeroPnUpdate",
             "earliestDateInBuffer",
+            "nonBmStorUpdate",
         ]
         assert await stream._unsubscribe(1)
         assert not await stream._unsubscribe(1)
-        assert stream.hub_connection.calls[-1] == ("LeaveGroup", [ACCEPTED_BOA_PUSH_NAME])
+        assert stream.hub_connection.calls[-1] == ("LeaveGroup", [BOA_PUSH_NAME])
         assert stream.group_names == ()
 
     asyncio.run(run())
@@ -126,7 +254,7 @@ def test_join_errors_keep_structured_fields(caplog):
 
     async def run():
         stream = helper()
-        stream.hub_connection.responses["JoinAcceptedBoaPush"] = {
+        stream.hub_connection.responses["JoinBoaPush"] = {
             "messages": [{"errorCode": "DataCapped", "message": "Allowance exhausted"}]
         }
         with pytest.raises(EnactApiError) as error:
@@ -134,7 +262,7 @@ def test_join_errors_keep_structured_fields(caplog):
         assert error.value.error_code == "DataCapped"
         assert error.value.message == "Allowance exhausted"
         assert not stream._subscribed
-        assert "Subscribed to accepted BOA updates." not in caplog.text
+        assert "Subscribed to BOA updates." not in caplog.text
 
     asyncio.run(run())
 
@@ -144,12 +272,12 @@ def test_reconnect_restores_future_delivery_and_rejoins_expired_subscription():
         stream = helper()
         stream._subscribed = True
         await stream._restore_subscription()
-        assert stream.hub_connection.calls == [("ReconnectToPush", [ACCEPTED_BOA_PUSH_NAME])]
+        assert stream.hub_connection.calls == [("ReconnectToPush", [BOA_PUSH_NAME])]
         stream.hub_connection.responses["ReconnectToPush"] = {
             "messages": [{"errorCode": "DataFormatError", "message": "Subscribe again"}]
         }
         await stream._restore_subscription()
-        assert stream.hub_connection.calls[-1] == ("JoinAcceptedBoaPush", [])
+        assert stream.hub_connection.calls[-1] == ("JoinBoaPush", [])
 
     asyncio.run(run())
 
@@ -228,8 +356,9 @@ def test_malformed_and_empty_batches_are_ignored_without_logging_customer_data(c
         stream = helper()
         await stream._handle_batch({"sensitive": "customer-value"})
         empty = payload()
-        for key in ["acceptedBids", "acceptedOffers", "removedAcceptedBids", "removedAcceptedOffers"]:
-            empty[key] = []
+        for key, value in empty["item"].items():
+            if isinstance(value, list):
+                empty["item"][key] = []
         await stream._handle_batch(empty)
         assert stream._queue is None
         assert "customer-value" not in caplog.text
@@ -243,20 +372,20 @@ def test_public_sync_async_subscription_and_close_parity_without_network(caplog)
     stream.connect = lambda **_kwargs: stream
     stream._start_loop_thread()
     try:
-        assert stream.subscribe_to_accepted_boa_updates() == ACCEPTED_BOA_PUSH_NAME
-        assert asyncio.run(stream.async_subscribe_to_accepted_boa_updates()) == ACCEPTED_BOA_PUSH_NAME
-        assert asyncio.run(stream.async_unsubscribe_from_accepted_boa_updates())
-        assert stream.unsubscribe_from_accepted_boa_updates() is False
-        assert stream.subscribe_to_accepted_boa_updates() == ACCEPTED_BOA_PUSH_NAME
+        assert stream.subscribe_to_boa_updates() == BOA_PUSH_NAME
+        assert asyncio.run(stream.async_subscribe_to_boa_updates()) == BOA_PUSH_NAME
+        assert asyncio.run(stream.async_unsubscribe_from_boa_updates())
+        assert stream.unsubscribe_from_boa_updates() is False
+        assert stream.subscribe_to_boa_updates() == BOA_PUSH_NAME
         asyncio.run(stream.async_close())
         assert stream._closed
         assert not stream._thread.is_alive()
         assert stream.hub_connection.closed
         stream.close()
         messages = [record.getMessage() for record in caplog.records]
-        assert messages.count("Closing accepted BOA SignalR connection...") == 1
+        assert messages.count("Closing BOA SignalR connection...") == 1
         assert messages.count("Accepted BOA SignalR connection closed.") == 1
-        assert messages.index("Closing accepted BOA SignalR connection...") < messages.index(
+        assert messages.index("Closing BOA SignalR connection...") < messages.index(
             "Accepted BOA SignalR connection closed."
         )
     finally:
@@ -399,13 +528,13 @@ def test_heartbeat_warns_once_per_outage_and_logs_recovery_using_local_receipt_t
         stream._check_heartbeat()
         assert len(caplog.records) == 2
         clock[0] = 210
-        for name in ("zeroPnUpdate", "earliestDateInBuffer"):
+        for name in ("zeroPnUpdate", "earliestDateInBuffer", "nonBmStorUpdate"):
             await stream.hub_connection.handlers[name]([])
         assert stream._last_heartbeat_monotonic == 180
         stream._check_heartbeat()
         assert len(caplog.records) == 3
         assert stream._queue is None
-        assert stream.hub_connection.calls == [("JoinAcceptedBoaPush", [])]
+        assert stream.hub_connection.calls == [("JoinBoaPush", [])]
         await stream._shutdown_async(wait_for_callbacks=True)
 
     asyncio.run(run())
@@ -451,11 +580,11 @@ def test_lifecycle_logs_distinguish_open_connection_from_restored_subscription(c
         stream._connected.clear()
         await stream._on_open()
         assert "SignalR connection opened." in caplog.text
-        assert "Subscribed to accepted BOA updates." not in caplog.text
+        assert "Subscribed to BOA updates." not in caplog.text
 
         await stream._subscribe(lambda _batch: None, 1)
         await stream._subscribe(lambda _batch: None, 1)
-        assert caplog.text.count("Subscribed to accepted BOA updates.") == 1
+        assert caplog.text.count("Subscribed to BOA updates.") == 1
 
         caplog.clear()
         await stream._on_close()
@@ -465,7 +594,7 @@ def test_lifecycle_logs_distinguish_open_connection_from_restored_subscription(c
         assert "may be missed while disconnected" in caplog.text
 
         await stream._on_open()
-        assert "Restoring accepted BOA subscription..." in caplog.text
+        assert "Restoring BOA subscription..." in caplog.text
         assert "subscription restored" not in caplog.text
         await stream._restore_task
         assert "Accepted BOA subscription restored" in caplog.text
@@ -476,7 +605,7 @@ def test_lifecycle_logs_distinguish_open_connection_from_restored_subscription(c
         await stream._on_close()
         assert not caplog.records  # Orderly shutdown should not warn about unexpected disconnection.
         await stream._shutdown_async(wait_for_callbacks=True)
-        assert "Stopped accepted BOA subscription." in caplog.text
+        assert "Stopped BOA subscription." in caplog.text
 
     asyncio.run(run())
 

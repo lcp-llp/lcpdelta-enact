@@ -1,80 +1,27 @@
 from __future__ import annotations
 
 import asyncio
-import copy
 import inspect
 import logging
 import math
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
-from datetime import date
 from time import monotonic
 from typing import Any, Callable
 
 from lcp_delta.common.http.exceptions import EnactApiError
 from lcp_delta.enact._signalr_connection import _SignalRConnection
+from lcp_delta.enact.services.boa_push_service import BoaPush
 
 
-ACCEPTED_BOA_PUSH_NAME = "acceptedBoaUpdated"
+BOA_PUSH_NAME = "boaDashboardUpdated"
 
 
-@dataclass(frozen=True)
-class AcceptedBoaPush:
-    """One accepted-row batch. Revision is source metadata, not a delivery sequence.
-
-    Changed collections contain complete rows to insert/replace; removed
-    collections contain previous rows to remove. Row identity is scoped to
-    settlement date, period, bid/offer side, and the row's ``deltaId``.
-    """
-
-    date: date
-    period: int
-    revision: int
-    accepted_bids: tuple[dict[str, Any], ...]
-    accepted_offers: tuple[dict[str, Any], ...]
-    removed_accepted_bids: tuple[dict[str, Any], ...]
-    removed_accepted_offers: tuple[dict[str, Any], ...]
-
-    @classmethod
-    def from_payload(cls, payload: Any) -> AcceptedBoaPush:
-        """Decode a public SignalR batch without fetching or accumulating data."""
-        while isinstance(payload, (list, tuple)) and len(payload) == 1:
-            payload = payload[0]
-        if not isinstance(payload, dict):
-            raise ValueError("Expected an accepted BOA object")
-        settlement_date = date.fromisoformat(payload["date"])
-        period, revision = payload["period"], payload["revision"]
-        if type(period) is not int or not 1 <= period <= 50:
-            raise ValueError("Invalid settlement period")
-        if type(revision) is not int or revision < 0:
-            raise ValueError("Invalid source revision")
-
-        def rows(key):
-            values = payload[key]
-            if not isinstance(values, list) or any(
-                not isinstance(row, dict) or not isinstance(row.get("deltaId"), str) or not row["deltaId"]
-                for row in values
-            ):
-                raise ValueError("Invalid accepted BOA row collection")
-            return tuple(copy.deepcopy(values))
-
-        return cls(
-            settlement_date,
-            period,
-            revision,
-            rows("acceptedBids"),
-            rows("acceptedOffers"),
-            rows("removedAcceptedBids"),
-            rows("removedAcceptedOffers"),
-        )
-
-
-class AcceptedBoaDPSHelper(_SignalRConnection):
-    """Receive batches of live GB accepted BOA changes on one SignalR connection.
+class BoaDPSHelper(_SignalRConnection):
+    """Receive cleaned accepted and on-table GB BOA changes on one SignalR connection.
 
     Requires the same live GB entitlement as the public BOA API. A callback
-    accepts one ``AcceptedBoaPush`` and may be synchronous or asynchronous.
+    accepts one ``BoaPush`` and may be synchronous or asynchronous.
     Callbacks run sequentially. A finite ``callback_queue_maxsize`` bounds
     queued plus running callbacks and applies backpressure (0 is unbounded).
 
@@ -92,7 +39,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         self,
         username: str,
         public_api_key: str,
-        callback: Callable[[AcceptedBoaPush], Any] | None = None,
+        callback: Callable[[BoaPush], Any] | None = None,
         *,
         auto_connect: bool = True,
         reconnect: bool = True,
@@ -152,19 +99,19 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
 
     @property
     def group_names(self) -> tuple[str, ...]:
-        return (ACCEPTED_BOA_PUSH_NAME,) if self._subscribed else ()
+        return (BOA_PUSH_NAME,) if self._subscribed else ()
 
-    def __enter__(self) -> AcceptedBoaDPSHelper:
+    def __enter__(self) -> BoaDPSHelper:
         self.connect()
         return self
 
     def __exit__(self, exc_type, exc, traceback) -> None:
         self.close()
 
-    def subscribe_to_accepted_boa_updates(self, callback=None, *, timeout: float = 30) -> str:
-        """Subscribe to future GB accepted-row batches, reusing an existing subscription."""
+    def subscribe_to_boa_updates(self, callback=None, *, timeout: float = 30) -> str:
+        """Subscribe to future accepted/on-table GB batches through one callback."""
         if self._is_running_on_helper_loop():
-            raise RuntimeError("Use async_subscribe_to_accepted_boa_updates on the helper's event loop")
+            raise RuntimeError("Use async_subscribe_to_boa_updates on the helper's event loop")
         callback = self._callback if callback is None else callback
         if callback is None:
             callback = self._default_callback
@@ -175,9 +122,9 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             raise TimeoutError("Timed out waiting for the SignalR connection to open")
         return self._run_in_loop(self._subscribe(callback, timeout)).result(timeout=timeout + 5)
 
-    async def async_subscribe_to_accepted_boa_updates(self, callback=None, *, timeout: float = 30) -> str:
+    async def async_subscribe_to_boa_updates(self, callback=None, *, timeout: float = 30) -> str:
         """Subscribe without blocking the caller's event loop."""
-        return await asyncio.to_thread(self.subscribe_to_accepted_boa_updates, callback, timeout=timeout)
+        return await asyncio.to_thread(self.subscribe_to_boa_updates, callback, timeout=timeout)
 
     async def _ensure_connection_started(self) -> None:
         if self._connection_task is None or self._connection_task.done():
@@ -191,7 +138,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         self._register_handler()
         self.logger.info("SignalR connection opened.")
         if self._subscribed:
-            self.logger.info("Restoring accepted BOA subscription...")
+            self.logger.info("Restoring BOA subscription...")
             self._start_heartbeat_monitor()
             self._restore_task = asyncio.create_task(self._restore_subscription())
 
@@ -202,14 +149,15 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         if self._restore_task is not None:
             self._restore_task.cancel()
         if was_connected and not self._stop_requested.is_set():
-            self.logger.warning("SignalR connection closed; accepted BOA updates may be missed while disconnected.")
+            self.logger.warning("SignalR connection closed; BOA updates may be missed while disconnected.")
 
     def _register_handler(self) -> None:
         handlers = {
-            ACCEPTED_BOA_PUSH_NAME: self._handle_batch,
+            BOA_PUSH_NAME: self._handle_batch,
             "heartbeat": self._handle_heartbeat,
             "zeroPnUpdate": self._ignore_broadcast,
             "earliestDateInBuffer": self._ignore_broadcast,
+            "nonBmStorUpdate": self._ignore_broadcast,
         }
         for name, handler in handlers.items():
             if name not in self._handlers_registered_for_client:
@@ -285,19 +233,19 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                 await self._join(timeout)
                 self._subscribed = True
                 self._start_heartbeat_monitor()
-                self.logger.info("Subscribed to accepted BOA updates.")
-            return ACCEPTED_BOA_PUSH_NAME
+                self.logger.info("Subscribed to BOA updates.")
+            return BOA_PUSH_NAME
 
     async def _join(self, timeout) -> None:
-        response = await self._send_with_response("JoinAcceptedBoaPush", [], timeout=timeout)
+        response = await self._send_with_response("JoinBoaPush", [], timeout=timeout)
         self._check_response(response)
-        if response.get("data", {}).get("pushName") != ACCEPTED_BOA_PUSH_NAME:
-            raise EnactApiError("DataFormatError", "Unexpected accepted BOA subscription response", response)
+        if response.get("data", {}).get("pushName") != BOA_PUSH_NAME:
+            raise EnactApiError("DataFormatError", "Unexpected BOA subscription response", response)
 
     @staticmethod
     def _check_response(response) -> None:
         if not isinstance(response, dict):
-            raise EnactApiError("DataFormatError", "Invalid accepted BOA subscription response", response)
+            raise EnactApiError("DataFormatError", "Invalid BOA subscription response", response)
         for message in response.get("messages", []):
             if message.get("errorCode"):
                 raise EnactApiError(message["errorCode"], message.get("message", "Subscription failed"), response)
@@ -310,9 +258,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                     if not self._subscribed:
                         return
                     try:
-                        response = await self._send_with_response(
-                            "ReconnectToPush", [ACCEPTED_BOA_PUSH_NAME], timeout=30
-                        )
+                        response = await self._send_with_response("ReconnectToPush", [BOA_PUSH_NAME], timeout=30)
                         self._check_response(response)
                     except EnactApiError as exc:
                         if exc.error_code not in {"DataFormatError", "ReconnectUnavailable"}:
@@ -328,7 +274,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             except asyncio.CancelledError:
                 raise
             except Exception:
-                self.logger.warning("Unable to restore accepted BOA subscription")
+                self.logger.warning("Unable to restore BOA subscription")
                 if not self.reconnect:
                     return
                 await asyncio.sleep(max(delay, 0.1))
@@ -339,12 +285,21 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
         if callback is None or self._stop_requested.is_set():
             return
         try:
-            batch = AcceptedBoaPush.from_payload(payload)
+            batch = BoaPush.from_payload(payload)
         except (KeyError, TypeError, ValueError):
-            self.logger.warning("Ignoring malformed accepted BOA batch")
+            self.logger.warning("Ignoring malformed BOA batch")
             return
         if not any(
-            (batch.accepted_bids, batch.accepted_offers, batch.removed_accepted_bids, batch.removed_accepted_offers)
+            (
+                batch.accepted_bids,
+                batch.accepted_offers,
+                batch.removed_accepted_bids,
+                batch.removed_accepted_offers,
+                batch.table_bids,
+                batch.table_offers,
+                batch.removed_table_bids,
+                batch.removed_table_offers,
+            )
         ):
             return
         if self._queue is None:
@@ -369,22 +324,22 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
                     if inspect.isawaitable(result):
                         await result
             except Exception:
-                self.logger.warning("Error in accepted BOA callback")
+                self.logger.warning("Error in BOA callback")
             finally:
                 self._queue.task_done()
                 if self._callback_slots is not None:
                     self._callback_slots.release()
 
-    def unsubscribe_from_accepted_boa_updates(self, *, timeout: float = 30) -> bool:
+    def unsubscribe_from_boa_updates(self, *, timeout: float = 30) -> bool:
         """Leave the feed; callbacks already queued may still run."""
         if self._is_running_on_helper_loop():
-            raise RuntimeError("Use async_unsubscribe_from_accepted_boa_updates on the helper's event loop")
+            raise RuntimeError("Use async_unsubscribe_from_boa_updates on the helper's event loop")
         if self._loop is None or self._closed:
             return False
         return self._run_in_loop(self._unsubscribe(timeout)).result(timeout=timeout + 5)
 
-    async def async_unsubscribe_from_accepted_boa_updates(self, *, timeout: float = 30) -> bool:
-        return await asyncio.to_thread(self.unsubscribe_from_accepted_boa_updates, timeout=timeout)
+    async def async_unsubscribe_from_boa_updates(self, *, timeout: float = 30) -> bool:
+        return await asyncio.to_thread(self.unsubscribe_from_boa_updates, timeout=timeout)
 
     async def _unsubscribe(self, timeout) -> bool:
         async with self._get_subscription_lock():
@@ -393,8 +348,8 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             self._subscribed = False
             await self._stop_heartbeat_monitor()
             self._callback = None
-            await self._leave_signalr_group(ACCEPTED_BOA_PUSH_NAME, timeout=timeout)
-            self.logger.info("Stopped accepted BOA subscription.")
+            await self._leave_signalr_group(BOA_PUSH_NAME, timeout=timeout)
+            self.logger.info("Stopped BOA subscription.")
             return True
 
     async def _shutdown_async(self, *, wait_for_callbacks: bool, leave_groups_timeout: float = 5) -> None:
@@ -420,7 +375,7 @@ class AcceptedBoaDPSHelper(_SignalRConnection):
             raise RuntimeError("Close the helper from outside its callback loop")
         if self._closed:
             return
-        self.logger.info("Closing accepted BOA SignalR connection...")
+        self.logger.info("Closing BOA SignalR connection...")
         self._stop_requested.set()
         drained = False
         try:

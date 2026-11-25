@@ -12,5 +12,5 @@ from ..common.credentials_holder import CredentialsHolder
 from .api_helper import APIHelper
 from .dps_helper import DPSHelper
 from .multi_series_dps_helper import MultiSeriesDPSHelper, MultiSeriesPushMetadata, PlantPushMetadata
-from .accepted_boa_dps_helper import AcceptedBoaDPSHelper, AcceptedBoaPush
+from .boa_dps_helper import BoaDPSHelper, BoaPush
 from .chart_helper import ChartHelper
